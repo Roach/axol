@@ -965,7 +965,7 @@ final class BubbleView: NSView {
     /// Default icon names an adapter can pass via the envelope `icon` field.
     /// Each name resolves to an SF Symbol + tint color. Unknown strings fall
     /// through as a literal title prefix (emoji or short text).
-    private static let iconDefaults: [(name: String, symbol: String, color: String)] = [
+    static let iconDefaults: [(name: String, symbol: String, color: String)] = [
         ("success",  "checkmark.circle.fill",         "2E8B57"),
         ("error",    "xmark.circle.fill",             "C0392B"),
         ("warn",     "exclamationmark.triangle.fill", "B8860B"),
@@ -983,12 +983,12 @@ final class BubbleView: NSView {
         ("git",      "arrow.triangle.branch",         "2D2533"),
     ]
 
-    private static func iconImage(for name: String) -> NSImage? {
+    static func iconImage(for name: String, pointSize: CGFloat = 12) -> NSImage? {
         guard let def = iconDefaults.first(where: { $0.name == name }),
               let base = NSImage(systemSymbolName: def.symbol, accessibilityDescription: nil) else {
             return nil
         }
-        var config = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        var config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .semibold)
         if #available(macOS 12.0, *) {
             config = config.applying(.init(paletteColors: [NSColor.fromHex(def.color)]))
         }
@@ -1449,7 +1449,6 @@ final class HistoryRowView: NSView {
         layer?.addSublayer(hoverLayer)
 
         // Title (left, flex, single-line, ellipsized)
-        titleLabel.stringValue = entry.title
         titleLabel.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
         titleLabel.textColor = NSColor.fromHex("2D2533")
         titleLabel.isEditable = false; titleLabel.isBezeled = false
@@ -1457,6 +1456,26 @@ final class HistoryRowView: NSView {
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.maximumNumberOfLines = 1
         titleLabel.usesSingleLineMode = true
+        if let iconName = entry.icon?.trimmingCharacters(in: .whitespaces), !iconName.isEmpty,
+           let image = BubbleView.iconImage(for: iconName, pointSize: 11) {
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            let attach = NSMutableAttributedString(attachment: attachment)
+            attach.addAttribute(.baselineOffset, value: -1,
+                                range: NSRange(location: 0, length: attach.length))
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: titleLabel.font!,
+                .foregroundColor: titleLabel.textColor ?? NSColor.labelColor
+            ]
+            let full = NSMutableAttributedString()
+            full.append(attach)
+            full.append(NSAttributedString(string: "  " + entry.title, attributes: attrs))
+            titleLabel.attributedStringValue = full
+        } else if let rawIcon = entry.icon?.trimmingCharacters(in: .whitespaces), !rawIcon.isEmpty {
+            titleLabel.stringValue = "\(rawIcon) \(entry.title)"
+        } else {
+            titleLabel.stringValue = entry.title
+        }
         addSubview(titleLabel)
 
         // Time (right)
