@@ -165,6 +165,7 @@ Example hook configuration (in your Claude Code `settings.json`):
 ## Interactions
 
 - **Left-click** — replays the most recent actionable alert, or cycles through the recent ones. If there aren't any pending, she speaks a quip. Wakes her up from a nap.
+- **⌘-click** — toggles Compact Mode (same as the right-click menu item).
 - **Double-click** — opens the recent-alerts panel (scrollable, with sticky header). Closes automatically after 10s; click a row to run its action.
 - **Right-click** — compact menu: **Idle Animations** (checkbox), **Compact Mode / Expand**, **About**, **Quit**.
 - **Drag** — move the window; position is persisted across launches. Drags are clamped to the visible screen so she can't be lost off-edge.

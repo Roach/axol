@@ -573,6 +573,7 @@ final class AxolCharacterView: NSView {
     var onLeftClick:   (() -> Void)?
     var onDoubleClick: (() -> Void)?
     var onRightClick:  (() -> Void)?
+    var onCmdClick:    (() -> Void)?
     var onDragStart:   (() -> Void)?
     var onDragEnd:     (() -> Void)?
     var onDragDelta:   ((CGFloat, CGFloat) -> Void)?
@@ -610,6 +611,11 @@ final class AxolCharacterView: NSView {
         if isDragging {
             onDragEnd?()
             isDragging = false
+            return
+        }
+        if event.modifierFlags.contains(.command) {
+            pendingSingleClick.cancel()
+            onCmdClick?()
             return
         }
         if event.clickCount >= 2 {
@@ -2050,6 +2056,7 @@ final class CompactView: NSView {
     private let badgeLabel = NSTextField(labelWithString: "")
 
     var onTap: (() -> Void)?
+    var onCmdClick: (() -> Void)?
     var onDragDelta: ((CGFloat, CGFloat) -> Void)?
     var onDragEnd: (() -> Void)?
 
@@ -2075,6 +2082,7 @@ final class CompactView: NSView {
         // The inner AxolCharacterView handles its own mouse events; forward
         // them up to the compact view so taps/drags reach the app delegate.
         character.onLeftClick   = { [weak self] in self?.onTap?() }
+        character.onCmdClick    = { [weak self] in self?.onCmdClick?() }
         character.onDragDelta   = { [weak self] dx, dy in self?.onDragDelta?(dx, dy) }
         character.onDragEnd     = { [weak self] in self?.onDragEnd?() }
 
@@ -2569,6 +2577,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.character.onDoubleClick = { [weak self] in
             self?.showHistory()
         }
+        stage.character.onCmdClick = { [weak self] in
+            self?.toggleCompact()
+        }
 
         stage.bubble.onAction = { [weak self] action in
             guard let self = self else { return }
@@ -2603,6 +2614,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         stage.compact.onTap = { [weak self] in
             self?.expandToFull()
+        }
+        stage.compact.onCmdClick = { [weak self] in
+            self?.toggleCompact()
         }
         stage.compact.onDragDelta = { [weak self] dx, dy in
             guard let self = self, let w = self.window else { return }
