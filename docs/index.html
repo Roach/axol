@@ -882,6 +882,11 @@ cd axol
     green:   { title: 'ci-bot',                        body: 'all tests passing',          priority: 'normal', alert: true,  sweat: false, hop: true },
     shipped: { title: 'main',                          body: 'shipped to production',      priority: 'normal', alert: true,  sweat: false },
     quip:    { title: "Sip of water? You earned it.",                                      priority: null,     alert: false, sweat: false },
+    review:  { title: 'github',                        body: 'PR #482 needs your review',  priority: 'normal', alert: true,  sweat: false },
+    failing: { title: 'feature/auth',                  body: 'CI failed',                  priority: 'urgent', alert: true,  sweat: true },
+    claude:  { title: 'claude-code',                   body: 'awaiting your input',        priority: 'normal', alert: true,  sweat: false },
+    stretch: { title: "Stand up, stretch, look away.",                                     priority: null,     alert: false, sweat: false },
+    nap:     { title: 'zzz…',                          body: 'things are quiet',           priority: 'low',    alert: false, sweat: false },
   };
 
   function escapeHtml(s) {
@@ -931,7 +936,7 @@ cd axol
     }, dur);
   }
 
-  const sequence = ['hello', 'deploy', 'green', 'shipped', 'quip'];
+  const sequence = ['hello', 'deploy', 'green', 'review', 'failing', 'claude', 'shipped', 'stretch', 'quip', 'nap'];
   let i = 0;
   function playNext() {
     showDemo(sequence[i]);
