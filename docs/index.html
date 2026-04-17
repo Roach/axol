@@ -878,15 +878,15 @@ cd axol
 
   const demos = {
     hello:   { title: 'Hello!',                        body: "I'm Axol.",                  priority: null,     alert: false, sweat: false },
-    deploy:  { title: 'ci-bot',                        body: 'deploy starting',            priority: 'low',    alert: false, sweat: false },
+    deploy:  { title: 'ci-bot',                        body: 'deploy succeeded',           priority: 'normal', alert: true,  sweat: false },
     green:   { title: 'ci-bot',                        body: 'all tests passing',          priority: 'normal', alert: true,  sweat: false, hop: true },
     shipped: { title: 'main',                          body: 'shipped to production',      priority: 'normal', alert: true,  sweat: false },
     quip:    { title: "Sip of water? You earned it.",                                      priority: null,     alert: false, sweat: false },
-    review:  { title: 'github',                        body: 'PR #482 needs your review',  priority: 'normal', alert: true,  sweat: false },
-    failing: { title: 'feature/auth',                  body: 'CI failed',                  priority: 'urgent', alert: true,  sweat: true },
-    claude:  { title: 'claude-code',                   body: 'awaiting your input',        priority: 'normal', alert: true,  sweat: false },
+    review:  { title: 'github',                        body: 'PR #482 approved 🎉',        priority: 'normal', alert: true,  sweat: false },
+    failing: { title: 'feature/auth',                  body: 'all green on first try!',    priority: 'normal', alert: true,  sweat: false, hop: true },
+    claude:  { title: 'claude-code',                   body: 'task complete',              priority: 'normal', alert: true,  sweat: false },
     stretch: { title: "Stand up, stretch, look away.",                                     priority: null,     alert: false, sweat: false },
-    nap:     { title: 'zzz…',                          body: 'things are quiet',           priority: 'low',    alert: false, sweat: false },
+    nap:     { title: "You're doing great.",                                               priority: null,     alert: false, sweat: false },
   };
 
   function escapeHtml(s) {
