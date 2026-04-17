@@ -438,16 +438,21 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--ink);
+    background: var(--pink-accent);
     color: white;
     padding: 11px 20px;
     border-radius: 999px;
     text-decoration: none;
     font-weight: 600;
     font-size: 14px;
-    transition: transform 0.15s ease, background 0.15s ease;
+    box-shadow: 0 4px 14px -4px rgba(214, 69, 122, 0.45);
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   }
-  .cta:hover { background: var(--pink-accent); transform: translateY(-1px); }
+  .cta:hover {
+    background: #B8355F;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px -4px rgba(214, 69, 122, 0.55);
+  }
   .cta svg { width: 16px; height: 16px; fill: currentColor; }
 
   section {
