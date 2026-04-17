@@ -686,7 +686,12 @@ final class AxolCharacterView: NSView {
     func stopIdles() {
         layer?.removeAnimation(forKey: "hop")
         layer?.removeAnimation(forKey: "tilt")
-        layer?.removeAnimation(forKey: "peek")
+        // peek rotates the root layer with paired additive (tx, ty) keyframes
+        // that compensate for the below-center pivot. All three must be
+        // removed together or the character will stick mid-drift.
+        for key in ["peek", "peek-px", "peek-py"] {
+            layer?.removeAnimation(forKey: key)
+        }
         armLeftLayer.removeAnimation(forKey: "stretch")
         armRightLayer.removeAnimation(forKey: "stretch")
         leftGillsLayer.removeAnimation(forKey: "wiggle")
@@ -789,18 +794,14 @@ final class AxolCharacterView: NSView {
     }
 
     private func playPeek() {
-        // Quick head-cock + return — reads as a curiosity glance. Small
-        // additive rotation; pivots naturally on center now that the root
-        // layer's anchor is (0.5, 0.5) (set in init).
-        let tilt = CGFloat.pi * 4 / 180
-        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
-        rot.values   = [0.0, Double(tilt), Double(tilt), 0.0]
-        rot.keyTimes = [0.0, 0.25, 0.65, 1.0]
-        rot.duration = 1.1
-        rot.calculationMode = .cubic
-        rot.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        rot.isAdditive = true
-        layer?.add(rot, forKey: "peek")
+        // Head-cock + return — a curiosity glance. Pivots ~40px below the
+        // view center so the swing reads as planted on her body instead
+        // of spinning around her forehead.
+        rotateWithGroundedPivot(key: "peek",
+                                angleDeg: 4,
+                                pivotBelow: rotationPivotBelow,
+                                keyTimes: [0.0, 0.25, 0.65, 1.0],
+                                duration: 1.1)
     }
 
     private func playStretch() {
@@ -843,16 +844,17 @@ final class AxolCharacterView: NSView {
     }
 
     private func playTilt() {
-        // Small anticipation counter-tilt, main swing, overshoot back past
-        // neutral, settle. Pivots on center (layer anchor is (0.5, 0.5)).
-        let degs: [CGFloat] = [0, 1.5, -5, 4, -1, 0]
-        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
-        rot.values   = degs.map { Double(CGFloat.pi * $0 / 180) }
-        rot.keyTimes = [0.0, 0.08, 0.38, 0.68, 0.88, 1.0]
-        rot.duration = 2.4
-        rot.calculationMode = .cubic
-        rot.isAdditive = true
-        layer?.add(rot, forKey: "tilt")
+        // Gentle breathe — a slow inhale/exhale scale around the view center.
+        // Replaces the previous whole-body rotation, which read as an
+        // off-kilter pendulum sway on a rounded character that has no neck
+        // or feet to anchor the swing.
+        let breathe = CAKeyframeAnimation(keyPath: "transform.scale")
+        breathe.values   = [1.0, 1.025, 0.99, 1.0]
+        breathe.keyTimes = [0.0, 0.42, 0.78, 1.0]
+        breathe.duration = 2.0
+        breathe.calculationMode = .cubic
+        breathe.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        layer?.add(breathe, forKey: "tilt")
     }
 
     /// Tiny double blink — two quick lid closures with a short hold between.
@@ -883,6 +885,76 @@ final class AxolCharacterView: NSView {
         flick.calculationMode = .cubic
         flick.isAdditive = false
         target.add(flick, forKey: "gill-flick")
+    }
+
+    /// Distance below the view center (in root-layer pixel coords, y-up) to
+    /// use as the rotation pivot for tilt/peek. ~40px lands near her hips on
+    /// the default 150×136 character view, so rotations feel planted on the
+    /// body rather than spinning around her head.
+    private var rotationPivotBelow: CGFloat { bounds.height * 0.30 }
+
+    /// Apply a constant-peak rotation whose effective pivot sits `h` pixels
+    /// below the layer's anchor. The anchor is at the view's geometric center
+    /// (set in `init`); additive (tx, ty) keyframes keep the point (0, -h)
+    /// (i.e. h below center, root-layer y-up) stationary throughout the
+    /// rotation. Used by peek-style in/hold/out/rest idles.
+    private func rotateWithGroundedPivot(key: String,
+                                         angleDeg: CGFloat,
+                                         pivotBelow h: CGFloat,
+                                         keyTimes: [NSNumber],
+                                         duration: CFTimeInterval) {
+        let theta = CGFloat.pi * angleDeg / 180
+        let angles: [CGFloat] = [0, theta, theta, 0]
+        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rot.values   = angles.map { Double($0) }
+        rot.keyTimes = keyTimes
+        rot.duration = duration
+        rot.calculationMode = .cubic
+        rot.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        rot.isAdditive = true
+        layer?.add(rot, forKey: key)
+
+        addPivotCompensation(key: key,
+                             anglesRad: angles,
+                             pivotBelow: h,
+                             keyTimes: keyTimes,
+                             duration: duration,
+                             calculationMode: .cubic,
+                             timingFunction: CAMediaTimingFunction(name: .easeInEaseOut))
+    }
+
+    /// Additive translation keyframes that keep the point (0, -h) (h pixels
+    /// below the anchor in root-layer y-up coords) stationary under a
+    /// rotation keyframe. The rotation R(θ) carries that point to
+    /// (h·sin θ, -h·cos θ) — a drift of (h·sin θ, h·(1−cos θ)) — so we
+    /// apply the opposite.
+    private func addPivotCompensation(key: String,
+                                      anglesRad: [CGFloat],
+                                      pivotBelow h: CGFloat,
+                                      keyTimes: [NSNumber],
+                                      duration: CFTimeInterval,
+                                      calculationMode: CAAnimationCalculationMode,
+                                      timingFunction: CAMediaTimingFunction?) {
+        let txValues = anglesRad.map { Double(-h * sin($0)) }
+        let tyValues = anglesRad.map { Double(-h * (1 - cos($0))) }
+
+        let tx = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        tx.values = txValues
+        tx.keyTimes = keyTimes
+        tx.duration = duration
+        tx.calculationMode = calculationMode
+        if let t = timingFunction { tx.timingFunction = t }
+        tx.isAdditive = true
+        layer?.add(tx, forKey: "\(key)-px")
+
+        let ty = CAKeyframeAnimation(keyPath: "transform.translation.y")
+        ty.values = tyValues
+        ty.keyTimes = keyTimes
+        ty.duration = duration
+        ty.calculationMode = calculationMode
+        if let t = timingFunction { ty.timingFunction = t }
+        ty.isAdditive = true
+        layer?.add(ty, forKey: "\(key)-py")
     }
 
     private func playWiggle() {
@@ -1477,6 +1549,10 @@ struct AlertEntry {
     let envelope: [String: Any]
     let time: Date
     var seenAt: Date?
+    /// Set when the user clicks through the bubble (or a history row) to run
+    /// the entry's action. Actioned entries are filtered out of the bubble
+    /// rotation — they remain in the history panel but won't replay.
+    var actionedAt: Date?
 
     var title: String   { (envelope["title"] as? String) ?? "" }
     var body: String?   { envelope["body"] as? String }
@@ -1499,9 +1575,10 @@ final class AlertStore {
         entries.contains { $0.seenAt == nil && $0.action != nil }
     }
 
-    /// Most-recent archived entry that the user can still act on.
+    /// Most-recent archived entry that the user can still act on (has an
+    /// action and hasn't been clicked through yet).
     var lastActionableAlert: AlertEntry? {
-        entries.first { $0.action != nil }
+        entries.first { $0.action != nil && $0.actionedAt == nil }
     }
 
     /// Count of entries the user hasn't seen yet.
@@ -1512,7 +1589,7 @@ final class AlertStore {
     @discardableResult
     func push(envelope: [String: Any]) -> AlertEntry {
         nextId += 1
-        let entry = AlertEntry(id: nextId, envelope: envelope, time: Date(), seenAt: nil)
+        let entry = AlertEntry(id: nextId, envelope: envelope, time: Date(), seenAt: nil, actionedAt: nil)
         entries.insert(entry, at: 0)
         if entries.count > maxEntries {
             entries = Array(entries.prefix(maxEntries))
@@ -1529,6 +1606,25 @@ final class AlertStore {
         let now = Date()
         for i in entries.indices where entries[i].seenAt == nil {
             entries[i].seenAt = now
+        }
+    }
+
+    /// Records that the user clicked through to run the entry's action. Also
+    /// marks it seen (can't act on something without seeing it).
+    func markActioned(id: Int) {
+        guard let idx = entries.firstIndex(where: { $0.id == id }) else { return }
+        let now = Date()
+        if entries[idx].actionedAt == nil { entries[idx].actionedAt = now }
+        if entries[idx].seenAt == nil { entries[idx].seenAt = now }
+    }
+
+    /// Marks every entry as actioned — used by the explicit "clear alerts"
+    /// menu action, which dismisses the whole backlog at once.
+    func markAllActioned() {
+        let now = Date()
+        for i in entries.indices {
+            if entries[i].actionedAt == nil { entries[i].actionedAt = now }
+            if entries[i].seenAt == nil { entries[i].seenAt = now }
         }
     }
 
@@ -2427,9 +2523,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Always archive the alert (except explicit low) first so downstream
             // branches see a consistent store.
-            if priority != "low" {
-                self.alertStore.push(envelope: envelope)
-            }
+            let entryId = priority != "low" ? self.alertStore.push(envelope: envelope).id : nil
             self.updateWorryBubbles()
 
             // If the history panel is open, update it in place and skip the
@@ -2456,13 +2550,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }()
             if bubbleYoung && priority != "urgent" {
                 if self.pendingBubbles.count < self.pendingBubbleCap {
-                    self.pendingBubbles.append(PendingBubble(envelope: envelope, attention: attention))
+                    self.pendingBubbles.append(PendingBubble(envelope: envelope, attention: attention, entryId: entryId))
                 }
                 return
             }
 
             if self.isNapping { self.endNap() }
-            self.presentBubbleFromEnvelope(envelope, attention: attention)
+            self.presentBubbleFromEnvelope(envelope, attention: attention, entryId: entryId)
         }
     }
 
@@ -2670,7 +2764,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if self.stage.history.isVisible { self.stage.history.hide(); return }
             if self.isNapping { self.endNap(); return }
             // Cycle through recent actionable alerts if any; otherwise quip.
-            let actionable = self.alertStore.entries.filter { $0.action != nil }
+            // Clicked-through entries stay in history but drop out of the
+            // bubble rotation here.
+            let actionable = self.alertStore.entries.filter { $0.action != nil && $0.actionedAt == nil }
             if !actionable.isEmpty {
                 let entry = actionable[self.historyCycleIndex % actionable.count]
                 self.historyCycleIndex = (self.historyCycleIndex + 1) % actionable.count
@@ -2692,8 +2788,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.bubble.onAction = { [weak self] action in
             guard let self = self else { return }
             self.runAction(action)
-            if let last = self.alertStore.lastActionableAlert {
-                self.alertStore.markSeen(id: last.id)
+            if let id = self.currentBubbleEntryId {
+                self.alertStore.markActioned(id: id)
             }
             self.bumpWound(self.woundHandled)
             self.updateWorryBubbles()
@@ -2705,6 +2801,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         stage.bubble.onHide = { [weak self] in
             guard let self = self else { return }
+            self.currentBubbleEntryId = nil
             self.stage.character.stopTalking()
             self.updateWorryBubbles()
             self.drainPendingBubbles()
@@ -2715,8 +2812,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if let action = entry.action {
                 self.runAction(action)
                 self.bumpWound(self.woundHandled)
+                self.alertStore.markActioned(id: entry.id)
+            } else {
+                self.alertStore.markSeen(id: entry.id)
             }
-            self.alertStore.markSeen(id: entry.id)
             self.updateWorryBubbles()
         }
 
@@ -2738,6 +2837,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func replay(entry: AlertEntry) {
         stage.bubble.present(title: entry.title, body: entry.body,
                              priority: entry.priority, icon: entry.icon, action: entry.action)
+        currentBubbleEntryId = entry.id
         alertStore.markSeen(id: entry.id)
         updateWorryBubbles()
     }
@@ -2801,30 +2901,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private struct PendingBubble {
         let envelope: [String: Any]
         let attention: String?
+        let entryId: Int?
     }
     private var pendingBubbles: [PendingBubble] = []
     private let pendingBubbleCap: Int = 4
     private var lastBubbleOpenedAt: Date?
     private let minBubbleDisplayTime: TimeInterval = 2.5
 
+    /// ID of the archived alert currently shown in the bubble, if any.
+    /// Set in the present paths; cleared on hide. Used to mark the exact
+    /// entry as actioned when the user clicks the bubble — the bubble itself
+    /// only carries the action payload, not the entry identity.
+    private var currentBubbleEntryId: Int?
+
     private func drainPendingBubbles() {
         guard !pendingBubbles.isEmpty,
               !stage.history.isVisible,
               !stage.bubble.isVisible else { return }
         let next = pendingBubbles.removeFirst()
-        presentBubbleFromEnvelope(next.envelope, attention: next.attention)
+        presentBubbleFromEnvelope(next.envelope, attention: next.attention, entryId: next.entryId)
     }
 
     /// Single-use helper that turns a validated envelope into a bubble +
     /// attention one-shot. Used by forwardToUI and drainPendingBubbles so
     /// both paths go through the same presentation logic.
-    private func presentBubbleFromEnvelope(_ envelope: [String: Any], attention: String?) {
+    private func presentBubbleFromEnvelope(_ envelope: [String: Any], attention: String?, entryId: Int?) {
         let title    = (envelope["title"] as? String) ?? ""
         let body     = envelope["body"] as? String
         let priority = (envelope["priority"] as? String) ?? "normal"
         let icon     = envelope["icon"] as? String
         let action   = (envelope["actions"] as? [[String: Any]])?.first
         stage.bubble.present(title: title, body: body, priority: priority, icon: icon, action: action)
+        currentBubbleEntryId = entryId
         lastBubbleOpenedAt = Date()
 
         let effective: String = {
@@ -3158,7 +3266,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     @objc func doClearAlert() {
-        alertStore.markAllSeen()
+        alertStore.markAllActioned()
         woundUp *= woundClearFactor
         stage.bubble.hide()
         updateWorryBubbles()
