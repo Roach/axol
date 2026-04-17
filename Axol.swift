@@ -2370,7 +2370,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard let raw = candidate,
               let envelope = EnvelopeValidator.validate(raw) else {
-            NSLog("axol: dropped payload — no matching adapter and not a valid envelope")
+            let keys = data.keys.sorted().joined(separator: ", ")
+            NSLog("axol: dropped payload — no matching adapter and not a valid envelope (keys: [\(keys)])")
             return
         }
         let priority  = (envelope["priority"] as? String) ?? "normal"
