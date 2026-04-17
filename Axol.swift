@@ -649,8 +649,9 @@ final class AxolCharacterView: NSView {
     /// appears so the character settles instead of continuing the idle mid-reveal.
     func stopIdles() {
         layer?.removeAnimation(forKey: "hop")
-        layer?.removeAnimation(forKey: "tilt")
-        layer?.removeAnimation(forKey: "peek")
+        for key in ["tilt", "tilt-px", "tilt-py", "peek", "peek-px", "peek-py"] {
+            layer?.removeAnimation(forKey: key)
+        }
         armLeftLayer.removeAnimation(forKey: "stretch")
         armRightLayer.removeAnimation(forKey: "stretch")
         leftGillsLayer.removeAnimation(forKey: "wiggle")
@@ -742,18 +743,15 @@ final class AxolCharacterView: NSView {
 
     private func playPeek() {
         // Quick head-cock + return — reads as a curiosity glance. Rotation
-        // on the whole character (additive) instead of the old X-translation
-        // on the eyes, which compounded with the ambient Y bob into an
-        // odd diagonal drift.
-        let a = CAKeyframeAnimation(keyPath: "transform.rotation.z")
-        let tilt: CGFloat = CGFloat.pi * 4 / 180
-        a.values   = [0.0, Double(tilt), Double(tilt), 0.0]
-        a.keyTimes = [0.0, 0.25, 0.65, 1.0]
-        a.duration = 1.1
-        a.calculationMode = .cubic
-        a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        a.isAdditive = true
-        layer?.add(a, forKey: "peek")
+        // on the whole character (additive) with a compensating translation
+        // so the effective pivot sits below center (near her body) instead
+        // of at the layer's geometric center, which would swing her body
+        // out around her face.
+        rotateWithGroundedPivot(key: "peek",
+                                angleDeg: 4,
+                                pivotBelow: 20,
+                                keyTimes: [0.0, 0.25, 0.65, 1.0],
+                                duration: 1.1)
     }
 
     private func playStretch() {
@@ -797,18 +795,89 @@ final class AxolCharacterView: NSView {
 
     private func playTilt() {
         // Small anticipation counter-tilt before the main swing, then
-        // overshoot back past neutral before settling.
-        let a = CAKeyframeAnimation(keyPath: "transform.rotation.z")
-        let smallCounter: CGFloat = CGFloat.pi *  1.5 / 180
-        let neg:          CGFloat = CGFloat.pi * -6   / 180
-        let pos:          CGFloat = CGFloat.pi *  5   / 180
-        let smallUnder:   CGFloat = CGFloat.pi * -1   / 180
-        a.values   = [0.0, Double(smallCounter), Double(neg), Double(pos), Double(smallUnder), 0.0]
-        a.keyTimes = [0.0, 0.08, 0.38, 0.68, 0.88, 1.0]
-        a.duration = 2.4
-        a.calculationMode = .cubic
-        a.isAdditive = true
-        layer?.add(a, forKey: "tilt")
+        // overshoot back past neutral before settling. Pivots below center
+        // so the sway feels planted on her body rather than spinning
+        // around her forehead.
+        let pivotBelow: CGFloat = 20
+        let values: [CGFloat] = [0, 1.5, -6, 5, -1, 0]
+        let keyTimes: [NSNumber] = [0.0, 0.08, 0.38, 0.68, 0.88, 1.0]
+
+        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rot.values = values.map { Double(CGFloat.pi * $0 / 180) }
+        rot.keyTimes = keyTimes
+        rot.duration = 2.4
+        rot.calculationMode = .cubic
+        rot.isAdditive = true
+        layer?.add(rot, forKey: "tilt")
+
+        addPivotCompensation(key: "tilt",
+                             anglesRad: values.map { CGFloat.pi * $0 / 180 },
+                             pivotBelow: pivotBelow,
+                             keyTimes: keyTimes,
+                             duration: rot.duration,
+                             calculationMode: .cubic,
+                             timingFunction: nil)
+    }
+
+    /// Simple constant-peak rotation helper shared by peek-style animations
+    /// (in/hold/out/rest). For multi-phase rotations, build the keyframes
+    /// explicitly and call `addPivotCompensation` directly.
+    private func rotateWithGroundedPivot(key: String,
+                                         angleDeg: CGFloat,
+                                         pivotBelow: CGFloat,
+                                         keyTimes: [NSNumber],
+                                         duration: CFTimeInterval) {
+        let theta = CGFloat.pi * angleDeg / 180
+        let vals: [CGFloat] = [0, theta, theta, 0]
+        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rot.values   = vals.map { Double($0) }
+        rot.keyTimes = keyTimes
+        rot.duration = duration
+        rot.calculationMode = .cubic
+        rot.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        rot.isAdditive = true
+        layer?.add(rot, forKey: key)
+
+        addPivotCompensation(key: key,
+                             anglesRad: vals,
+                             pivotBelow: pivotBelow,
+                             keyTimes: keyTimes,
+                             duration: duration,
+                             calculationMode: .cubic,
+                             timingFunction: CAMediaTimingFunction(name: .easeInEaseOut))
+    }
+
+    /// Additive translation keyframes that keep a point `pivotBelow` pixels
+    /// below the layer anchor stationary under a rotation keyframe. For a
+    /// rotation θ around the anchor, the point drifts by (h·sin θ, h·(1−cos θ))
+    /// relative to its θ=0 position; we apply the opposite.
+    private func addPivotCompensation(key: String,
+                                      anglesRad: [CGFloat],
+                                      pivotBelow h: CGFloat,
+                                      keyTimes: [NSNumber],
+                                      duration: CFTimeInterval,
+                                      calculationMode: CAAnimationCalculationMode,
+                                      timingFunction: CAMediaTimingFunction?) {
+        let txValues = anglesRad.map { Double(-h * sin($0)) }
+        let tyValues = anglesRad.map { Double(-h * (1 - cos($0))) }
+
+        let tx = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        tx.values = txValues
+        tx.keyTimes = keyTimes
+        tx.duration = duration
+        tx.calculationMode = calculationMode
+        if let t = timingFunction { tx.timingFunction = t }
+        tx.isAdditive = true
+        layer?.add(tx, forKey: "\(key)-px")
+
+        let ty = CAKeyframeAnimation(keyPath: "transform.translation.y")
+        ty.values = tyValues
+        ty.keyTimes = keyTimes
+        ty.duration = duration
+        ty.calculationMode = calculationMode
+        if let t = timingFunction { ty.timingFunction = t }
+        ty.isAdditive = true
+        layer?.add(ty, forKey: "\(key)-py")
     }
 
     private func playWiggle() {
