@@ -23,13 +23,12 @@ Per tick:
 ## Install
 
 ```sh
-cp com.axol.lateral-line.plist.example ~/Library/LaunchAgents/com.axol.lateral-line.plist
-# Edit the copy:
-#   Program       → absolute path to lateral-line.sh
-#   AXOL_CLOUD_URL → your deployed neuromast URL
-#   AXOL_POLL_TOKEN → the POLL_TOKEN you set in wrangler
-launchctl load ~/Library/LaunchAgents/com.axol.lateral-line.plist
+AXOL_CLOUD_URL=https://your-site.webflow.io \
+AXOL_POLL_TOKEN=your-bearer-token \
+./install.sh
 ```
+
+That renders the plist with absolute paths + your env, drops it into `~/Library/LaunchAgents/com.axol.lateral-line.plist`, and loads it. Re-running replaces the existing install.
 
 Verify it's running:
 
@@ -37,6 +36,15 @@ Verify it's running:
 launchctl list | grep lateral-line
 tail -f /tmp/axol-lateral-line.log
 ```
+
+To uninstall:
+
+```sh
+launchctl unload ~/Library/LaunchAgents/com.axol.lateral-line.plist
+rm ~/Library/LaunchAgents/com.axol.lateral-line.plist
+```
+
+(`com.axol.lateral-line.plist.example` is still in the repo for reference if you'd rather hand-edit.)
 
 ## Manual test
 
