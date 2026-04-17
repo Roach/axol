@@ -89,7 +89,7 @@
 
   .hero {
     text-align: center;
-    padding: 160px 0 24px;
+    padding: 200px 0 24px;
   }
 
   .stage-wrap {
@@ -422,7 +422,7 @@
 
   h1 {
     font-size: 52px;
-    margin: -8px 0 6px;
+    margin: -32px 0 6px;
     letter-spacing: -0.01em;
     color: #1F3A56;
   }
@@ -1251,6 +1251,7 @@ cd axol
     review:  { title: 'github',      body: 'PR #482 approved',                               priority: 'normal', alert: true,  sweat: false, kind: 'github' },
     shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship' },
     claude:  { title: 'claude-code', body: 'finished',                                       priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
+    recap:   { title: '',            body: "Let's recap —",                                  priority: null,     alert: false, sweat: false },
   };
 
   function escapeHtml(s) {
@@ -1341,7 +1342,7 @@ cd axol
     demoHistory.classList.remove('visible');
   }
 
-  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'shipped', 'claude', 'history'];
+  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'shipped', 'claude', 'recap', 'history'];
   let i = 0;
   function playNext() {
     const key = sequence[i];
