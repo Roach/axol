@@ -193,8 +193,8 @@ struct AlertAdapter {
         )
     }
 
-    func render(_ payload: [String: Any]) -> [String: Any]? {
-        guard match.evaluate(payload) else { return nil }
+    func render(_ payload: [String: Any]) -> AdapterOutcome {
+        guard match.evaluate(payload) else { return .noMatch }
         let template: [String: Any]?
         if let switchField = switchField {
             let key = (payload[switchField] as? String) ?? ""
@@ -202,15 +202,24 @@ struct AlertAdapter {
         } else {
             template = flatTemplate
         }
-        guard var t = template else { return nil }
+        guard var t = template else { return .noMatch }
         if let skipJson = t["skip_if"] as? [String: Any],
            let skip = SkipIf(json: skipJson),
            skip.evaluate(payload) {
-            return nil
+            return .skipped
         }
         t.removeValue(forKey: "skip_if")
-        return AdapterTemplate.render(t, payload: payload) as? [String: Any]
+        guard let out = AdapterTemplate.render(t, payload: payload) as? [String: Any] else {
+            return .noMatch
+        }
+        return .rendered(out)
     }
+}
+
+enum AdapterOutcome {
+    case rendered([String: Any])
+    case skipped
+    case noMatch
 }
 
 enum AdapterTemplate {
@@ -360,13 +369,31 @@ final class AdapterRegistry {
         }
     }
 
-    func route(_ payload: [String: Any]) -> [String: Any]? {
+    /// Result of routing a payload through the registered adapters. `.rendered`
+    /// means an adapter matched and produced an envelope; `.skipped` means an
+    /// adapter matched but its case's `skip_if` predicate intentionally
+    /// silenced the event (not an error); `.noMatch` means no adapter claimed
+    /// the payload.
+    enum RouteResult {
+        case rendered([String: Any], adapterName: String)
+        case skipped(adapterName: String)
+        case noMatch
+    }
+
+    func route(_ payload: [String: Any]) -> RouteResult {
+        var sawSkip: String? = nil
         for adapter in adapters {
-            if let env = adapter.render(payload) {
-                return env
+            switch adapter.render(payload) {
+            case .rendered(let env):
+                return .rendered(env, adapterName: adapter.name)
+            case .skipped:
+                sawSkip = adapter.name
+            case .noMatch:
+                continue
             }
         }
-        return nil
+        if let name = sawSkip { return .skipped(adapterName: name) }
+        return .noMatch
     }
 }
 
@@ -2365,8 +2392,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var candidate: [String: Any]?
         if data["title"] is String {
             candidate = data
-        } else if let adapted = adapters.route(data) {
-            candidate = adapted
+        } else {
+            switch adapters.route(data) {
+            case .rendered(let env, _):
+                candidate = env
+            case .skipped(let name):
+                NSLog("axol: skipped by adapter \(name)")
+                return
+            case .noMatch:
+                break
+            }
         }
         guard let raw = candidate,
               let envelope = EnvelopeValidator.validate(raw) else {
