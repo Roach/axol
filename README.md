@@ -175,7 +175,7 @@ Ambient behavior: she bobs, blinks, sways her gills, and occasionally fires a su
 
 ### Bubble behavior
 
-- Display duration scales with content length (2.5–6s for plain quips, 4–10s for alerts).
+- Display duration is fixed: 3.5s for plain quips/normal-priority, 6s for alerts.
 - Minimum 2.5s display window: non-urgent alerts arriving inside that window queue behind the current bubble (up to 4 pending) and pop once it dismisses. Urgent jumps the queue.
 - Urgent bubbles stay pinned until handled; non-urgent alerts arriving during a pinned urgent slip silently into history without interrupting.
 - Edge-aware: when the window is near a screen edge, the bubble and history panel bias a few pixels toward the open side.

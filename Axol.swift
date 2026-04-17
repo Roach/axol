@@ -1344,11 +1344,7 @@ final class BubbleView: NSView {
     }
 
     static func durationFor(text: String, isAlert: Bool) -> TimeInterval {
-        let chars = Double(text.count)
-        if isAlert {
-            return max(4.0, min(10.0, 2.5 + chars * 0.07))
-        }
-        return max(2.5, min(6.0, 1.6 + chars * 0.055))
+        return isAlert ? 6.0 : 3.5
     }
 
     /// Returns an x-origin for the panel that shifts toward the open side of
