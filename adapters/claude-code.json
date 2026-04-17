@@ -19,7 +19,7 @@
       "body": "{{message | default 'needs your input'}}",
       "priority": "urgent",
       "source": "claude-code",
-      "icon": "warn",
+      "icon": "claude",
       "actions": [
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],
@@ -31,7 +31,7 @@
       "body": "finished",
       "priority": "normal",
       "source": "claude-code",
-      "icon": "success",
+      "icon": "claude",
       "actions": [
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],
