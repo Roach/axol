@@ -403,12 +403,31 @@
     100% { transform: translateY(0); }
   }
 
-  /* Rapid side-to-side tilt — mirrors the native attention=wiggle one-shot. */
-  .stage.wiggling svg { animation: wiggle 0.5s ease-in-out 3; }
-  @keyframes wiggle {
+  /* Arm animations — rotate around the shoulder. Origin values are in SVG
+     user units (viewBox 0 0 220 200), pointing at the top of each arm
+     ellipse so the limb swings from where it meets the body. */
+  .arm-left  { transform-origin: 58px 141px; }
+  .arm-right { transform-origin: 162px 141px; }
+
+  /* Friendly wave — right arm raises and flaps a few times. */
+  .stage.waving .arm-right { animation: wave 0.5s ease-in-out 3; }
+  @keyframes wave {
     0%, 100% { transform: rotate(0deg); }
-    25%      { transform: rotate(-6deg); }
-    75%      { transform: rotate(6deg); }
+    25%      { transform: rotate(38deg); }
+    50%      { transform: rotate(22deg); }
+    75%      { transform: rotate(38deg); }
+  }
+
+  /* Both-arms-up celebration — brief pump then settle. */
+  .stage.celebrating .arm-left  { animation: celebrate-left  0.45s ease-in-out 3; }
+  .stage.celebrating .arm-right { animation: celebrate-right 0.45s ease-in-out 3; }
+  @keyframes celebrate-left {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(-55deg); }
+  }
+  @keyframes celebrate-right {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(55deg); }
   }
 
   .gills { transform-origin: 110px 95px; animation: sway 3.8s ease-in-out infinite; }
@@ -973,8 +992,12 @@
         </g>
         <ellipse cx="110" cy="110" rx="72" ry="62" fill="url(#bodyGrad)" />
         <ellipse cx="110" cy="125" rx="50" ry="38" fill="url(#bellyGrad)" />
-        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(-20 58 155)" />
-        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(20 162 155)" />
+        <g class="arm arm-left">
+          <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(-20 58 155)" />
+        </g>
+        <g class="arm arm-right">
+          <ellipse cx="162" cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(20 162 155)" />
+        </g>
         <g class="eyes">
           <circle cx="88"  cy="105" r="7" fill="#2D2533" />
           <circle cx="132" cy="105" r="7" fill="#2D2533" />
@@ -1252,12 +1275,12 @@ cd axol
   };
 
   const demos = {
-    hello:   { title: 'Hello!',      body: "I'm Axol!",                                      priority: null,     alert: false, sweat: false, wiggle: true },
+    hello:   { title: 'Hello!',      body: "I'm Axol!",                                      priority: null,     alert: false, sweat: false, wave: true },
     intro:   { title: '',            body: "I'm here to help. Let's go!",                    priority: null,     alert: false, sweat: false },
     deploy:  { title: 'ci-bot',      body: 'deploy succeeded',                               priority: 'normal', alert: true,  sweat: false, kind: 'success' },
     green:   { title: 'ci-bot',      body: 'tests pass',                                     priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'success' },
     review:  { title: 'github',      body: 'PR #482 approved',                               priority: 'normal', alert: true,  sweat: false, kind: 'github' },
-    shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship', wiggle: true },
+    shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship', celebrate: true },
     claude:  { title: 'claude-code', body: 'finished',                                       priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
     recap:   { title: '',            body: "Let's recap —",                                  priority: null,     alert: false, sweat: false },
     signoff: { title: '',            body: "Ping me anytime!",                                priority: null,     alert: false, sweat: false },
@@ -1308,11 +1331,17 @@ cd axol
       stage.classList.add('hopping');
       setTimeout(() => stage.classList.remove('hopping'), 1200);
     }
-    if (d.wiggle) {
-      stage.classList.remove('wiggling');
+    if (d.wave) {
+      stage.classList.remove('waving');
       void stage.offsetWidth;
-      stage.classList.add('wiggling');
-      setTimeout(() => stage.classList.remove('wiggling'), 1600);
+      stage.classList.add('waving');
+      setTimeout(() => stage.classList.remove('waving'), 1600);
+    }
+    if (d.celebrate) {
+      stage.classList.remove('celebrating');
+      void stage.offsetWidth;
+      stage.classList.add('celebrating');
+      setTimeout(() => stage.classList.remove('celebrating'), 1500);
     }
     clearTimeout(bubbleTimer);
     const dur = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
