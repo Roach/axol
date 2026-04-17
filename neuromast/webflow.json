@@ -1,6 +1,14 @@
 {
   "siteId": "69e1f60eac1fe7e4301ee67e",
   "cloud": {
-    "framework": "astro"
+    "framework": "astro",
+    "project_id": "fedc5f58-192e-4db9-b85b-e4871f98ff2b"
+  },
+  "telemetry": {
+    "global": {
+      "allowTelemetry": true,
+      "lastPrompted": 1776466658170,
+      "version": "1.14.0"
+    }
   }
 }
