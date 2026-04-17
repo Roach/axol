@@ -1239,16 +1239,13 @@ cd axol
   };
 
   const demos = {
-    hello:   { title: 'Hello!',                        body: "I'm Axol.",                  priority: null,     alert: false, sweat: false },
-    deploy:  { title: 'ci-bot',                        body: 'deploy succeeded',           priority: 'normal', alert: true,  sweat: false, kind: 'success' },
-    green:   { title: 'ci-bot',                        body: 'all tests passing',          priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'success' },
-    shipped: { title: 'main',                          body: 'shipped to production',      priority: 'normal', alert: true,  sweat: false, kind: 'ship' },
-    quip:    { title: "Sip of water? You earned it.",                                      priority: null,     alert: false, sweat: false },
-    review:  { title: 'github',                        body: 'PR #482 approved',           priority: 'normal', alert: true,  sweat: false, kind: 'github' },
-    failing: { title: 'feature/auth',                  body: 'all green on first try!',    priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'sparkle' },
-    claude:  { title: 'claude-code',                   body: 'task complete',              priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
-    stretch: { title: "Stand up, stretch, look away.",                                     priority: null,     alert: false, sweat: false },
-    nap:     { title: "You're doing great.",                                               priority: null,     alert: false, sweat: false },
+    hello:   { title: 'Hello!',      body: "I'm Axol!",                                      priority: null,     alert: false, sweat: false },
+    intro:   { title: '',            body: "I'm here to help you get things done. Let's go!",priority: null,     alert: false, sweat: false },
+    deploy:  { title: 'ci-bot',      body: 'deploy succeeded',                               priority: 'normal', alert: true,  sweat: false, kind: 'success' },
+    green:   { title: 'ci-bot',      body: 'tests pass',                                     priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'success' },
+    review:  { title: 'github',      body: 'PR #482 approved',                               priority: 'normal', alert: true,  sweat: false, kind: 'github' },
+    shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship' },
+    claude:  { title: 'claude-code', body: 'finished',                                       priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
   };
 
   function escapeHtml(s) {
@@ -1258,7 +1255,12 @@ cd axol
   }
   function bubbleHtml(d) {
     const icon = d.kind && ICONS[d.kind] ? '<span class="bicon">' + ICONS[d.kind] + '</span>' : '';
-    const t = '<span class="btitle">' + icon + escapeHtml(d.title) + '</span>';
+    // Title-less messages get their body promoted into the title slot so
+    // conversational quips read as one line rather than a quiet subhead.
+    if (!d.title && d.body) {
+      return '<span class="btitle">' + icon + escapeHtml(d.body) + '</span>';
+    }
+    const t = '<span class="btitle">' + icon + escapeHtml(d.title || '') + '</span>';
     const b = d.body ? '<span class="bbody">' + escapeHtml(d.body) + '</span>' : '';
     return t + b;
   }
@@ -1303,9 +1305,10 @@ cd axol
   // Static history timeline shown when sequence hits 'history' — newest first.
   const historyShape = [
     { key: 'claude',  source: 'claude-code', time: 'now' },
+    { key: 'shipped', source: 'ci-bot',      time: '1m' },
     { key: 'review',  source: 'github',      time: '2m' },
-    { key: 'shipped', source: 'ci-bot',      time: '6m' },
-    { key: 'green',   source: 'ci-bot',      time: '9m' },
+    { key: 'green',   source: 'ci-bot',      time: '3m' },
+    { key: 'deploy',  source: 'ci-bot',      time: '4m' },
   ];
   const demoHistory = document.getElementById('demoHistory');
   const demoHistoryRows = document.getElementById('demoHistoryRows');
@@ -1333,7 +1336,7 @@ cd axol
     demoHistory.classList.remove('visible');
   }
 
-  const sequence = ['hello', 'deploy', 'green', 'review', 'failing', 'claude', 'shipped', 'stretch', 'quip', 'history', 'nap'];
+  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'shipped', 'claude', 'history'];
   let i = 0;
   function playNext() {
     const key = sequence[i];
