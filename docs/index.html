@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — a cheerful desktop companion</title>
+<meta name="description" content="Axol is a tiny axolotl that lives in the corner of your screen and surfaces Claude Code hook events as speech bubbles." />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — a cheerful desktop companion" />
+<meta property="og:description" content="A tiny axolotl that lives in the corner of your screen, surfaces alerts from any tool that can POST JSON, and cheers you on." />
+<meta property="og:url" content="https://roach.github.io/axol/" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content="https://github.com/user-attachments/assets/33b71358-71b8-42bf-8400-a6b2630dbd02" />
+<meta property="og:image:width" content="485" />
+<meta property="og:image:height" content="255" />
+<meta property="og:image:alt" content="Axol, a pink axolotl, waving from the corner of a screen." />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Axol — a cheerful desktop companion" />
+<meta name="twitter:description" content="A tiny axolotl that surfaces alerts from any tool that can POST JSON, and cheers you on." />
+<meta name="twitter:image" content="https://github.com/user-attachments/assets/33b71358-71b8-42bf-8400-a6b2630dbd02" />
+<style>
+  :root {
+    --pink-1: #FFF4FA;
+    --pink-2: #FFE5F0;
+    --pink-3: #FFC9E2;
+    --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533;
+    --ink-soft: #6E5F6B;
+    --blue-bead: #7FC6ED;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px,
+      rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px,
+      transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px,
+      rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 10;
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 40px 0 24px;
+  }
+
+  .stage-wrap {
+    position: relative;
+    display: inline-block;
+    width: 220px;
+    height: 190px;
+  }
+
+  .stage {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+
+  .stage svg {
+    width: 150px;
+    height: auto;
+    animation: bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+
+  .bubble {
+    position: absolute;
+    left: 50%;
+    bottom: 141px;
+    transform: translate(-50%, 8px) scale(0.92);
+    max-width: 260px;
+    min-width: 120px;
+    padding: 10px 14px;
+    background: white;
+    color: var(--ink);
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    pointer-events: none;
+    word-wrap: break-word;
+  }
+  .bubble.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .bubble::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: white;
+    transform: translateX(-50%) rotate(45deg);
+    box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.04);
+  }
+  .bubble.alert {
+    background: var(--pink-1);
+    border: 1px solid var(--pink-3);
+  }
+  .bubble.alert::after {
+    background: var(--pink-1);
+  }
+  .bubble.low {
+    background: #FAF7F9;
+    color: #8A7F87;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  }
+  .bubble.low::after { background: #FAF7F9; }
+  .bubble.low .btitle { color: #6E5F6B; font-weight: 500; }
+  .bubble.low .bbody  { color: #9A8E95; }
+  .bubble.urgent {
+    background: #FFEEF5;
+    border: 1.5px solid var(--pink-accent);
+  }
+  .bubble.urgent::after {
+    bottom: -6px;
+    width: 11px;
+    height: 11px;
+    background: #FFEEF5;
+    border-right: 1.5px solid var(--pink-accent);
+    border-bottom: 1.5px solid var(--pink-accent);
+    box-shadow: none;
+  }
+  .bubble.alert .btitle::before {
+    content: "↗ ";
+    color: var(--pink-accent);
+    font-weight: 600;
+  }
+  .bubble .btitle {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .bubble .bbody {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.35;
+  }
+
+  .mouth-open {
+    display: none;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .stage.talking .mouth-closed { display: none; }
+  .stage.talking .mouth-open {
+    display: block;
+    animation: talk 0.32s ease-in-out infinite;
+  }
+  @keyframes talk {
+    0%, 100% { transform: scaleY(1); }
+    50%      { transform: scaleY(0.45); }
+  }
+
+  #worry {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 80px;
+    pointer-events: none;
+  }
+  .wb {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: var(--s, 6px);
+    height: var(--s, 6px);
+    margin-left: calc(var(--s, 6px) / -2);
+    border-radius: 50%;
+    background: #B9E2F5;
+    border: 1px solid #5EA6D0;
+    opacity: 0;
+  }
+  .wb-1 { --s: 6px; }
+  .wb-2 { --s: 5px; }
+  .wb-3 { --s: 7px; }
+
+  .stage.has-alert ~ #worry .wb-1 { animation: worry-rise-a 2.6s ease-out infinite; }
+  .stage.has-alert ~ #worry .wb-2 { animation: worry-rise-b 2.6s ease-out infinite 0.87s; }
+  .stage.has-alert ~ #worry .wb-3 { animation: worry-rise-c 2.6s ease-out infinite 1.74s; }
+
+  .bubble.visible ~ #worry .wb { animation: none; }
+
+  @keyframes worry-rise-a {
+    0%   { opacity: 0;    transform: translate(0, 0)        scale(0.4); }
+    15%  { opacity: 0.85; }
+    50%  { opacity: 0.85; transform: translate(3px, -18px)  scale(0.95); }
+    85%  { opacity: 0.7;  transform: translate(5px, -32px)  scale(1.05); }
+    100% { opacity: 0;    transform: translate(7px, -40px)  scale(1.1); }
+  }
+  @keyframes worry-rise-b {
+    0%   { opacity: 0;    transform: translate(0, 0)        scale(0.4); }
+    15%  { opacity: 0.85; }
+    50%  { opacity: 0.85; transform: translate(-2px, -18px) scale(0.95); }
+    85%  { opacity: 0.7;  transform: translate(-6px, -32px) scale(1.05); }
+    100% { opacity: 0;    transform: translate(-8px, -40px) scale(1.1); }
+  }
+  @keyframes worry-rise-c {
+    0%   { opacity: 0;    transform: translate(0, 0)        scale(0.4); }
+    15%  { opacity: 0.85; }
+    50%  { opacity: 0.85; transform: translate(2px, -19px)  scale(0.95); }
+    85%  { opacity: 0.7;  transform: translate(1px, -33px)  scale(1.05); }
+    100% { opacity: 0;    transform: translate(3px, -40px)  scale(1.1); }
+  }
+
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  .stage.hopping svg { animation: hop 0.55s ease-out 2; }
+  @keyframes hop {
+    0%   { transform: translateY(0); }
+    35%  { transform: translateY(-22px); }
+    60%  { transform: translateY(0); }
+    75%  { transform: translateY(-8px); }
+    100% { transform: translateY(0); }
+  }
+
+  .gills { transform-origin: 110px 95px; animation: sway 3.8s ease-in-out infinite; }
+  .gills-right { animation-delay: -1.9s; }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-2deg); }
+    50%      { transform: rotate(3deg); }
+  }
+
+  .eyes {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: blink 5.5s infinite;
+  }
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    94%, 98%      { transform: scaleY(0.08); }
+  }
+
+  h1 {
+    font-size: 52px;
+    margin: 18px 0 6px;
+    letter-spacing: -0.01em;
+    color: #1F3A56;
+  }
+
+  .tagline {
+    font-size: 18px;
+    color: rgba(31, 58, 86, 0.75);
+    margin: 0 auto 28px;
+    max-width: 440px;
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--ink);
+    color: white;
+    padding: 11px 20px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .cta:hover { background: var(--pink-accent); transform: translateY(-1px); }
+  .cta svg { width: 16px; height: 16px; fill: currentColor; }
+
+  section {
+    background: white;
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin-top: 24px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+
+  section h2 {
+    font-size: 22px;
+    margin: 0 0 14px;
+    color: var(--pink-accent);
+  }
+
+  /* Hero pitch cards */
+  .pitch {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 880px;
+    margin: 48px auto 0;
+    text-align: left;
+  }
+  .pitch-card {
+    position: relative;
+    padding: 24px 22px 22px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 18px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 10px 30px -12px rgba(60, 100, 150, 0.18);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .pitch-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 18px 40px -14px rgba(200, 80, 140, 0.28);
+  }
+  .pitch-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    color: var(--pink-accent);
+    background: linear-gradient(135deg, #FFE5F0 0%, #FFC9E2 100%);
+    box-shadow: 0 4px 12px -4px rgba(200, 80, 140, 0.35);
+  }
+  .pitch-icon svg { width: 22px; height: 22px; }
+  .pitch-card h3 {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .pitch-card p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .pitch-card p code {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(243, 221, 233, 0.8);
+  }
+
+  @media (max-width: 760px) {
+    .pitch { grid-template-columns: 1fr; gap: 12px; max-width: 480px; }
+    .pitch-card { padding: 20px; }
+  }
+  .features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 15px;
+  }
+  .features .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    color: var(--pink-accent);
+    margin-top: 2px;
+  }
+  .features .icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  pre {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 10px 0 18px;
+    color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+  /* Minimal JSON syntax highlighting */
+  .tok-key     { color: #B33A7A; }
+  .tok-string  { color: #3A6E4A; }
+  .tok-number  { color: #7A5A1F; }
+  .tok-bool    { color: #7A5A1F; font-weight: 600; }
+  .tok-null    { color: #9A8E95; font-style: italic; }
+  .tok-punct   { color: #9A8E95; }
+  .tok-tmpl    { color: var(--pink-accent); font-weight: 600; }
+
+  /* Shell highlighting (single-token — comments + flags) */
+  .tok-flag    { color: #B33A7A; }
+  .tok-cmd     { color: #3A4A7A; font-weight: 600; }
+  .tok-str     { color: #3A6E4A; }
+  p code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+
+  .pill {
+    display: inline-block;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* adapter flow diagram (vertical) */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 16px 0 22px;
+  }
+  .flow-step {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px 14px;
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .flow-step b {
+    color: var(--pink-accent);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding-top: 10px;
+  }
+  .flow-step .desc {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin: 0 0 8px;
+  }
+  .flow-step pre {
+    margin: 0;
+    padding: 10px 12px;
+    background: white;
+    border: 1px solid #F3DDE9;
+    border-radius: 8px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  /* Static, inline clone of the hero .bubble (no absolute positioning, always visible). */
+  .bubble-static {
+    position: relative;
+    display: inline-block;
+    max-width: 260px;
+    min-width: 120px;
+    padding: 10px 14px 12px;
+    margin: 10px 0 18px;
+    background: white;
+    border: 1.5px solid var(--pink-accent);
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--ink);
+    word-wrap: break-word;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+  .bubble-static::after {
+    content: "";
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    width: 11px;
+    height: 11px;
+    background: white;
+    border-right: 1.5px solid var(--pink-accent);
+    border-bottom: 1.5px solid var(--pink-accent);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .bubble-static .btitle {
+    display: block;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .bubble-static .btitle::before {
+    content: "↗ ";
+    color: var(--pink-accent);
+    font-weight: 600;
+  }
+  .bubble-static .bbody {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.35;
+  }
+  .flow-arrow {
+    align-self: center;
+    color: var(--pink-accent);
+    font-size: 20px;
+    line-height: 1;
+    opacity: 0.55;
+    padding: 4px 0;
+    text-align: left;
+    margin-left: 48px;
+  }
+
+  @media (max-width: 520px) {
+    .flow-step {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .flow-step b { padding-top: 0; }
+    .flow-arrow { margin-left: 12px; }
+  }
+
+  /* two adapter cards side-by-side */
+  .adapter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 14px 0 6px;
+  }
+  .adapter-card {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    min-width: 0;
+  }
+  .adapter-card header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .adapter-card header b { color: var(--ink); font-weight: 600; }
+  .adapter-card header .tag {
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--pink-accent);
+    background: white;
+    border: 1px solid #F3DDE9;
+    border-radius: 6px;
+    padding: 1px 6px;
+    font-weight: 600;
+  }
+  .adapter-card pre {
+    margin: 0;
+    padding: 10px 12px;
+    background: white;
+    border-radius: 8px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* template language chips */
+  .tmpl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    margin: 10px 0 0;
+    font-size: 13px;
+    align-items: baseline;
+  }
+  .tmpl code { color: var(--pink-accent); }
+  .tmpl span { color: var(--ink-soft); }
+
+  @media (max-width: 640px) {
+    .adapter-grid { grid-template-columns: 1fr; }
+    .flow-arrow { transform: rotate(90deg); }
+  }
+
+  footer {
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 13px;
+    padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  footer a:hover { opacity: 0.7; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 40px; }
+    .features { grid-template-columns: 1fr; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="stage-wrap">
+      <div class="bubble" id="bubble"></div>
+      <div class="stage" id="stage">
+      <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bodyGrad" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <radialGradient id="bellyGrad" cx="50%" cy="60%" r="50%">
+            <stop offset="0%" stop-color="#FFE5F0" />
+            <stop offset="100%" stop-color="#FFCCE2" />
+          </radialGradient>
+        </defs>
+        <g class="gills gills-left">
+          <ellipse cx="52" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+        </g>
+        <g class="gills gills-right">
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="url(#bodyGrad)" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="url(#bellyGrad)" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(20 162 155)" />
+        <g class="eyes">
+          <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+          <circle cx="132" cy="105" r="7" fill="#2D2533" />
+          <circle cx="90"  cy="102" r="2.2" fill="white" />
+          <circle cx="134" cy="102" r="2.2" fill="white" />
+        </g>
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <g class="mouth-group">
+          <path class="mouth-closed"
+                d="M 98 130 Q 110 138 122 130"
+                stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          <ellipse class="mouth-open"
+                   cx="110" cy="134" rx="6" ry="4" fill="#7A2D4D" />
+        </g>
+      </svg>
+      </div>
+      <div id="worry">
+        <div class="wb wb-1"></div>
+        <div class="wb wb-2"></div>
+        <div class="wb wb-3"></div>
+      </div>
+    </div>
+    <h1>Axol</h1>
+    <p class="tagline">A tiny axolotl that lives in the corner of your screen, surfaces alerts from any tool that can POST JSON, and cheers you on.</p>
+    <a class="cta" href="https://github.com/Roach/axol">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      View on GitHub
+    </a>
+
+    <div class="pitch">
+      <article class="pitch-card">
+        <div class="pitch-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </div>
+        <h3>Alerts with a face.</h3>
+        <p>Any tool that can <code>curl</code> can pop her speech bubble. Click to jump back to the terminal, URL, or file that needs you.</p>
+      </article>
+
+      <article class="pitch-card">
+        <div class="pitch-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </div>
+        <h3>A little presence.</h3>
+        <p>Drags anywhere on screen. Nudges you to breathe, hydrate, stretch. Fidgets and naps when things go quiet.</p>
+      </article>
+
+      <article class="pitch-card">
+        <div class="pitch-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <h3>Nothing heavy.</h3>
+        <p>One 700&#8239;KB Swift binary. No Electron, no helpers, no telemetry. Idles at 0&nbsp;% CPU and ~40&nbsp;MB RAM.</p>
+      </article>
+    </div>
+  </header>
+
+  <section>
+    <h2>install</h2>
+    <p>On macOS with the Xcode command line tools:</p>
+<pre><code class="lang-sh">git clone https://github.com/Roach/axol.git
+cd axol
+./build.sh
+./axol</code></pre>
+  </section>
+
+  <section>
+    <h2>send her alerts</h2>
+    <p>Axol listens on <code>127.0.0.1:47329</code>. Anything you can <code>curl</code> can talk to her — post an envelope from a script, a Makefile, a CI step:</p>
+<pre><code class="lang-sh">curl -s -X POST http://127.0.0.1:47329/ \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title":    "ci-bot",
+    "body":     "build passed on main",
+    "priority": "normal",
+    "source":   "github-actions",
+    "actions":  [{ "type": "open-url", "url": "https://github.com/.../runs/1" }]
+  }'</code></pre>
+    <p>Required field: <code>title</code>. Priority <code>high</code> / <code>urgent</code> floats worry bubbles above her head; <code>urgent</code> also pins the speech bubble open until you handle it. Actions are a closed set — <code>focus-pid</code>, <code>open-url</code>, <code>reveal-file</code>, <code>noop</code> — so there's no shell execution path.</p>
+  </section>
+
+  <section>
+    <h2>lightweight plugins</h2>
+    <p>Adapters are JSON files that translate a third-party payload into Axol's envelope. Drop one into <code>~/Library/Application Support/Axol/adapters/</code> and anything that POSTs JSON to <code>localhost:47329</code> can talk to her — no code required.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <b>incoming</b>
+        <div>
+          <p class="desc">Whatever JSON your tool already emits. GitHub sends this to a webhook on every workflow run.</p>
+<pre><code class="lang-json">{
+  "workflow_run": {
+    "conclusion":  "failure",
+    "head_branch": "main",
+    "html_url":    "https://github.com/.../runs/42"
+  }
+}</code></pre>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <b>adapter</b>
+        <div>
+          <p class="desc"><code>match</code> picks the adapter. <code>switch</code> + <code>cases</code> choose a template. <code>{{…}}</code> placeholders are filled from the payload.</p>
+<pre><code class="lang-json">{
+  "match":  { "field": "workflow_run", "exists": true },
+  "switch": "workflow_run.conclusion",
+  "cases": {
+    "failure": {
+      "title":    "{{workflow_run.head_branch}}",
+      "body":     "CI failed",
+      "priority": "urgent",
+      "actions":  [{ "type": "open-url",
+                     "url":  "{{workflow_run.html_url}}" }]
+    }
+  }
+}</code></pre>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <b>envelope</b>
+        <div>
+          <p class="desc">Axol's common shape. Any payload that reaches the bubble goes through this — adapters can't smuggle in unknown action types or shell commands.</p>
+<pre><code class="lang-json">{
+  "title":    "main",
+  "body":     "CI failed",
+  "priority": "urgent",
+  "actions":  [{ "type": "open-url",
+                 "url":  "https://github.com/.../runs/42" }]
+}</code></pre>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <b>bubble</b>
+        <div>
+          <p class="desc">Urgent bubbles pin open until clicked. Clicking runs the first action — here, opening the workflow run in the browser.</p>
+          <div class="bubble-static">
+            <span class="btitle">main</span>
+            <span class="bbody">CI failed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:18px">One adapter ships with Axol (<code>adapters/claude-code.json</code>, for Claude Code hooks). Everything else you add lives in <code>~/Library/Application Support/Axol/adapters/</code>.</p>
+
+    <p style="margin-top:14px"><b>Template language</b> — deliberately tiny:</p>
+    <div class="tmpl">
+      <code>{{field}}</code>            <span>top-level substitution</span>
+      <code>{{nested.field}}</code>     <span>dot-path into objects</span>
+      <code>{{field | default 'x'}}</code> <span>fallback when missing</span>
+      <code>{{basename path}}</code>    <span>last path component</span>
+      <code>{{trim field}}</code>       <span>strip surrounding whitespace</span>
+    </div>
+
+    <p style="margin-top:20px">
+      <a class="cta" href="https://github.com/Roach/axol#adapters">Full spec in the README →</a>
+    </p>
+  </section>
+
+  <footer>
+    Made with 🌸 · MIT licensed · <a href="https://github.com/Roach/axol">source on GitHub</a>
+  </footer>
+
+</div>
+
+<script>
+  const bubble = document.getElementById('bubble');
+  const stage = document.getElementById('stage');
+  let bubbleTimer = null;
+
+  const demos = {
+    hello:   { title: 'Hello!',                        body: "I'm Axol.",                  priority: null,     alert: false, sweat: false },
+    deploy:  { title: 'ci-bot',                        body: 'deploy starting',            priority: 'low',    alert: false, sweat: false },
+    green:   { title: 'ci-bot',                        body: 'all tests passing',          priority: 'normal', alert: true,  sweat: false, hop: true },
+    shipped: { title: 'main',                          body: 'shipped to production',      priority: 'normal', alert: true,  sweat: false },
+    quip:    { title: "Sip of water? You earned it.",                                      priority: null,     alert: false, sweat: false },
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  }
+  function bubbleHtml(d) {
+    const t = '<span class="btitle">' + escapeHtml(d.title) + '</span>';
+    const b = d.body ? '<span class="bbody">' + escapeHtml(d.body) + '</span>' : '';
+    return t + b;
+  }
+  function demoText(d) {
+    return d.body ? d.title + ' ' + d.body : d.title;
+  }
+
+  function bubbleDurationMs(text, isAlert) {
+    const n = (text || '').length;
+    return isAlert
+      ? Math.max(4000, Math.min(10000, 2500 + n * 80))
+      : Math.max(3000, Math.min(7000, 2000 + n * 60));
+  }
+
+  function showDemo(key) {
+    const d = demos[key];
+    if (!d) return;
+    bubble.innerHTML = bubbleHtml(d);
+    bubble.classList.remove('alert', 'low', 'urgent');
+    if (d.alert) bubble.classList.add('alert');
+    if (d.priority === 'low')    bubble.classList.add('low');
+    if (d.priority === 'urgent') bubble.classList.add('urgent');
+    bubble.classList.add('visible');
+    stage.classList.add('talking');
+    if (d.sweat) stage.classList.add('has-alert');
+    if (d.hop) {
+      stage.classList.remove('hopping');
+      void stage.offsetWidth;
+      stage.classList.add('hopping');
+      setTimeout(() => stage.classList.remove('hopping'), 1200);
+    }
+    clearTimeout(bubbleTimer);
+    const dur = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
+    bubbleTimer = setTimeout(() => {
+      bubble.classList.remove('visible');
+      stage.classList.remove('talking');
+      stage.classList.remove('has-alert');
+    }, dur);
+  }
+
+  const sequence = ['hello', 'deploy', 'green', 'shipped', 'quip'];
+  let i = 0;
+  function playNext() {
+    showDemo(sequence[i]);
+    const d = demos[sequence[i]];
+    const dur = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
+    const gap = dur + 700;
+    i++;
+    if (i < sequence.length) setTimeout(playNext, gap);
+  }
+  setTimeout(playNext, 900);
+
+  // --- Minimal syntax highlighter -----------------------------------------
+  // Walks every <code class="lang-json"> / "lang-sh" block and wraps tokens
+  // with <span> classes the stylesheet colors. Pure-JS, no deps.
+  function escapeHtml(s) {
+    return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+  }
+  function highlightJson(src) {
+    // Single-pass tokenizer — emits HTML from a scanner so we never
+    // re-match spans we've already written.
+    const TOKEN = /("(?:[^"\\]|\\.)*")(\s*:)?|(\{\{[^}]+\}\})|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d+)?|([{}\[\],:])/g;
+    let out = '', last = 0, m;
+    while ((m = TOKEN.exec(src)) !== null) {
+      out += escapeHtml(src.slice(last, m.index));
+      if (m[1]) {
+        // Quoted string. If followed by a colon, it's a key.
+        const cls = m[2] ? 'tok-key' : 'tok-string';
+        out += `<span class="${cls}">${escapeHtml(m[1])}</span>`;
+        if (m[2]) out += `<span class="tok-punct">${escapeHtml(m[2])}</span>`;
+      } else if (m[3]) {
+        out += `<span class="tok-tmpl">${escapeHtml(m[3])}</span>`;
+      } else if (m[4]) {
+        out += `<span class="tok-bool">${m[4]}</span>`;
+      } else if (m[5]) {
+        out += `<span class="tok-punct">${m[5]}</span>`;
+      } else if (m[0] === 'null') {
+        out += `<span class="tok-null">null</span>`;
+      } else {
+        out += `<span class="tok-number">${m[0]}</span>`;
+      }
+      last = m.index + m[0].length;
+    }
+    out += escapeHtml(src.slice(last));
+    return out;
+  }
+  function highlightSh(src) {
+    // Scanner: leading command on each line, then flags and single-quoted
+    // strings. Never re-tokenizes its own output.
+    const TOKEN = /(^|\n)(\s*)([A-Za-z_][\w./-]*)|('(?:[^']|\\.)*')|(?:^|\s)(--?[A-Za-z][\w-]*)/g;
+    let out = '', last = 0, m;
+    while ((m = TOKEN.exec(src)) !== null) {
+      out += escapeHtml(src.slice(last, m.index));
+      if (m[3]) {
+        out += escapeHtml((m[1] || '') + m[2]) +
+               `<span class="tok-cmd">${escapeHtml(m[3])}</span>`;
+      } else if (m[4]) {
+        out += `<span class="tok-str">${escapeHtml(m[4])}</span>`;
+      } else if (m[5]) {
+        const lead = m[0].slice(0, m[0].length - m[5].length);
+        out += escapeHtml(lead) +
+               `<span class="tok-flag">${escapeHtml(m[5])}</span>`;
+      }
+      last = m.index + m[0].length;
+    }
+    out += escapeHtml(src.slice(last));
+    return out;
+  }
+  document.querySelectorAll('code.lang-json').forEach(el => {
+    el.innerHTML = highlightJson(el.textContent);
+  });
+  document.querySelectorAll('code.lang-sh').forEach(el => {
+    el.innerHTML = highlightSh(el.textContent);
+  });
+</script>
+</body>
+</html>

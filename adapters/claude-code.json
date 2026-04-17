@@ -1,0 +1,38 @@
+{
+  "name": "claude-code",
+  "match": { "field": "hook_event_name", "exists": true },
+  "switch": "hook_event_name",
+  "cases": {
+    "SessionStart": {
+      "title": "{{basename cwd}}",
+      "body": "started",
+      "priority": "low",
+      "source": "claude-code",
+      "actions": [
+        { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
+      ],
+      "context": { "cwd": "{{cwd}}", "session_id": "{{session_id}}" }
+    },
+    "Notification": {
+      "title": "{{basename cwd}}",
+      "body": "{{message | default 'needs your input'}}",
+      "priority": "urgent",
+      "source": "claude-code",
+      "actions": [
+        { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
+      ],
+      "context": { "cwd": "{{cwd}}", "session_id": "{{session_id}}" },
+      "skip_if": { "field": "message", "matches": "waiting for your input" }
+    },
+    "Stop": {
+      "title": "{{basename cwd}}",
+      "body": "finished",
+      "priority": "normal",
+      "source": "claude-code",
+      "actions": [
+        { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
+      ],
+      "context": { "cwd": "{{cwd}}", "session_id": "{{session_id}}" }
+    }
+  }
+}

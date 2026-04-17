@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Compiled Swift binary
+/axol
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Claude Code local settings
+.claude/
