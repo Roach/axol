@@ -1288,7 +1288,7 @@ final class BubbleView: NSView {
         let fullText = title + " " + bodyText
         let isAlert = priority == "high" || priority == "urgent"
         let fullDuration = Self.durationFor(text: fullText, isAlert: isAlert)
-        let talkDuration = min(fullDuration, 3.5)
+        let talkDuration = Self.talkDurationFor(text: fullText)
         onShow?(talkDuration)
 
         if !isUrgent {
@@ -1441,6 +1441,14 @@ final class BubbleView: NSView {
 
     static func durationFor(text: String, isAlert: Bool) -> TimeInterval {
         return isAlert ? 6.0 : 3.5
+    }
+
+    /// How long the mouth-flap animation should run. Scales with character
+    /// count (~0.065s per char, ~15 chars/sec spoken pace) so short quips
+    /// stop talking before the full bubble dismisses, and longer messages
+    /// keep her mouth moving proportionally. Clamped 0.5–3.5s.
+    static func talkDurationFor(text: String) -> TimeInterval {
+        return max(0.5, min(3.5, Double(text.count) * 0.065))
     }
 
     /// Returns an x-origin for the panel that shifts toward the open side of
