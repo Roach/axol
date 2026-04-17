@@ -1,4 +1,4 @@
-<img width="485" height="255" alt="image" src="https://github.com/user-attachments/assets/33b71358-71b8-42bf-8400-a6b2630dbd02" />
+<img width="450" height="237" alt="axol" src="https://github.com/user-attachments/assets/0278e1d5-b354-4090-bd69-0ceba1767a9f" />
 
 # Axol
 
