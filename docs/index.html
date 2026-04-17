@@ -89,7 +89,7 @@
 
   .hero {
     text-align: center;
-    padding: 200px 0 24px;
+    padding: 225px 0 24px;
   }
 
   .stage-wrap {
@@ -1252,6 +1252,7 @@ cd axol
     shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship' },
     claude:  { title: 'claude-code', body: 'finished',                                       priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
     recap:   { title: '',            body: "Let's recap —",                                  priority: null,     alert: false, sweat: false },
+    signoff: { title: '',            body: "Ping me anytime!",                                priority: null,     alert: false, sweat: false },
   };
 
   function escapeHtml(s) {
@@ -1342,7 +1343,7 @@ cd axol
     demoHistory.classList.remove('visible');
   }
 
-  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'shipped', 'claude', 'recap', 'history'];
+  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'shipped', 'claude', 'recap', 'history', 'signoff'];
   let i = 0;
   function playNext() {
     const key = sequence[i];
