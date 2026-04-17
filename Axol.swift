@@ -436,6 +436,7 @@ final class AxolCharacterView: NSView {
     private let rightGillsLayer = CALayer()
     private let armLeftLayer = CALayer()
     private let armRightLayer = CALayer()
+    private let napTwitchTimer = Scheduled()
     private let eyesLayer = CALayer()
     private let mouthClosedLayer = CAShapeLayer()
     private let mouthOpenLayer = CAShapeLayer()
@@ -895,9 +896,39 @@ final class AxolCharacterView: NSView {
         }
         dimMouth(mouthClosedLayer)
         dimMouth(mouthOpenLayer)
+
+        scheduleNapTwitch()
+    }
+
+    /// Occasional small foot twitch while napping — a tiny rotation on one
+    /// arm layer that reads as a dream-state micromovement. Alternates sides,
+    /// fires on a randomized 4–9s cadence, and stops when the nap ends.
+    private func scheduleNapTwitch() {
+        let delay = 4.0 + Double.random(in: 0...5.0)
+        napTwitchTimer.run(after: delay) { [weak self] in
+            guard let self = self else { return }
+            self.playFootTwitch(leftSide: Bool.random())
+            self.scheduleNapTwitch()
+        }
+    }
+
+    private func playFootTwitch(leftSide: Bool) {
+        let target = leftSide ? armLeftLayer : armRightLayer
+        let peak: CGFloat = leftSide ? -6 : 6     // small outward kick
+        let a = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        a.values   = [0.0, Double(peak) * .pi / 180, 0.0, Double(peak * 0.4) * .pi / 180, 0.0]
+        a.keyTimes = [0.0, 0.25, 0.55, 0.78, 1.0]
+        a.duration = 0.7
+        a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        a.isAdditive = true
+        target.add(a, forKey: "nap-twitch")
     }
 
     func leaveNap() {
+        napTwitchTimer.cancel()
+        armLeftLayer.removeAnimation(forKey: "nap-twitch")
+        armRightLayer.removeAnimation(forKey: "nap-twitch")
+
         // Reverse fades via explicit animations (see enterNap note on why).
         let openEyes = CABasicAnimation(keyPath: "transform.scale.y")
         openEyes.fromValue = 0.08
