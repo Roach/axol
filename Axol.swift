@@ -2864,31 +2864,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isCompact = true
         savedFullFrame = window.frame
 
-        // Hide full-mode UI + any transient overlays
+        // Hide transient overlays but leave the character visible for phase 1.
         stage.bubble.hide()
         stage.history.hide()
-        stage.character.isHidden = true
         stage.worryBubbles.isHidden = true
         stage.zs.isHidden = true
         stage.worryBubbles.stop()
         stage.zs.stop()
         stage.character.stopAmbientAnimations()
 
-        // Show compact view pinned inside the new small window bounds
         let s = CompactView.size
-        stage.compact.frame = NSRect(x: 0, y: 0, width: s, height: s)
-        stage.compact.isHidden = false
-        stage.compact.updateBadge(count: alertStore.unseenCount)
-
-        // Shrink window anchored at its bottom-right corner (keeps her in
-        // the same visual spot; the window just contracts). Clamp to the
-        // screen so she doesn't end up half off if the full window's right
-        // edge was sitting right against the edge.
         let old = window.frame
-        let proposed = CGPoint(x: old.maxX - s, y: old.minY)
-        let clamped = clampOriginToScreen(proposed, size: NSSize(width: s, height: s))
-        let newFrame = NSRect(origin: clamped, size: NSSize(width: s, height: s))
-        window.setFrame(newFrame, display: true, animate: true)
+        let targetScale: CGFloat = 0.38
+
+        // Phase 1 — scale the full-mode character down in place. Reads as
+        // "getting smaller" rather than just vanishing. fillMode=.forwards
+        // holds the final scale so the swap in phase 2 is seamless.
+        let scaleDown = CABasicAnimation(keyPath: "transform.scale")
+        scaleDown.fromValue = 1.0
+        scaleDown.toValue   = targetScale
+        scaleDown.duration  = 0.28
+        scaleDown.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        scaleDown.fillMode = .forwards
+        scaleDown.isRemovedOnCompletion = false
+        stage.character.layer?.add(scaleDown, forKey: "compact-shrink")
+
+        // Phase 2 — hand off to the compact view and slide the window to
+        // its compact footprint. NSWindow.setFrame(animate:true) does the
+        // actual slide; anchoring at the right edge keeps her visually
+        // tucked into the same corner throughout.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
+            guard let self = self else { return }
+            self.stage.character.layer?.removeAnimation(forKey: "compact-shrink")
+            self.stage.character.isHidden = true
+
+            self.stage.compact.frame = NSRect(x: 0, y: 0, width: s, height: s)
+            self.stage.compact.isHidden = false
+            self.stage.compact.updateBadge(count: self.alertStore.unseenCount)
+
+            let proposed = CGPoint(x: old.maxX - s, y: old.minY)
+            let clamped = self.clampOriginToScreen(proposed, size: NSSize(width: s, height: s))
+            let newFrame = NSRect(origin: clamped, size: NSSize(width: s, height: s))
+            self.window.setFrame(newFrame, display: true, animate: true)
+        }
     }
 
     private func expandToFull() {
@@ -3054,7 +3072,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.bubble.present(title: "👋 hi there!", body: nil, priority: "normal", action: nil)
     }
     @objc func doAbout() {
-        stage.bubble.present(title: "Axol v0.1 — a desktop companion.", body: nil, priority: "normal", action: nil)
+        let openRepo: [String: Any] = [
+            "type": "open-url",
+            "url": "https://github.com/Roach/axol",
+            "label": "Open GitHub repo"
+        ]
+        stage.bubble.present(
+            title: "Axol v0.1 — a desktop companion.",
+            body: "github.com/Roach/axol",
+            priority: "normal",
+            action: openRepo
+        )
     }
     // Phase 8 will wire these to real native behavior
     @objc func doLastAlert() {
