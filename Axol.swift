@@ -3159,7 +3159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             "label": "Open GitHub repo"
         ]
         stage.bubble.present(
-            title: "Axol v0.1 — a desktop companion.",
+            title: "Axol v1.0 — a desktop companion.",
             body: "github.com/Roach/axol",
             priority: "normal",
             action: openRepo
