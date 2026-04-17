@@ -56,7 +56,7 @@ Only `title` is required. Everything else has sensible defaults.
 
 ### Default icon names
 
-Set `icon` on the envelope to one of these names and Axol renders the matching SF Symbol, tinted per-kind, before the title:
+Set `icon` on the envelope to one of these names and Axol renders the matching glyph, tinted per-kind, before the title. Most names resolve to SF Symbols; the two brand glyphs (`claude`, `github`) are bundled Bootstrap Icons SVGs (rendered on macOS 13+).
 
 | Name | Glyph | Typical use |
 |---|---|---|
@@ -75,6 +75,8 @@ Set `icon` on the envelope to one of these names and Axol renders the matching S
 | `message` | speech bubble | inbound chat |
 | `approved` | thumbs-up | approval granted |
 | `git` | branch | git event |
+| `claude` | Claude mark | Claude Code events |
+| `github` | Octocat | GitHub events |
 
 Unknown strings fall through as a literal prefix, so `"icon": "🚢"` still works for quick one-offs.
 
