@@ -2346,13 +2346,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let defaultOrigin = NSPoint(x: visible.maxX - w - 40, y: visible.minY + 40)
         let origin: NSPoint = {
             let size = NSSize(width: w, height: h)
-            if let saved = loadSavedOrigin(),
-               originFitsOnAScreen(saved, size: size) {
-                // Saved origin may have been recorded at a smaller (compact)
-                // size. Clamp so the whole full-size window stays on-screen.
-                return clampOriginToScreen(saved, size: size)
+            guard let saved = loadSavedOrigin(),
+                  originFitsOnAScreen(saved, size: size) else {
+                return defaultOrigin
             }
-            return defaultOrigin
+            // Saved origin may have been recorded at a smaller (compact)
+            // size. Clamp inline (self.window isn't assigned yet here, so
+            // we can't call clampOriginToScreen which dereferences it).
+            let margin: CGFloat = 4
+            var o = saved
+            o.x = max(visible.minX + margin, min(o.x, visible.maxX - size.width  - margin))
+            o.y = max(visible.minY + margin, min(o.y, visible.maxY - size.height - margin))
+            return o
         }()
 
         window = AxolWindow(
