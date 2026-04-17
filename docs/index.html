@@ -89,7 +89,7 @@
 
   .hero {
     text-align: center;
-    padding: 40px 0 24px;
+    padding: 96px 0 24px;
   }
 
   .stage-wrap {
@@ -112,6 +112,110 @@
     height: auto;
     animation: bob 3.2s ease-in-out infinite;
     transform-origin: center bottom;
+  }
+
+  /* Hero-scoped history panel — mirrors the static demo in the section
+     below but positioned above the character and toggled via JS. */
+  .demo-history {
+    position: absolute;
+    left: 50%;
+    bottom: 141px;
+    transform: translate(-50%, 8px) scale(0.94);
+    width: 250px;
+    background: white;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    box-shadow: 0 10px 26px -12px rgba(200, 80, 140, 0.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    z-index: 3;
+  }
+  .demo-history.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .demo-history-header {
+    padding: 8px 12px 6px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #999;
+    border-bottom: 1px solid #F3DDE9;
+    text-align: left;
+  }
+  .demo-history-rows { padding: 4px; }
+  .demo-history .d-row {
+    padding: 6px 8px 7px;
+    border-radius: 7px;
+    text-align: left;
+    transition: background 0.12s ease;
+  }
+  .demo-history .d-row + .d-row { margin-top: 1px; }
+  .demo-history .d-row.highlight { background: #FFF4FA; }
+  .demo-history .d-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+  }
+  .demo-history .d-icon {
+    display: inline-flex;
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    color: var(--pink-accent);
+  }
+  .demo-history .d-icon svg { width: 12px; height: 12px; }
+  .demo-history .d-title {
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .demo-history .d-pill {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--pink-accent);
+    background: var(--pink-2);
+    padding: 1px 6px;
+    border-radius: 999px;
+    flex: 0 0 auto;
+  }
+  .demo-history .d-time {
+    font-size: 9.5px;
+    color: #A89CA3;
+    margin-left: auto;
+    flex: 0 0 auto;
+  }
+  .demo-history .d-body {
+    margin-top: 2px;
+    margin-left: 18px;
+    font-size: 10.5px;
+    color: #998F96;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .demo-history .d-row.kind-success .d-icon { color: #2E8B57; }
+  .demo-history .d-row.kind-ship    .d-icon { color: var(--pink-accent); }
+  .demo-history .d-row.kind-review  .d-icon { color: #7A5A9F; }
+  .demo-history .d-row.kind-github  .d-icon { color: var(--ink); }
+  .demo-history .d-row.kind-claude  .d-icon { color: #D97757; }
+  .demo-history .d-row.kind-sparkle .d-icon { color: #D4A017; }
+  .demo-history-tail {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-right: 1px solid #F3DDE9;
+    border-bottom: 1px solid #F3DDE9;
+    transform: translateX(-50%) rotate(45deg);
   }
 
   .bubble {
@@ -826,6 +930,11 @@
 
   <header class="hero">
     <div class="stage-wrap">
+      <div class="demo-history" id="demoHistory">
+        <div class="demo-history-header">RECENT ALERTS</div>
+        <div class="demo-history-rows" id="demoHistoryRows"></div>
+        <div class="demo-history-tail" aria-hidden="true"></div>
+      </div>
       <div class="bubble" id="bubble"></div>
       <div class="stage" id="stage">
       <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
@@ -1191,11 +1300,55 @@ cd axol
     }, dur);
   }
 
-  const sequence = ['hello', 'deploy', 'green', 'review', 'failing', 'claude', 'shipped', 'stretch', 'quip', 'nap'];
+  // Static history timeline shown when sequence hits 'history' — newest first.
+  const historyShape = [
+    { key: 'claude',  source: 'claude-code', time: 'now' },
+    { key: 'review',  source: 'github',      time: '2m' },
+    { key: 'shipped', source: 'ci-bot',      time: '6m' },
+    { key: 'green',   source: 'ci-bot',      time: '9m' },
+  ];
+  const demoHistory = document.getElementById('demoHistory');
+  const demoHistoryRows = document.getElementById('demoHistoryRows');
+
+  function renderDemoHistory() {
+    demoHistoryRows.innerHTML = historyShape.map((h, idx) => {
+      const d = demos[h.key]; if (!d) return '';
+      const iconSvg = d.kind && ICONS[d.kind] ? ICONS[d.kind] : '';
+      const body = d.body ? '<div class="d-body">' + escapeHtml(d.body) + '</div>' : '';
+      return '<div class="d-row kind-' + (d.kind || '') + (idx === 0 ? ' highlight' : '') + '">' +
+               '<div class="d-head">' +
+                 '<span class="d-icon">' + iconSvg + '</span>' +
+                 '<span class="d-title">' + escapeHtml(d.title) + '</span>' +
+                 '<span class="d-pill">' + escapeHtml(h.source) + '</span>' +
+                 '<span class="d-time">' + h.time + '</span>' +
+               '</div>' + body +
+             '</div>';
+    }).join('');
+  }
+  function showDemoHistory() {
+    renderDemoHistory();
+    demoHistory.classList.add('visible');
+  }
+  function hideDemoHistory() {
+    demoHistory.classList.remove('visible');
+  }
+
+  const sequence = ['hello', 'deploy', 'green', 'review', 'failing', 'claude', 'shipped', 'stretch', 'quip', 'history', 'nap'];
   let i = 0;
   function playNext() {
-    showDemo(sequence[i]);
-    const d = demos[sequence[i]];
+    const key = sequence[i];
+    if (key === 'history') {
+      showDemoHistory();
+      i++;
+      const holdMs = 4800;
+      setTimeout(() => {
+        hideDemoHistory();
+        if (i < sequence.length) setTimeout(playNext, 500);
+      }, holdMs);
+      return;
+    }
+    showDemo(key);
+    const d = demos[key];
     const dur = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
     const gap = dur + 700;
     i++;
