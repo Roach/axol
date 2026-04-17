@@ -644,7 +644,7 @@ final class AxolCharacterView: NSView {
     func stopIdles() {
         layer?.removeAnimation(forKey: "hop")
         layer?.removeAnimation(forKey: "tilt")
-        eyesLayer.removeAnimation(forKey: "peek")
+        layer?.removeAnimation(forKey: "peek")
         armLeftLayer.removeAnimation(forKey: "stretch")
         armRightLayer.removeAnimation(forKey: "stretch")
         leftGillsLayer.removeAnimation(forKey: "wiggle")
@@ -735,20 +735,19 @@ final class AxolCharacterView: NSView {
     }
 
     private func playPeek() {
-        let a = CAKeyframeAnimation(keyPath: "transform.translation.x")
-        // Small overshoot on each side reads as curiosity — the cubic
-        // calculationMode smooths the reversals into an organic sweep.
-        a.values   = [0.0, -4.5, 0.5, 4.0, 0.0]
-        a.keyTimes = [0.0, 0.28, 0.48, 0.68, 1.0]
-        a.duration = 2.0
+        // Quick head-cock + return — reads as a curiosity glance. Rotation
+        // on the whole character (additive) instead of the old X-translation
+        // on the eyes, which compounded with the ambient Y bob into an
+        // odd diagonal drift.
+        let a = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        let tilt: CGFloat = CGFloat.pi * 4 / 180
+        a.values   = [0.0, Double(tilt), Double(tilt), 0.0]
+        a.keyTimes = [0.0, 0.25, 0.65, 1.0]
+        a.duration = 1.1
         a.calculationMode = .cubic
-        a.timingFunctions = [
-            CAMediaTimingFunction(name: .easeOut),
-            CAMediaTimingFunction(name: .easeInEaseOut),
-            CAMediaTimingFunction(name: .easeInEaseOut),
-            CAMediaTimingFunction(name: .easeIn)
-        ]
-        eyesLayer.add(a, forKey: "peek")
+        a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        a.isAdditive = true
+        layer?.add(a, forKey: "peek")
     }
 
     private func playStretch() {
@@ -870,7 +869,7 @@ final class AxolCharacterView: NSView {
 
         // Cancel blink AND any in-flight idle before fading the eye scale.
         eyesLayer.removeAnimation(forKey: "blink")
-        eyesLayer.removeAnimation(forKey: "peek")
+        layer?.removeAnimation(forKey: "peek")
 
         // NSView-backed CALayers suppress implicit animations; use explicit
         // CABasicAnimations with fillMode=.forwards so the closed-eye and
