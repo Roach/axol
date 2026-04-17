@@ -1099,7 +1099,7 @@ final class BubbleView: NSView {
             f.isSelectable = false
             f.isBezeled = false
             f.drawsBackground = false
-            f.alignment = .natural
+            f.alignment = .center
             addSubview(f)
         }
 
