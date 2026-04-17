@@ -8,7 +8,7 @@
       "body": "started",
       "priority": "low",
       "source": "claude-code",
-      "icon": "info",
+      "icon": "claude",
       "actions": [
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],
