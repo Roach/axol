@@ -1141,7 +1141,7 @@ final class BubbleView: NSView {
     private let tailHeight:   CGFloat = 6
     private let cornerRadius: CGFloat = 14
     private let tailWidth:    CGFloat = 12
-    private let maxBubbleWidth: CGFloat = 280
+    private let maxBubbleWidth: CGFloat = 240
     private let minBubbleWidth: CGFloat = 130
 
     private var action: [String: Any]?
@@ -1405,7 +1405,13 @@ final class BubbleView: NSView {
             bodyField.frame = .zero
         } else {
             let bodyY = tailHeight + vertPadding
-            bodyField.frame = CGRect(x: horizPadding, y: bodyY, width: contentWidth, height: bodyHeight)
+            let bodyInset: CGFloat = 4
+            bodyField.frame = CGRect(
+                x: horizPadding - bodyInset,
+                y: bodyY,
+                width: contentWidth + 2 * bodyInset,
+                height: bodyHeight
+            )
         }
 
         backgroundLayer.frame = bounds
