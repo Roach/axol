@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Copy to: ~/Library/LaunchAgents/com.axol.lateral-line.plist
+  Then:    launchctl load ~/Library/LaunchAgents/com.axol.lateral-line.plist
+
+  Edit Program, AXOL_CLOUD_URL, and AXOL_POLL_TOKEN below before loading.
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.axol.lateral-line</string>
+
+    <key>Program</key>
+    <string>/ABSOLUTE/PATH/TO/Axol/lateral-line/lateral-line.sh</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartInterval</key>
+    <integer>30</integer>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>AXOL_CLOUD_URL</key>
+      <string>https://your-neuromast.webflow.app</string>
+      <key>AXOL_POLL_TOKEN</key>
+      <string>REPLACE_WITH_POLL_TOKEN</string>
+      <key>PATH</key>
+      <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/axol-lateral-line.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/axol-lateral-line.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>

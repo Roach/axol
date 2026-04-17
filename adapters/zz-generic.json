@@ -1,0 +1,11 @@
+{
+  "name": "generic",
+  "match": { "field": "title", "exists": true },
+  "template": {
+    "title":    "{{title}}",
+    "body":     "{{body | default ''}}",
+    "priority": "{{priority | default 'normal'}}",
+    "source":   "{{source | default 'remote'}}",
+    "icon":     "{{icon | default 'bell'}}"
+  }
+}

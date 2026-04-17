@@ -139,6 +139,26 @@ When a value is a single `{{...}}` substitution, the native type is preserved �
 
 Adapters are loaded on startup in filename order. First match wins. Adapter output runs through the same validator as a direct envelope, so an adapter can't smuggle in disallowed actions.
 
+## Remote alerts (lateral line)
+
+Axol's receiver is loopback-only. To route third-party webhooks (GitHub, Stripe, anything posting JSON) into the same bubble UX, two optional pieces live alongside this repo:
+
+- **`neuromast/`** — a tiny Astro + Cloudflare Workers app, deployed to [Webflow Cloud](https://developers.webflow.com/webflow-cloud), that accepts signed webhooks and parks them in a KV queue. Supports GitHub / Stripe HMAC out of the box plus a generic `sha256=<hex>` scheme; falls back to a `?key=<SHARED_SECRET>` query param for senders that can't sign.
+- **`lateral-line/`** — a ~50-line bash script, run by `launchd` every 30 seconds, that pulls the queue, posts each body into `127.0.0.1:47329`, and acks on success.
+
+The poller posts raw webhook bodies unchanged; Axol's existing adapter system does the translation, so adding a new source is one `adapters/<source>.json` file and no cloud redeploy.
+
+Quickstart:
+
+```sh
+# once, after deploying neuromast and setting POLL_TOKEN + SHARED_SECRET
+curl -X POST "$AXOL_CLOUD_URL/app/api/hooks/test?key=$SHARED_SECRET" \
+     -H 'content-type: application/json' \
+     -d '{"title":"hello","body":"from the cloud"}'
+```
+
+See [`neuromast/README.md`](./neuromast/README.md) and [`lateral-line/README.md`](./lateral-line/README.md) for setup.
+
 ## Claude Code integration
 
 Claude Code support is provided by the bundled `adapters/claude-code.json`. It recognizes `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until you handle them), and `Stop` (normal). The internal "waiting for your input" chatter is dropped via a `skip_if`.

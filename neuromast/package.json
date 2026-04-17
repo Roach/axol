@@ -1,0 +1,28 @@
+{
+  "name": "neuromast",
+  "version": "0.1.0",
+  "description": "Axol's lateral-line cloud endpoint — webhook intake + poll/ack for the local forwarder.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro build && wrangler dev",
+    "check": "astro check",
+    "cf-typegen": "wrangler types",
+    "deploy": "webflow cloud deploy"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.0.0",
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.0",
+    "@cloudflare/workers-types": "^4.20240924.0",
+    "typescript": "^5.4.0",
+    "wrangler": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
