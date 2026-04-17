@@ -2875,6 +2875,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if isCompact { expandToFull() } else { shrinkToCompact() }
     }
 
+    /// CATransform3D that scales a view around its own geometric center —
+    /// works for any anchor point (layer-backed NSViews default to (0,0)
+    /// on macOS, so `transform.scale` alone would pivot at the bottom-left).
+    fileprivate static func centeredScale(_ s: CGFloat, for view: NSView) -> CATransform3D {
+        let cx = view.bounds.width  / 2
+        let cy = view.bounds.height / 2
+        var t = CATransform3DIdentity
+        t = CATransform3DTranslate(t,  cx,  cy, 0)
+        t = CATransform3DScale(t, s, s, 1)
+        t = CATransform3DTranslate(t, -cx, -cy, 0)
+        return t
+    }
+
     private func shrinkToCompact() {
         guard !isCompact else { return }
         isCompact = true
@@ -2899,11 +2912,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let targetScale: CGFloat = 0.38
 
         // Phase 1 — scale the full-mode character down in place. Reads as
-        // "getting smaller" rather than just vanishing. fillMode=.forwards
-        // holds the final scale so the swap in phase 2 is seamless.
-        let scaleDown = CABasicAnimation(keyPath: "transform.scale")
-        scaleDown.fromValue = 1.0
-        scaleDown.toValue   = targetScale
+        // "getting smaller" rather than just vanishing. Layer-backed NSViews
+        // default anchorPoint to (0, 0) on macOS, so we can't just animate
+        // transform.scale (would pivot at the bottom-left). Use an explicit
+        // transform keyframe that translates to the view's center, scales,
+        // and translates back — pure center scale regardless of anchor.
+        let scaleDown = CABasicAnimation(keyPath: "transform")
+        scaleDown.fromValue = NSValue(caTransform3D: Self.centeredScale(1.0, for: stage.character))
+        scaleDown.toValue   = NSValue(caTransform3D: Self.centeredScale(targetScale, for: stage.character))
         scaleDown.duration  = 0.28
         scaleDown.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         scaleDown.fillMode = .forwards
@@ -2967,29 +2983,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let clamped = clampOriginToScreen(proposedOrigin, size: savedSize)
         let newFrame = NSRect(origin: clamped, size: savedSize)
 
-        // Start the character at the same scale the shrink left her at,
-        // ready for the scale-up animation to grow her back to full.
+        // Snap the window to full size (no slide), then reveal the
+        // character pre-scaled to the compact size and grow her back up
+        // from her own visual center (see centeredScale rationale above).
         let targetScale: CGFloat = 0.38
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        stage.character.layer?.transform = CATransform3DMakeScale(targetScale, targetScale, 1)
-        CATransaction.commit()
-        stage.character.isHidden = false
-
-        // Snap the window to full size — no slide.
         window.setFrame(newFrame, display: true, animate: false)
-
-        // Swap compact → character after the window's geometry is in place.
         stage.compact.isHidden = true
         stage.worryBubbles.isHidden = false
         stage.zs.isHidden = false
 
-        // Animate the scale back up to 1.0 in place. fillMode=.forwards
-        // keeps the final pose until we reset the base transform in the
-        // completion block.
-        let scaleUp = CABasicAnimation(keyPath: "transform.scale")
-        scaleUp.fromValue = targetScale
-        scaleUp.toValue   = 1.0
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        stage.character.layer?.transform = Self.centeredScale(targetScale, for: stage.character)
+        CATransaction.commit()
+        stage.character.isHidden = false
+
+        let scaleUp = CABasicAnimation(keyPath: "transform")
+        scaleUp.fromValue = NSValue(caTransform3D: Self.centeredScale(targetScale, for: stage.character))
+        scaleUp.toValue   = NSValue(caTransform3D: Self.centeredScale(1.0, for: stage.character))
         scaleUp.duration  = 0.28
         scaleUp.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         scaleUp.fillMode = .forwards
