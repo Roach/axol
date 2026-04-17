@@ -1149,13 +1149,20 @@ final class BubbleView: NSView {
                 let attachString = NSMutableAttributedString(attachment: attachment)
                 attachString.addAttribute(.baselineOffset, value: -1,
                                           range: NSRange(location: 0, length: attachString.length))
+                // Bake center alignment into the paragraph style — NSTextField's
+                // .alignment property is ignored once attributedStringValue is set.
+                let para = NSMutableParagraphStyle()
+                para.alignment = .center
                 let titleAttrs: [NSAttributedString.Key: Any] = [
                     .font: titleField.font!,
-                    .foregroundColor: titleField.textColor ?? NSColor.labelColor
+                    .foregroundColor: titleField.textColor ?? NSColor.labelColor,
+                    .paragraphStyle: para
                 ]
                 let full = NSMutableAttributedString()
                 full.append(attachString)
                 full.append(NSAttributedString(string: "  " + title, attributes: titleAttrs))
+                full.addAttribute(.paragraphStyle, value: para,
+                                  range: NSRange(location: 0, length: full.length))
                 titleField.attributedStringValue = full
             } else {
                 titleField.stringValue = "\(iconName) \(title)"
