@@ -474,6 +474,15 @@ final class AxolCharacterView: NSView {
         let root = CALayer()
         layer = root
 
+        // Layer-backed NSViews on macOS default root anchorPoint to (0,0), so
+        // rotations and scales pivot at the bottom-left corner. Re-anchor to
+        // the center and shift position by half-bounds to keep the view
+        // visually in place. Every ambient/idle animation on this layer now
+        // pivots on the center naturally — no per-animation compensation.
+        root.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        root.position = CGPoint(x: frame.origin.x + frame.width / 2,
+                                y: frame.origin.y + frame.height / 2)
+
         // Set up a content sublayer with its own coordinate system matching SVG's
         // 220x200 top-left-origin space, then scale down to the view's size.
         contentLayer.bounds = CGRect(x: 0, y: 0, width: Self.svgWidth, height: Self.svgHeight)
@@ -676,13 +685,15 @@ final class AxolCharacterView: NSView {
     /// appears so the character settles instead of continuing the idle mid-reveal.
     func stopIdles() {
         layer?.removeAnimation(forKey: "hop")
-        for key in ["tilt", "tilt-px", "tilt-py", "peek", "peek-px", "peek-py"] {
-            layer?.removeAnimation(forKey: key)
-        }
+        layer?.removeAnimation(forKey: "tilt")
+        layer?.removeAnimation(forKey: "peek")
         armLeftLayer.removeAnimation(forKey: "stretch")
         armRightLayer.removeAnimation(forKey: "stretch")
         leftGillsLayer.removeAnimation(forKey: "wiggle")
         rightGillsLayer.removeAnimation(forKey: "wiggle")
+        eyesLayer.removeAnimation(forKey: "double-blink")
+        leftGillsLayer.removeAnimation(forKey: "gill-flick")
+        rightGillsLayer.removeAnimation(forKey: "gill-flick")
     }
 
     private func startBob() {
@@ -751,34 +762,45 @@ final class AxolCharacterView: NSView {
     // MARK: Idle animations (one-shot, pool-selected)
 
     enum IdleKind: String, CaseIterable {
-        case peek, stretch, hop, tilt, wiggle
+        case peek, stretch, hop, tilt, wiggle, doubleBlink, gillFlickLeft, gillFlickRight
     }
 
     /// Idle animations available to the scheduler. `hop` is intentionally
-    /// reserved for urgent-alert attention and not in this pool.
-    static let idlePool: [IdleKind] = [.peek, .stretch, .tilt, .wiggle]
+    /// reserved for urgent-alert attention and not in this pool. The subtle
+    /// micro-animations (doubleBlink, gill flicks) are listed twice so the
+    /// idle picker weights them higher than the larger-motion idles.
+    static let idlePool: [IdleKind] = [
+        .peek, .stretch, .tilt, .wiggle,
+        .doubleBlink, .doubleBlink,
+        .gillFlickLeft, .gillFlickRight,
+    ]
 
     func playIdle(_ kind: IdleKind) {
         switch kind {
-        case .peek:    playPeek()
-        case .stretch: playStretch()
-        case .hop:     playHop()
-        case .tilt:    playTilt()
-        case .wiggle:  playWiggle()
+        case .peek:            playPeek()
+        case .stretch:         playStretch()
+        case .hop:             playHop()
+        case .tilt:            playTilt()
+        case .wiggle:          playWiggle()
+        case .doubleBlink:     playDoubleBlink()
+        case .gillFlickLeft:   playGillFlick(leftSide: true)
+        case .gillFlickRight:  playGillFlick(leftSide: false)
         }
     }
 
     private func playPeek() {
-        // Quick head-cock + return — reads as a curiosity glance. Rotation
-        // on the whole character (additive) with a compensating translation
-        // so the effective pivot sits below center (near her body) instead
-        // of at the layer's geometric center, which would swing her body
-        // out around her face.
-        rotateWithGroundedPivot(key: "peek",
-                                angleDeg: 4,
-                                pivotBelow: 20,
-                                keyTimes: [0.0, 0.25, 0.65, 1.0],
-                                duration: 1.1)
+        // Quick head-cock + return — reads as a curiosity glance. Small
+        // additive rotation; pivots naturally on center now that the root
+        // layer's anchor is (0.5, 0.5) (set in init).
+        let tilt = CGFloat.pi * 4 / 180
+        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rot.values   = [0.0, Double(tilt), Double(tilt), 0.0]
+        rot.keyTimes = [0.0, 0.25, 0.65, 1.0]
+        rot.duration = 1.1
+        rot.calculationMode = .cubic
+        rot.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        rot.isAdditive = true
+        layer?.add(rot, forKey: "peek")
     }
 
     private func playStretch() {
@@ -821,90 +843,46 @@ final class AxolCharacterView: NSView {
     }
 
     private func playTilt() {
-        // Small anticipation counter-tilt before the main swing, then
-        // overshoot back past neutral before settling. Pivots below center
-        // so the sway feels planted on her body rather than spinning
-        // around her forehead.
-        let pivotBelow: CGFloat = 20
-        let values: [CGFloat] = [0, 1.5, -6, 5, -1, 0]
-        let keyTimes: [NSNumber] = [0.0, 0.08, 0.38, 0.68, 0.88, 1.0]
-
+        // Small anticipation counter-tilt, main swing, overshoot back past
+        // neutral, settle. Pivots on center (layer anchor is (0.5, 0.5)).
+        let degs: [CGFloat] = [0, 1.5, -5, 4, -1, 0]
         let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
-        rot.values = values.map { Double(CGFloat.pi * $0 / 180) }
-        rot.keyTimes = keyTimes
+        rot.values   = degs.map { Double(CGFloat.pi * $0 / 180) }
+        rot.keyTimes = [0.0, 0.08, 0.38, 0.68, 0.88, 1.0]
         rot.duration = 2.4
         rot.calculationMode = .cubic
         rot.isAdditive = true
         layer?.add(rot, forKey: "tilt")
-
-        addPivotCompensation(key: "tilt",
-                             anglesRad: values.map { CGFloat.pi * $0 / 180 },
-                             pivotBelow: pivotBelow,
-                             keyTimes: keyTimes,
-                             duration: rot.duration,
-                             calculationMode: .cubic,
-                             timingFunction: nil)
     }
 
-    /// Simple constant-peak rotation helper shared by peek-style animations
-    /// (in/hold/out/rest). For multi-phase rotations, build the keyframes
-    /// explicitly and call `addPivotCompensation` directly.
-    private func rotateWithGroundedPivot(key: String,
-                                         angleDeg: CGFloat,
-                                         pivotBelow: CGFloat,
-                                         keyTimes: [NSNumber],
-                                         duration: CFTimeInterval) {
-        let theta = CGFloat.pi * angleDeg / 180
-        let vals: [CGFloat] = [0, theta, theta, 0]
-        let rot = CAKeyframeAnimation(keyPath: "transform.rotation.z")
-        rot.values   = vals.map { Double($0) }
-        rot.keyTimes = keyTimes
-        rot.duration = duration
-        rot.calculationMode = .cubic
-        rot.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        rot.isAdditive = true
-        layer?.add(rot, forKey: key)
-
-        addPivotCompensation(key: key,
-                             anglesRad: vals,
-                             pivotBelow: pivotBelow,
-                             keyTimes: keyTimes,
-                             duration: duration,
-                             calculationMode: .cubic,
-                             timingFunction: CAMediaTimingFunction(name: .easeInEaseOut))
+    /// Tiny double blink — two quick lid closures with a short hold between.
+    /// Subtle; reads as a moment of thought.
+    private func playDoubleBlink() {
+        let b = CAKeyframeAnimation(keyPath: "transform.scale.y")
+        b.values   = [1.0, 0.08, 1.0, 1.0, 0.08, 1.0]
+        b.keyTimes = [0.0,  0.08, 0.16, 0.42, 0.50, 0.58]
+        b.duration = 1.0
+        b.timingFunctions = [
+            CAMediaTimingFunction(name: .easeOut),
+            CAMediaTimingFunction(name: .easeIn),
+            CAMediaTimingFunction(name: .linear),
+            CAMediaTimingFunction(name: .easeOut),
+            CAMediaTimingFunction(name: .easeIn),
+        ]
+        eyesLayer.add(b, forKey: "double-blink")
     }
 
-    /// Additive translation keyframes that keep a point `pivotBelow` pixels
-    /// below the layer anchor stationary under a rotation keyframe. For a
-    /// rotation θ around the anchor, the point drifts by (h·sin θ, h·(1−cos θ))
-    /// relative to its θ=0 position; we apply the opposite.
-    private func addPivotCompensation(key: String,
-                                      anglesRad: [CGFloat],
-                                      pivotBelow h: CGFloat,
-                                      keyTimes: [NSNumber],
-                                      duration: CFTimeInterval,
-                                      calculationMode: CAAnimationCalculationMode,
-                                      timingFunction: CAMediaTimingFunction?) {
-        let txValues = anglesRad.map { Double(-h * sin($0)) }
-        let tyValues = anglesRad.map { Double(-h * (1 - cos($0))) }
-
-        let tx = CAKeyframeAnimation(keyPath: "transform.translation.x")
-        tx.values = txValues
-        tx.keyTimes = keyTimes
-        tx.duration = duration
-        tx.calculationMode = calculationMode
-        if let t = timingFunction { tx.timingFunction = t }
-        tx.isAdditive = true
-        layer?.add(tx, forKey: "\(key)-px")
-
-        let ty = CAKeyframeAnimation(keyPath: "transform.translation.y")
-        ty.values = tyValues
-        ty.keyTimes = keyTimes
-        ty.duration = duration
-        ty.calculationMode = calculationMode
-        if let t = timingFunction { ty.timingFunction = t }
-        ty.isAdditive = true
-        layer?.add(ty, forKey: "\(key)-py")
+    /// Single-gill flick — one side's gill group scales up slightly then
+    /// settles. Reads as a small involuntary flutter. Alternates sides.
+    private func playGillFlick(leftSide: Bool) {
+        let target = leftSide ? leftGillsLayer : rightGillsLayer
+        let flick = CAKeyframeAnimation(keyPath: "transform.scale")
+        flick.values   = [1.0, 1.10, 0.98, 1.0]
+        flick.keyTimes = [0.0, 0.30, 0.70, 1.0]
+        flick.duration = 0.8
+        flick.calculationMode = .cubic
+        flick.isAdditive = false
+        target.add(flick, forKey: "gill-flick")
     }
 
     private func playWiggle() {
