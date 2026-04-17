@@ -1252,6 +1252,7 @@ cd axol
   const bubble = document.getElementById('bubble');
   const stage = document.getElementById('stage');
   let bubbleTimer = null;
+  let talkTimer = null;
 
   // Bootstrap Icons (MIT) — https://icons.getbootstrap.com
   const ICONS = {
@@ -1306,11 +1307,20 @@ cd axol
     return d.body ? d.title + ' ' + d.body : d.title;
   }
 
+  // Fixed bubble display — mirrors native durationFor (6s for alerts, 3.5s
+  // otherwise). Urgent pins open on the native side; the demo just uses the
+  // alert timing for those.
   function bubbleDurationMs(text, isAlert) {
+    return isAlert ? 6000 : 3500;
+  }
+
+  // Mouth-talking runs proportional to text length (~65ms/char, clamped
+  // 500–3500ms), so short quips stop flapping while the bubble's still up
+  // and longer messages keep her mouth moving for their duration.
+  // Mirrors native talkDurationFor.
+  function talkDurationMs(text) {
     const n = (text || '').length;
-    return isAlert
-      ? Math.max(4000, Math.min(10000, 2500 + n * 80))
-      : Math.max(3000, Math.min(7000, 2000 + n * 60));
+    return Math.max(500, Math.min(3500, n * 65));
   }
 
   function showDemo(key) {
@@ -1344,7 +1354,12 @@ cd axol
       setTimeout(() => stage.classList.remove('celebrating'), 1500);
     }
     clearTimeout(bubbleTimer);
-    const dur = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
+    clearTimeout(talkTimer);
+    const dur  = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
+    const talk = Math.min(dur, talkDurationMs(demoText(d)));
+    talkTimer = setTimeout(() => {
+      stage.classList.remove('talking');
+    }, talk);
     bubbleTimer = setTimeout(() => {
       bubble.classList.remove('visible');
       stage.classList.remove('talking');
