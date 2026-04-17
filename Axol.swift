@@ -955,7 +955,7 @@ final class AxolCharacterView: NSView {
 }
 
 /// Native speech bubble. Presents a title (single line, ellipsized) plus an
-/// optional body (up to 3 lines, ellipsized) in a rounded rect with a
+/// optional body (up to 4 lines, ellipsized) in a rounded rect with a
 /// downward tail. Priority drives fill, border, and auto-dismiss behavior.
 final class BubbleView: NSView {
     private let backgroundLayer = CAShapeLayer()
@@ -1010,13 +1010,14 @@ final class BubbleView: NSView {
         titleField.lineBreakMode = .byTruncatingTail
         titleField.usesSingleLineMode = true
 
-        // Body: wraps to 3 lines, ellipsis on the last line.
+        // Body: wraps to 4 lines, ellipsis on the last line.
         bodyField.font = NSFont.systemFont(ofSize: 12)
-        bodyField.maximumNumberOfLines = 3
-        bodyField.lineBreakMode = .byTruncatingTail
+        bodyField.maximumNumberOfLines = 4
+        bodyField.lineBreakMode = .byWordWrapping
         bodyField.usesSingleLineMode = false
         bodyField.cell?.wraps = true
         bodyField.cell?.isScrollable = false
+        bodyField.cell?.truncatesLastVisibleLine = true
 
         alphaValue = 0
         isHidden = true
@@ -1159,18 +1160,18 @@ final class BubbleView: NSView {
         var bodyHeight: CGFloat = 0
         if !bodyField.isHidden {
             // Use NSString bounding-rect calculation to get an accurate
-            // wrapped height for up to 3 lines.
+            // wrapped height for up to 4 lines.
             let bodyAttrs: [NSAttributedString.Key: Any] = [.font: bodyField.font!]
             let bodyText = bodyField.stringValue as NSString
             let oneLineHeight = ceil(bodyText.size(withAttributes: bodyAttrs).height)
-            let maxThreeLines = oneLineHeight * 3
+            let maxBodyLines = oneLineHeight * 4
             let boundingRect = bodyText.boundingRect(
-                with: CGSize(width: maxContentWidth, height: maxThreeLines),
+                with: CGSize(width: maxContentWidth, height: maxBodyLines),
                 options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
                 attributes: bodyAttrs
             )
             bodyWidth  = ceil(min(boundingRect.width, maxContentWidth))
-            bodyHeight = ceil(min(boundingRect.height, maxThreeLines))
+            bodyHeight = ceil(min(boundingRect.height, maxBodyLines))
         }
 
         let rawWidth = max(titleWidth, bodyWidth)
