@@ -8,6 +8,7 @@
       "body": "started",
       "priority": "low",
       "source": "claude-code",
+      "icon": "info",
       "actions": [
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],
@@ -18,6 +19,7 @@
       "body": "{{message | default 'needs your input'}}",
       "priority": "urgent",
       "source": "claude-code",
+      "icon": "warn",
       "actions": [
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],
@@ -29,6 +31,7 @@
       "body": "finished",
       "priority": "normal",
       "source": "claude-code",
+      "icon": "success",
       "actions": [
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],

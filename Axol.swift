@@ -962,6 +962,39 @@ final class BubbleView: NSView {
     private let titleField = NSTextField(labelWithString: "")
     private let bodyField  = NSTextField(wrappingLabelWithString: "")
 
+    /// Default icon names an adapter can pass via the envelope `icon` field.
+    /// Each name resolves to an SF Symbol + tint color. Unknown strings fall
+    /// through as a literal title prefix (emoji or short text).
+    private static let iconDefaults: [(name: String, symbol: String, color: String)] = [
+        ("success",  "checkmark.circle.fill",         "2E8B57"),
+        ("error",    "xmark.circle.fill",             "C0392B"),
+        ("warn",     "exclamationmark.triangle.fill", "B8860B"),
+        ("info",     "info.circle.fill",              "3A6EA5"),
+        ("ship",     "paperplane.fill",               "D6457A"),
+        ("review",   "eye.fill",                      "7A5A9F"),
+        ("sparkle",  "sparkles",                      "D4A017"),
+        ("bell",     "bell.fill",                     "D6457A"),
+        ("bug",      "ant.fill",                      "C0392B"),
+        ("metric",   "chart.line.uptrend.xyaxis",     "3A6EA5"),
+        ("pending",  "clock.fill",                    "6E5F6B"),
+        ("security", "checkmark.shield.fill",         "2E8B57"),
+        ("message",  "bubble.left.fill",              "3A6EA5"),
+        ("approved", "hand.thumbsup.fill",            "2E8B57"),
+        ("git",      "arrow.triangle.branch",         "2D2533"),
+    ]
+
+    private static func iconImage(for name: String) -> NSImage? {
+        guard let def = iconDefaults.first(where: { $0.name == name }),
+              let base = NSImage(systemSymbolName: def.symbol, accessibilityDescription: nil) else {
+            return nil
+        }
+        var config = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        if #available(macOS 12.0, *) {
+            config = config.applying(.init(paletteColors: [NSColor.fromHex(def.color)]))
+        }
+        return base.withSymbolConfiguration(config) ?? base
+    }
+
     // Layout constants — mirrored from styles.css
     private let horizPadding: CGFloat = 14
     private let vertPadding:  CGFloat = 10
@@ -1026,11 +1059,13 @@ final class BubbleView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     /// Show the bubble with the given content + styling.
-    func present(title: String, body: String?, priority: String, action: [String: Any]?) {
+    func present(title: String, body: String?, priority: String, icon: String? = nil, action: [String: Any]?) {
         self.action = action
         self.isUrgent = (priority == "urgent")
         let clickable = action != nil
 
+        // Set a plain title first so applyStyle can set color via .textColor;
+        // we upgrade to an attributed title below if an icon resolves.
         let prefix = clickable ? "↗ " : ""
         titleField.stringValue = prefix + title
         let bodyText = body?.trimmingCharacters(in: .whitespaces) ?? ""
@@ -1038,6 +1073,29 @@ final class BubbleView: NSView {
         bodyField.isHidden = bodyText.isEmpty
 
         applyStyle(priority: priority, clickable: clickable)
+
+        // Named icon → SF Symbol attachment in place of the ↗ prefix.
+        // Unknown strings fall through as a literal prefix (emoji, short text).
+        if let iconName = icon?.trimmingCharacters(in: .whitespaces), !iconName.isEmpty {
+            if let image = Self.iconImage(for: iconName) {
+                let attachment = NSTextAttachment()
+                attachment.image = image
+                let attachString = NSMutableAttributedString(attachment: attachment)
+                attachString.addAttribute(.baselineOffset, value: -1,
+                                          range: NSRange(location: 0, length: attachString.length))
+                let titleAttrs: [NSAttributedString.Key: Any] = [
+                    .font: titleField.font!,
+                    .foregroundColor: titleField.textColor ?? NSColor.labelColor
+                ]
+                let full = NSMutableAttributedString()
+                full.append(attachString)
+                full.append(NSAttributedString(string: "  " + title, attributes: titleAttrs))
+                titleField.attributedStringValue = full
+            } else {
+                titleField.stringValue = "\(iconName) \(title)"
+            }
+        }
+
         layoutContent()
 
         // Position centered in superview. Tail tip drops 13px into the top of
@@ -1268,6 +1326,7 @@ struct AlertEntry {
     var source: String  { (envelope["source"] as? String) ?? "unknown" }
     var priority: String { (envelope["priority"] as? String) ?? "normal" }
     var action: [String: Any]? { (envelope["actions"] as? [[String: Any]])?.first }
+    var icon: String? { envelope["icon"] as? String }
 }
 
 /// Centralized alert history + seen-set. Newest first; capped at maxEntries.
@@ -2477,7 +2536,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// Replays an archived alert in the bubble.
     private func replay(entry: AlertEntry) {
         stage.bubble.present(title: entry.title, body: entry.body,
-                             priority: entry.priority, action: entry.action)
+                             priority: entry.priority, icon: entry.icon, action: entry.action)
         alertStore.markSeen(id: entry.id)
         updateWorryBubbles()
     }
@@ -2562,8 +2621,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let title    = (envelope["title"] as? String) ?? ""
         let body     = envelope["body"] as? String
         let priority = (envelope["priority"] as? String) ?? "normal"
+        let icon     = envelope["icon"] as? String
         let action   = (envelope["actions"] as? [[String: Any]])?.first
-        stage.bubble.present(title: title, body: body, priority: priority, action: action)
+        stage.bubble.present(title: title, body: body, priority: priority, icon: icon, action: action)
         lastBubbleOpenedAt = Date()
 
         let effective: String = {

@@ -49,10 +49,34 @@ Only `title` is required. Everything else has sensible defaults.
 | `body` | Wraps below the title. |
 | `priority` | `low` (bubble only, not archived) \| `normal` \| `high` (worry bubbles rise from her head) \| `urgent` (worry bubbles + attention animation + **bubble pins open** until you handle it). Default `normal`. While an urgent is pinned, another urgent replaces it (older one drops into history); anything non-urgent slips silently into history without interrupting the pinned bubble. |
 | `source` | Free-form sender id, shown in the history panel. |
-| `icon` | Emoji or 1–2 char prefix. |
+| `icon` | Named glyph rendered before the title. Known names (below) map to SF Symbols; any other string is shown as a literal prefix (emoji or 1–2 chars). |
 | `attention` | Optional one-shot attention animation: `wiggle` \| `hop` \| `none`. Defaults to `wiggle` on `urgent`, `none` otherwise. |
 | `actions[]` | First action runs on bubble click. |
 | `context{}` | Round-trips untouched; useful for your own bookkeeping. |
+
+### Default icon names
+
+Set `icon` on the envelope to one of these names and Axol renders the matching SF Symbol, tinted per-kind, before the title:
+
+| Name | Glyph | Typical use |
+|---|---|---|
+| `success` | ✓ check-circle | completed step, passing check |
+| `error` | ✕ x-circle | failed step, exception |
+| `warn` | ⚠ triangle | attention needed |
+| `info` | ⓘ info-circle | neutral notice |
+| `ship` | paperplane | deploy / release |
+| `review` | eye | code review / inspect |
+| `sparkle` | sparkles | cheer / celebrate |
+| `bell` | bell | generic alert |
+| `bug` | ant | bug report |
+| `metric` | trend line | analytics / measurement |
+| `pending` | clock | queued / waiting |
+| `security` | shield-check | security / audit |
+| `message` | speech bubble | inbound chat |
+| `approved` | thumbs-up | approval granted |
+| `git` | branch | git event |
+
+Unknown strings fall through as a literal prefix, so `"icon": "🚢"` still works for quick one-offs.
 
 ### Action vocabulary (closed set)
 
