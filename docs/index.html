@@ -182,6 +182,12 @@
     color: var(--pink-accent);
     font-weight: 600;
   }
+  .bubble.alert.kind-success .btitle::before { content: "✓ "; color: #2E8B57; }
+  .bubble.alert.kind-info    .btitle::before { content: "ℹ "; color: #3A6EA5; }
+  .bubble.alert.kind-ship    .btitle::before { content: "🚀 "; }
+  .bubble.alert.kind-review  .btitle::before { content: "👀 "; }
+  .bubble.alert.kind-warn    .btitle::before { content: "⚠ "; color: var(--pink-accent); }
+  .bubble.alert.kind-sparkle .btitle::before { content: "✨ "; }
   .bubble .btitle {
     display: block;
     white-space: nowrap;
@@ -878,13 +884,13 @@ cd axol
 
   const demos = {
     hello:   { title: 'Hello!',                        body: "I'm Axol.",                  priority: null,     alert: false, sweat: false },
-    deploy:  { title: 'ci-bot',                        body: 'deploy succeeded',           priority: 'normal', alert: true,  sweat: false },
-    green:   { title: 'ci-bot',                        body: 'all tests passing',          priority: 'normal', alert: true,  sweat: false, hop: true },
-    shipped: { title: 'main',                          body: 'shipped to production',      priority: 'normal', alert: true,  sweat: false },
+    deploy:  { title: 'ci-bot',                        body: 'deploy succeeded',           priority: 'normal', alert: true,  sweat: false, kind: 'success' },
+    green:   { title: 'ci-bot',                        body: 'all tests passing',          priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'success' },
+    shipped: { title: 'main',                          body: 'shipped to production',      priority: 'normal', alert: true,  sweat: false, kind: 'ship' },
     quip:    { title: "Sip of water? You earned it.",                                      priority: null,     alert: false, sweat: false },
-    review:  { title: 'github',                        body: 'PR #482 approved 🎉',        priority: 'normal', alert: true,  sweat: false },
-    failing: { title: 'feature/auth',                  body: 'all green on first try!',    priority: 'normal', alert: true,  sweat: false, hop: true },
-    claude:  { title: 'claude-code',                   body: 'task complete',              priority: 'normal', alert: true,  sweat: false },
+    review:  { title: 'github',                        body: 'PR #482 approved',           priority: 'normal', alert: true,  sweat: false, kind: 'review' },
+    failing: { title: 'feature/auth',                  body: 'all green on first try!',    priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'sparkle' },
+    claude:  { title: 'claude-code',                   body: 'task complete',              priority: 'normal', alert: true,  sweat: false, kind: 'success' },
     stretch: { title: "Stand up, stretch, look away.",                                     priority: null,     alert: false, sweat: false },
     nap:     { title: "You're doing great.",                                               priority: null,     alert: false, sweat: false },
   };
@@ -914,10 +920,11 @@ cd axol
     const d = demos[key];
     if (!d) return;
     bubble.innerHTML = bubbleHtml(d);
-    bubble.classList.remove('alert', 'low', 'urgent');
+    bubble.className = 'bubble';
     if (d.alert) bubble.classList.add('alert');
     if (d.priority === 'low')    bubble.classList.add('low');
     if (d.priority === 'urgent') bubble.classList.add('urgent');
+    if (d.kind) bubble.classList.add('kind-' + d.kind);
     bubble.classList.add('visible');
     stage.classList.add('talking');
     if (d.sweat) stage.classList.add('has-alert');
