@@ -2888,6 +2888,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.worryBubbles.stop()
         stage.zs.stop()
         stage.character.stopAmbientAnimations()
+        // Kill any in-flight idle (peek/tilt add additive translation
+        // keyframes for their lowered pivot — if they're still playing when
+        // we start the scale animation, the residual translation reads as a
+        // diagonal drift on top of the pure shrink.
+        stage.character.stopIdles()
 
         let s = CompactView.size
         let old = window.frame
@@ -2944,32 +2949,65 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func expandToFull() {
         guard isCompact else { return }
         isCompact = false
-        stage.compact.isHidden = true
 
-        // Most recent actionable alert is replayed after the resize settles.
         let pending = alertStore.lastActionableAlert
+        let savedSize = savedFullFrame?.size ?? NSSize(width: 300, height: 360)
+        let compactFrame = window.frame
 
+        // Target full frame — size from savedFullFrame but positioned so the
+        // character's layer center lands where the compact center currently
+        // is. Mirrors the shrink math so the transition reads as a pure
+        // scale at the same on-screen point (no slide).
+        let charCenterInStage = CGPoint(x: stage.character.frame.midX,
+                                        y: stage.character.frame.midY)
+        let fullCenterScreen  = CGPoint(x: compactFrame.midX,
+                                        y: compactFrame.midY)
+        let proposedOrigin = CGPoint(x: fullCenterScreen.x - charCenterInStage.x,
+                                     y: fullCenterScreen.y - charCenterInStage.y)
+        let clamped = clampOriginToScreen(proposedOrigin, size: savedSize)
+        let newFrame = NSRect(origin: clamped, size: savedSize)
+
+        // Start the character at the same scale the shrink left her at,
+        // ready for the scale-up animation to grow her back to full.
+        let targetScale: CGFloat = 0.38
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        stage.character.layer?.transform = CATransform3DMakeScale(targetScale, targetScale, 1)
+        CATransaction.commit()
         stage.character.isHidden = false
+
+        // Snap the window to full size — no slide.
+        window.setFrame(newFrame, display: true, animate: false)
+
+        // Swap compact → character after the window's geometry is in place.
+        stage.compact.isHidden = true
         stage.worryBubbles.isHidden = false
         stage.zs.isHidden = false
-        stage.character.startAmbientAnimations()
-        updateWorryBubbles()
 
-        guard let saved = savedFullFrame else {
-            if let p = pending { replay(entry: p) }
-            return
-        }
+        // Animate the scale back up to 1.0 in place. fillMode=.forwards
+        // keeps the final pose until we reset the base transform in the
+        // completion block.
+        let scaleUp = CABasicAnimation(keyPath: "transform.scale")
+        scaleUp.fromValue = targetScale
+        scaleUp.toValue   = 1.0
+        scaleUp.duration  = 0.28
+        scaleUp.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        scaleUp.fillMode = .forwards
+        scaleUp.isRemovedOnCompletion = false
+        stage.character.layer?.add(scaleUp, forKey: "compact-expand")
 
-        // Animated resize via NSWindow's built-in animate:true path.
-        // animator()-based completion doesn't reliably fire for window frame
-        // changes, so schedule the bubble replay after a generous delay that
-        // covers the actual animation (animationResizeTime under-reports).
-        window.setFrame(saved, display: true, animate: true)
-        if let p = pending {
-            let delay = window.animationResizeTime(saved) + 0.35
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.replay(entry: p)
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
+            guard let self = self else { return }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.stage.character.layer?.removeAnimation(forKey: "compact-expand")
+            self.stage.character.layer?.transform = CATransform3DIdentity
+            CATransaction.commit()
+
+            self.stage.character.startAmbientAnimations()
+            self.updateWorryBubbles()
+
+            if let p = pending { self.replay(entry: p) }
         }
     }
 
