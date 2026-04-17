@@ -1307,11 +1307,12 @@ cd axol
     return d.body ? d.title + ' ' + d.body : d.title;
   }
 
-  // Fixed bubble display — mirrors native durationFor (6s for alerts, 3.5s
-  // otherwise). Urgent pins open on the native side; the demo just uses the
-  // alert timing for those.
+  // Demo bubbles stay up slightly shorter than the native defaults so the
+  // landing-page reel moves at a readable clip without dragging. The
+  // history-panel hold (set in playNext) intentionally keeps its own
+  // longer dwell.
   function bubbleDurationMs(text, isAlert) {
-    return isAlert ? 6000 : 3500;
+    return isAlert ? 3200 : 2400;
   }
 
   // Mouth-talking runs proportional to text length (~65ms/char, clamped
