@@ -2895,17 +2895,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // tucked into the same corner throughout.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
             guard let self = self else { return }
-            self.stage.character.layer?.removeAnimation(forKey: "compact-shrink")
+
+            // Center the compact window on where the (scaled) character
+            // currently sits, so the snap-to-compact-size doesn't appear
+            // to slide — she just stays in place and the window contracts
+            // to fit her.
+            let charFrame = self.stage.character.frame
+            let charCenterX = old.minX + charFrame.midX
+            let charCenterY = old.minY + charFrame.midY
+            let proposed = CGPoint(x: charCenterX - s / 2, y: charCenterY - s / 2)
+            let clamped = self.clampOriginToScreen(proposed, size: NSSize(width: s, height: s))
+            let newFrame = NSRect(origin: clamped, size: NSSize(width: s, height: s))
+
+            // Hide character BEFORE clearing the scale animation so the
+            // identity-transform snap-back can't flash a full-size frame.
             self.stage.character.isHidden = true
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.stage.character.layer?.removeAnimation(forKey: "compact-shrink")
+            self.stage.character.layer?.transform = CATransform3DIdentity
+            CATransaction.commit()
 
             self.stage.compact.frame = NSRect(x: 0, y: 0, width: s, height: s)
             self.stage.compact.isHidden = false
             self.stage.compact.updateBadge(count: self.alertStore.unseenCount)
 
-            let proposed = CGPoint(x: old.maxX - s, y: old.minY)
-            let clamped = self.clampOriginToScreen(proposed, size: NSSize(width: s, height: s))
-            let newFrame = NSRect(origin: clamped, size: NSSize(width: s, height: s))
-            self.window.setFrame(newFrame, display: true, animate: true)
+            // Instant resize — no slide animation.
+            self.window.setFrame(newFrame, display: true, animate: false)
         }
     }
 
