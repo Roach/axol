@@ -403,6 +403,14 @@
     100% { transform: translateY(0); }
   }
 
+  /* Rapid side-to-side tilt — mirrors the native attention=wiggle one-shot. */
+  .stage.wiggling svg { animation: wiggle 0.5s ease-in-out 3; }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25%      { transform: rotate(-6deg); }
+    75%      { transform: rotate(6deg); }
+  }
+
   .gills { transform-origin: 110px 95px; animation: sway 3.8s ease-in-out infinite; }
   .gills-right { animation-delay: -1.9s; }
   @keyframes sway {
@@ -1244,12 +1252,12 @@ cd axol
   };
 
   const demos = {
-    hello:   { title: 'Hello!',      body: "I'm Axol!",                                      priority: null,     alert: false, sweat: false },
+    hello:   { title: 'Hello!',      body: "I'm Axol!",                                      priority: null,     alert: false, sweat: false, wiggle: true },
     intro:   { title: '',            body: "I'm here to help. Let's go!",                    priority: null,     alert: false, sweat: false },
     deploy:  { title: 'ci-bot',      body: 'deploy succeeded',                               priority: 'normal', alert: true,  sweat: false, kind: 'success' },
     green:   { title: 'ci-bot',      body: 'tests pass',                                     priority: 'normal', alert: true,  sweat: false, hop: true, kind: 'success' },
     review:  { title: 'github',      body: 'PR #482 approved',                               priority: 'normal', alert: true,  sweat: false, kind: 'github' },
-    shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship' },
+    shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship', wiggle: true },
     claude:  { title: 'claude-code', body: 'finished',                                       priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
     recap:   { title: '',            body: "Let's recap —",                                  priority: null,     alert: false, sweat: false },
     signoff: { title: '',            body: "Ping me anytime!",                                priority: null,     alert: false, sweat: false },
@@ -1299,6 +1307,12 @@ cd axol
       void stage.offsetWidth;
       stage.classList.add('hopping');
       setTimeout(() => stage.classList.remove('hopping'), 1200);
+    }
+    if (d.wiggle) {
+      stage.classList.remove('wiggling');
+      void stage.offsetWidth;
+      stage.classList.add('wiggling');
+      setTimeout(() => stage.classList.remove('wiggling'), 1600);
     }
     clearTimeout(bubbleTimer);
     const dur = d.hold != null ? d.hold : bubbleDurationMs(demoText(d), d.alert);
