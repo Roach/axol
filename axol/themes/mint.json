@@ -1,0 +1,13 @@
+{
+  "name": "mint",
+  "character": {
+    "gillBase":  "#7ED4B8",
+    "gillTip":   "#4FB893",
+    "body":      "#9BD6B8",
+    "belly":     "#C4E8D8",
+    "eye":       "#1E3028",
+    "highlight": "#FFFFFF",
+    "cheek":     "#F5B8A0",
+    "mouth":     "#2F5A48"
+  }
+}

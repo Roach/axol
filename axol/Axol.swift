@@ -1,450 +1,28 @@
 import Cocoa
-import Network
 import QuartzCore
 
-/// Single-slot main-queue scheduler. Each instance owns at most one pending
-/// block; scheduling a new one cancels the previous. Replaces the
-/// "var x: DispatchWorkItem?; x?.cancel(); x = DispatchWorkItem {...}; asyncAfter(x)"
-/// pattern that was repeated throughout this file.
-final class Scheduled {
-    private var item: DispatchWorkItem?
-    func cancel() { item?.cancel(); item = nil }
-    func run(after delay: TimeInterval, _ block: @escaping () -> Void) {
-        cancel()
-        let w = DispatchWorkItem(block: block)
-        item = w
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: w)
-    }
-}
+// Scheduled, AxolServer, AxolWindow live in Scheduled.swift + Server.swift.
+// Predicate, AlertAdapter, AdapterTemplate, AdapterRegistry in Adapters.swift.
+// EnvelopeValidator in Envelope.swift. AlertEntry, AlertStore in AlertStore.swift.
 
-final class AxolServer {
-    private var listener: NWListener?
-    private let onEvent: ([String: Any]) -> Void
-    private let queue = DispatchQueue(label: "axol.server")
+/// Three window-size modes, cycled by cmd-click (full → mini → micro → full):
+///   - full: default ~300×360 pane with the ambient character + bubble-above-head.
+///   - mini: small ~60×48 character with an optional side bubble (~240×80 total).
+///   - micro: 48×48 static icon + count badge; clicks expand back to full.
+/// The enum is `String`-backed so it round-trips through `state.json` cleanly.
+/// The legacy raw value `"compact"` (pre-rename) is migrated to `.micro` in
+/// `loadSavedMode()` — existing users don't get dropped back to full mode.
+enum AxolMode: String {
+    case full
+    case mini
+    case micro
 
-    init(onEvent: @escaping ([String: Any]) -> Void) {
-        self.onEvent = onEvent
-    }
-
-    func start(port: UInt16) {
-        guard let nwPort = NWEndpoint.Port(rawValue: port) else { return }
-        do {
-            let params = NWParameters.tcp
-            params.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: nwPort)
-            let l = try NWListener(using: params)
-            l.newConnectionHandler = { [weak self] conn in
-                guard let self = self else { conn.cancel(); return }
-                if Self.isLoopback(conn) {
-                    self.handle(conn)
-                } else {
-                    conn.cancel()
-                }
-            }
-            l.stateUpdateHandler = { state in
-                if case .failed(let err) = state {
-                    NSLog("axol: listener failed: \(String(describing: err))")
-                }
-            }
-            l.start(queue: queue)
-            listener = l
-            NSLog("axol: listening on 127.0.0.1:\(port)")
-        } catch {
-            NSLog("axol: could not start server on port \(port): \(error)")
+    var next: AxolMode {
+        switch self {
+        case .full:  return .mini
+        case .mini:  return .micro
+        case .micro: return .full
         }
-    }
-
-    private static func isLoopback(_ conn: NWConnection) -> Bool {
-        if case let .hostPort(host: host, port: _) = conn.endpoint {
-            switch host {
-            case .ipv4(let addr): return addr == .loopback
-            case .ipv6(let addr): return addr == .loopback
-            default: return false
-            }
-        }
-        return false
-    }
-
-    private func handle(_ conn: NWConnection) {
-        var buffer = Data()
-        conn.start(queue: queue)
-        func readMore() {
-            conn.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { data, _, isComplete, error in
-                if let data = data, !data.isEmpty { buffer.append(data) }
-                if let parsed = Self.parseHTTP(buffer) {
-                    if var json = try? JSONSerialization.jsonObject(with: parsed.body) as? [String: Any] {
-                        if let pidStr = parsed.headers["x-claude-pid"], let pid = Int(pidStr) {
-                            json["claude_pid"] = pid
-                        }
-                        DispatchQueue.main.async { self.onEvent(json) }
-                    }
-                    let resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
-                    conn.send(content: resp.data(using: .utf8), completion: .contentProcessed { _ in
-                        conn.cancel()
-                    })
-                } else if isComplete || error != nil {
-                    conn.cancel()
-                } else {
-                    readMore()
-                }
-            }
-        }
-        readMore()
-    }
-
-    private static func parseHTTP(_ data: Data) -> (headers: [String: String], body: Data)? {
-        let sep = Data([0x0D, 0x0A, 0x0D, 0x0A])
-        guard let r = data.range(of: sep) else { return nil }
-        let headerData = data.subdata(in: 0..<r.lowerBound)
-        guard let headerStr = String(data: headerData, encoding: .utf8) else { return nil }
-        var headers: [String: String] = [:]
-        var contentLength = 0
-        for line in headerStr.components(separatedBy: "\r\n") {
-            let parts = line.split(separator: ":", maxSplits: 1)
-            if parts.count == 2 {
-                let k = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
-                let v = parts[1].trimmingCharacters(in: .whitespaces)
-                headers[k] = v
-                if k == "content-length" { contentLength = Int(v) ?? 0 }
-            }
-        }
-        let bodyStart = r.upperBound
-        if data.count - bodyStart < contentLength { return nil }
-        return (headers, data.subdata(in: bodyStart..<(bodyStart + contentLength)))
-    }
-}
-
-class AxolWindow: NSWindow {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
-}
-
-// MARK: - Adapter plugin framework
-
-struct AdapterMatch {
-    let field: String?
-    let exists: Bool?
-    let equals: String?
-
-    init(json: [String: Any]) {
-        self.field = json["field"] as? String
-        self.exists = json["exists"] as? Bool
-        self.equals = json["equals"] as? String
-    }
-
-    func evaluate(_ payload: [String: Any]) -> Bool {
-        guard let field = field else { return false }
-        let value = payload[field]
-        let present = value != nil && !(value is NSNull)
-        if let exists = exists {
-            if exists != present { return false }
-        }
-        if let equals = equals {
-            guard let str = value as? String, str == equals else { return false }
-        }
-        return true
-    }
-}
-
-struct SkipIf {
-    let field: String
-    let matches: String?
-    let equals: String?
-
-    init?(json: [String: Any]?) {
-        guard let json = json, let field = json["field"] as? String else { return nil }
-        self.field = field
-        self.matches = json["matches"] as? String
-        self.equals = json["equals"] as? String
-    }
-
-    func evaluate(_ payload: [String: Any]) -> Bool {
-        let value = (payload[field] as? String) ?? ""
-        if let m = matches {
-            return value.range(of: m, options: .caseInsensitive) != nil
-        }
-        if let e = equals {
-            return value == e
-        }
-        return false
-    }
-}
-
-struct AlertAdapter {
-    let name: String
-    let match: AdapterMatch
-    let switchField: String?
-    let cases: [String: [String: Any]]
-    let flatTemplate: [String: Any]?
-
-    static func load(from url: URL) -> AlertAdapter? {
-        guard let data = try? Data(contentsOf: url),
-              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let name = json["name"] as? String,
-              let matchJson = json["match"] as? [String: Any] else {
-            NSLog("axol: failed to load adapter at \(url.path)")
-            return nil
-        }
-        return AlertAdapter(
-            name: name,
-            match: AdapterMatch(json: matchJson),
-            switchField: json["switch"] as? String,
-            cases: (json["cases"] as? [String: [String: Any]]) ?? [:],
-            flatTemplate: json["template"] as? [String: Any]
-        )
-    }
-
-    func render(_ payload: [String: Any]) -> AdapterOutcome {
-        guard match.evaluate(payload) else { return .noMatch }
-        let template: [String: Any]?
-        if let switchField = switchField {
-            let key = (payload[switchField] as? String) ?? ""
-            template = cases[key]
-        } else {
-            template = flatTemplate
-        }
-        guard var t = template else { return .noMatch }
-        if let skipJson = t["skip_if"] as? [String: Any],
-           let skip = SkipIf(json: skipJson),
-           skip.evaluate(payload) {
-            return .skipped
-        }
-        t.removeValue(forKey: "skip_if")
-        guard let out = AdapterTemplate.render(t, payload: payload) as? [String: Any] else {
-            return .noMatch
-        }
-        return .rendered(out)
-    }
-}
-
-enum AdapterOutcome {
-    case rendered([String: Any])
-    case skipped
-    case noMatch
-}
-
-enum AdapterTemplate {
-    static func render(_ obj: Any, payload: [String: Any]) -> Any? {
-        if let s = obj as? String {
-            return renderString(s, payload: payload)
-        }
-        if let d = obj as? [String: Any] {
-            var out: [String: Any] = [:]
-            for (k, v) in d {
-                if let rendered = render(v, payload: payload) {
-                    out[k] = rendered
-                }
-            }
-            return out
-        }
-        if let arr = obj as? [Any] {
-            return arr.compactMap { render($0, payload: payload) }
-        }
-        return obj
-    }
-
-    private static func renderString(_ s: String, payload: [String: Any]) -> Any {
-        // If the whole string is a single {{...}}, preserve the value's native type
-        let trimmed = s.trimmingCharacters(in: .whitespaces)
-        if trimmed.hasPrefix("{{"), trimmed.hasSuffix("}}"),
-           let closeStart = trimmed.range(of: "}}") {
-            let firstClose = closeStart.lowerBound
-            if firstClose == trimmed.index(trimmed.endIndex, offsetBy: -2) {
-                let inner = String(trimmed.dropFirst(2).dropLast(2)).trimmingCharacters(in: .whitespaces)
-                return evalExpr(inner, payload: payload) ?? ""
-            }
-        }
-        // Otherwise interpolate each {{...}} as a string
-        var result = s
-        while let openRange = result.range(of: "{{"),
-              let closeRange = result.range(of: "}}", range: openRange.upperBound..<result.endIndex) {
-            let inner = String(result[openRange.upperBound..<closeRange.lowerBound])
-                .trimmingCharacters(in: .whitespaces)
-            let value = evalExpr(inner, payload: payload)
-            let rendered: String = {
-                guard let v = value else { return "" }
-                if let str = v as? String { return str }
-                if let n = v as? NSNumber { return n.stringValue }
-                return String(describing: v)
-            }()
-            result.replaceSubrange(openRange.lowerBound..<closeRange.upperBound, with: rendered)
-        }
-        return result
-    }
-
-    private static func evalExpr(_ expr: String, payload: [String: Any]) -> Any? {
-        let stages = expr.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
-        guard !stages.isEmpty else { return nil }
-        var current: Any? = evalAtom(stages[0], payload: payload)
-        for stage in stages.dropFirst() {
-            current = applyFilter(stage, value: current)
-        }
-        return current
-    }
-
-    private static func evalAtom(_ atom: String, payload: [String: Any]) -> Any? {
-        let parts = atom.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true).map(String.init)
-        if parts.count == 2 {
-            let fn = parts[0]
-            let arg = parts[1]
-            let val = resolvePath(arg, payload: payload)
-            switch fn {
-            case "basename":
-                if let s = val as? String {
-                    return s.split(separator: "/").last.map(String.init) ?? s
-                }
-                return val
-            case "trim":
-                if let s = val as? String {
-                    return s.trimmingCharacters(in: .whitespacesAndNewlines)
-                }
-                return val
-            default:
-                return nil
-            }
-        }
-        return resolvePath(atom, payload: payload)
-    }
-
-    private static func resolvePath(_ path: String, payload: [String: Any]) -> Any? {
-        var current: Any? = payload
-        for part in path.split(separator: ".").map(String.init) {
-            guard let dict = current as? [String: Any] else { return nil }
-            current = dict[part]
-        }
-        if current is NSNull { return nil }
-        return current
-    }
-
-    private static func applyFilter(_ stage: String, value: Any?) -> Any? {
-        let parts = stage.split(separator: " ", maxSplits: 1).map(String.init)
-        guard let fn = parts.first else { return value }
-        switch fn {
-        case "default":
-            let arg = parts.count > 1 ? stripQuotes(parts[1]) : ""
-            if let s = value as? String, !s.isEmpty { return value }
-            if value != nil && !(value is NSNull) { return value }
-            return arg
-        default:
-            return value
-        }
-    }
-
-    private static func stripQuotes(_ s: String) -> String {
-        var t = s.trimmingCharacters(in: .whitespaces)
-        if (t.hasPrefix("'") && t.hasSuffix("'")) || (t.hasPrefix("\"") && t.hasSuffix("\"")) {
-            t = String(t.dropFirst().dropLast())
-        }
-        return t
-    }
-}
-
-final class AdapterRegistry {
-    private(set) var adapters: [AlertAdapter] = []
-
-    func load() {
-        adapters = []
-        let fm = FileManager.default
-
-        let exeDir = URL(fileURLWithPath: CommandLine.arguments[0])
-            .resolvingSymlinksInPath().deletingLastPathComponent()
-        loadFrom(dir: exeDir.appendingPathComponent("adapters"))
-
-        if let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            let userDir = support.appendingPathComponent("Axol/adapters")
-            try? fm.createDirectory(at: userDir, withIntermediateDirectories: true)
-            loadFrom(dir: userDir)
-        }
-
-        NSLog("axol: loaded \(adapters.count) adapter(s): \(adapters.map { $0.name }.joined(separator: ", "))")
-    }
-
-    private func loadFrom(dir: URL) {
-        let fm = FileManager.default
-        guard let items = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return }
-        for item in items.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard item.pathExtension == "json" else { continue }
-            if let adapter = AlertAdapter.load(from: item) {
-                adapters.append(adapter)
-            }
-        }
-    }
-
-    /// Result of routing a payload through the registered adapters. `.rendered`
-    /// means an adapter matched and produced an envelope; `.skipped` means an
-    /// adapter matched but its case's `skip_if` predicate intentionally
-    /// silenced the event (not an error); `.noMatch` means no adapter claimed
-    /// the payload.
-    enum RouteResult {
-        case rendered([String: Any], adapterName: String)
-        case skipped(adapterName: String)
-        case noMatch
-    }
-
-    func route(_ payload: [String: Any]) -> RouteResult {
-        var sawSkip: String? = nil
-        for adapter in adapters {
-            switch adapter.render(payload) {
-            case .rendered(let env):
-                return .rendered(env, adapterName: adapter.name)
-            case .skipped:
-                sawSkip = adapter.name
-            case .noMatch:
-                continue
-            }
-        }
-        if let name = sawSkip { return .skipped(adapterName: name) }
-        return .noMatch
-    }
-}
-
-// MARK: - Envelope validator
-
-enum EnvelopeValidator {
-    static let allowedPriorities: Set<String> = ["low", "normal", "high", "urgent"]
-    static let allowedActions: Set<String> = ["focus-pid", "open-url", "reveal-file", "noop"]
-    static let allowedAttention: Set<String> = ["wiggle", "hop", "none"]
-
-    static func validate(_ input: [String: Any]) -> [String: Any]? {
-        guard let title = input["title"] as? String, !title.isEmpty else { return nil }
-        let priority = (input["priority"] as? String).flatMap { allowedPriorities.contains($0) ? $0 : nil } ?? "normal"
-        var out: [String: Any] = [
-            "title": title,
-            "priority": priority,
-            "source": (input["source"] as? String) ?? "unknown"
-        ]
-        if let body = input["body"] as? String, !body.isEmpty { out["body"] = body }
-        if let icon = input["icon"] as? String, !icon.isEmpty { out["icon"] = icon }
-        if let attn = input["attention"] as? String, allowedAttention.contains(attn) { out["attention"] = attn }
-        if let ctx = input["context"] as? [String: Any], !ctx.isEmpty { out["context"] = ctx }
-        if let actions = input["actions"] as? [[String: Any]] {
-            let valid = actions.compactMap { validateAction($0) }
-            if !valid.isEmpty { out["actions"] = valid }
-        }
-        return out
-    }
-
-    private static func validateAction(_ a: [String: Any]) -> [String: Any]? {
-        guard let type = a["type"] as? String, allowedActions.contains(type) else { return nil }
-        var out: [String: Any] = ["type": type]
-        if let label = a["label"] as? String { out["label"] = label }
-        switch type {
-        case "focus-pid":
-            let pid: Int? = (a["pid"] as? Int) ?? (a["pid"] as? NSNumber)?.intValue ?? Int((a["pid"] as? String) ?? "")
-            guard let p = pid, p > 0 else { return nil }
-            out["pid"] = p
-        case "open-url":
-            guard let url = a["url"] as? String,
-                  url.hasPrefix("http://") || url.hasPrefix("https://") else { return nil }
-            out["url"] = url
-        case "reveal-file":
-            guard let path = a["path"] as? String, !path.isEmpty else { return nil }
-            out["path"] = path
-        case "noop":
-            break
-        default:
-            return nil
-        }
-        return out
     }
 }
 
@@ -468,7 +46,14 @@ final class AxolCharacterView: NSView {
     private let mouthClosedLayer = CAShapeLayer()
     private let mouthOpenLayer = CAShapeLayer()
 
-    override init(frame: NSRect) {
+    /// Color palette the character is drawn with. Defaults to the hardcoded
+    /// pink palette so callers that don't care about theming get the
+    /// original axolotl. StageView / MicroView instantiate with the
+    /// app's currently-loaded theme at startup.
+    private let theme: Theme
+
+    init(frame: NSRect, theme: Theme = .builtin) {
+        self.theme = theme
         super.init(frame: frame)
         wantsLayer = true
         let root = CALayer()
@@ -509,46 +94,47 @@ final class AxolCharacterView: NSView {
         configureGroup(armLeftLayer,    pivotX: 58,  pivotY: 142)
         configureGroup(armRightLayer,   pivotX: 162, pivotY: 142)
 
-        // Left gills (3 ellipses) — darker pink to stand out against the body
-        leftGillsLayer.addSublayer(ellipse(cx: 52,  cy: 70,  rx: 16, ry: 9,  hex: "E066A0", rotateDeg: -35))
-        leftGillsLayer.addSublayer(ellipse(cx: 42,  cy: 95,  rx: 18, ry: 10, hex: "E066A0", rotateDeg: -8))
-        leftGillsLayer.addSublayer(ellipse(cx: 50,  cy: 122, rx: 20, ry: 11, hex: "BF4F85", rotateDeg: 22))
+        let c = theme.character
+
+        // Left gills (3 ellipses) — gillTip is conventionally darker than gillBase.
+        leftGillsLayer.addSublayer(ellipse(cx: 52,  cy: 70,  rx: 16, ry: 9,  hex: c.gillBase, rotateDeg: -35))
+        leftGillsLayer.addSublayer(ellipse(cx: 42,  cy: 95,  rx: 18, ry: 10, hex: c.gillBase, rotateDeg: -8))
+        leftGillsLayer.addSublayer(ellipse(cx: 50,  cy: 122, rx: 20, ry: 11, hex: c.gillTip,  rotateDeg: 22))
         contentLayer.addSublayer(leftGillsLayer)
 
         // Right gills (3 ellipses, mirrored)
-        rightGillsLayer.addSublayer(ellipse(cx: 168, cy: 70,  rx: 16, ry: 9,  hex: "E066A0", rotateDeg: 35))
-        rightGillsLayer.addSublayer(ellipse(cx: 178, cy: 95,  rx: 18, ry: 10, hex: "E066A0", rotateDeg: 8))
-        rightGillsLayer.addSublayer(ellipse(cx: 170, cy: 122, rx: 20, ry: 11, hex: "BF4F85", rotateDeg: -22))
+        rightGillsLayer.addSublayer(ellipse(cx: 168, cy: 70,  rx: 16, ry: 9,  hex: c.gillBase, rotateDeg: 35))
+        rightGillsLayer.addSublayer(ellipse(cx: 178, cy: 95,  rx: 18, ry: 10, hex: c.gillBase, rotateDeg: 8))
+        rightGillsLayer.addSublayer(ellipse(cx: 170, cy: 122, rx: 20, ry: 11, hex: c.gillTip,  rotateDeg: -22))
         contentLayer.addSublayer(rightGillsLayer)
 
-        // Body — slightly deeper pink so she pops against lighter backgrounds.
-        contentLayer.addSublayer(ellipse(cx: 110, cy: 110, rx: 72, ry: 62, hex: "F29BC5"))
-        // Belly — corresponding half-shade deeper than the body.
-        contentLayer.addSublayer(ellipse(cx: 110, cy: 125, rx: 50, ry: 38, hex: "F0B5D3"))
+        // Body + belly.
+        contentLayer.addSublayer(ellipse(cx: 110, cy: 110, rx: 72, ry: 62, hex: c.body))
+        contentLayer.addSublayer(ellipse(cx: 110, cy: 125, rx: 50, ry: 38, hex: c.belly))
 
-        // Arms — match the new body tone
-        armLeftLayer.addSublayer(ellipse(cx: 58,  cy: 155, rx: 10, ry: 14, hex: "F29BC5", rotateDeg: -20))
-        armRightLayer.addSublayer(ellipse(cx: 162, cy: 155, rx: 10, ry: 14, hex: "F29BC5", rotateDeg: 20))
+        // Arms — same tone as the body.
+        armLeftLayer.addSublayer(ellipse(cx: 58,  cy: 155, rx: 10, ry: 14, hex: c.body, rotateDeg: -20))
+        armRightLayer.addSublayer(ellipse(cx: 162, cy: 155, rx: 10, ry: 14, hex: c.body, rotateDeg: 20))
         contentLayer.addSublayer(armLeftLayer)
         contentLayer.addSublayer(armRightLayer)
 
         // Eyes — pupils + highlights, grouped for blink animation
-        eyesLayer.addSublayer(circle(cx: 88,  cy: 105, r: 7,   hex: "2D2533"))
-        eyesLayer.addSublayer(circle(cx: 132, cy: 105, r: 7,   hex: "2D2533"))
-        eyesLayer.addSublayer(circle(cx: 90,  cy: 102, r: 2.2, hex: "FFFFFF"))
-        eyesLayer.addSublayer(circle(cx: 134, cy: 102, r: 2.2, hex: "FFFFFF"))
+        eyesLayer.addSublayer(circle(cx: 88,  cy: 105, r: 7,   hex: c.eye))
+        eyesLayer.addSublayer(circle(cx: 132, cy: 105, r: 7,   hex: c.eye))
+        eyesLayer.addSublayer(circle(cx: 90,  cy: 102, r: 2.2, hex: c.highlight))
+        eyesLayer.addSublayer(circle(cx: 134, cy: 102, r: 2.2, hex: c.highlight))
         contentLayer.addSublayer(eyesLayer)
 
-        // Cheeks (semi-transparent pink)
-        contentLayer.addSublayer(circle(cx: 78,  cy: 125, r: 7, hex: "FF7AA3", opacity: 0.45))
-        contentLayer.addSublayer(circle(cx: 142, cy: 125, r: 7, hex: "FF7AA3", opacity: 0.45))
+        // Cheeks — opacity 45% is baked in regardless of the theme color.
+        contentLayer.addSublayer(circle(cx: 78,  cy: 125, r: 7, hex: c.cheek, opacity: 0.45))
+        contentLayer.addSublayer(circle(cx: 142, cy: 125, r: 7, hex: c.cheek, opacity: 0.45))
 
         // Mouth — closed arc + hidden open ellipse for talking
         let closedPath = CGMutablePath()
         closedPath.move(to: CGPoint(x: 98, y: 130))
         closedPath.addQuadCurve(to: CGPoint(x: 122, y: 130), control: CGPoint(x: 110, y: 138))
         mouthClosedLayer.path = closedPath
-        mouthClosedLayer.strokeColor = Self.hexColor("7A2D4D")
+        mouthClosedLayer.strokeColor = Self.hexColor(c.mouth)
         mouthClosedLayer.fillColor = NSColor.clear.cgColor
         mouthClosedLayer.lineWidth = 2.5
         mouthClosedLayer.lineCap = .round
@@ -556,7 +142,7 @@ final class AxolCharacterView: NSView {
 
         let openPath = CGPath(ellipseIn: CGRect(x: -6, y: -4, width: 12, height: 8), transform: nil)
         mouthOpenLayer.path = openPath
-        mouthOpenLayer.fillColor = Self.hexColor("7A2D4D")
+        mouthOpenLayer.fillColor = Self.hexColor(c.mouth)
         mouthOpenLayer.position = CGPoint(x: 110, y: 134)
         mouthOpenLayer.bounds = CGRect(x: -6, y: -4, width: 12, height: 8)
         mouthOpenLayer.isHidden = true
@@ -1143,6 +729,11 @@ final class BubbleView: NSView {
     private let backgroundLayer = CAShapeLayer()
     private let titleField = NSTextField(labelWithString: "")
     private let bodyField  = NSTextField(wrappingLabelWithString: "")
+    /// Carousel-style dots in the bubble's top-right corner, one per
+    /// actionable alert in the rotation. The current dot is filled in the
+    /// pink accent; the others are muted. Hidden for fresh alerts and
+    /// single-entry replays (nothing to paginate through).
+    private let indicatorDotsLayer = CALayer()
 
     /// Default icon names an adapter can pass via the envelope `icon` field.
     /// Each name resolves to an SF Symbol + tint color. Unknown strings fall
@@ -1213,12 +804,16 @@ final class BubbleView: NSView {
     private let tailHeight:   CGFloat = 6
     private let cornerRadius: CGFloat = 14
     private let tailWidth:    CGFloat = 12
-    private let maxBubbleWidth: CGFloat = 240
-    private let minBubbleWidth: CGFloat = 130
+    private let maxBubbleWidth: CGFloat = 200
+    private let minBubbleWidth: CGFloat = 120
 
     private var action: [String: Any]?
     private var isUrgent: Bool = false
     private let autoDismissTimer = Scheduled()
+
+    /// Which edge the tail protrudes from. Set by `present()`; drives both
+    /// the shape-path draw and the text-field positioning in `layoutContent`.
+    private var tailSide: BubbleShape.Side = .bottom
 
     var onAction: (([String: Any]) -> Void)?
     var onShow:   ((_ talkDuration: TimeInterval) -> Void)?
@@ -1240,11 +835,10 @@ final class BubbleView: NSView {
         backgroundLayer.shadowRadius  = 10
         root.addSublayer(backgroundLayer)
 
+        // Both fields are already configured as non-editable, non-bezeled
+        // labels via `labelWithString:` / `wrappingLabelWithString:`; we only
+        // need to wire the shared rendering knobs here.
         for f in [titleField, bodyField] {
-            f.isEditable = false
-            f.isSelectable = false
-            f.isBezeled = false
-            f.drawsBackground = false
             f.alignment = .center
             addSubview(f)
         }
@@ -1264,6 +858,13 @@ final class BubbleView: NSView {
         bodyField.cell?.isScrollable = false
         bodyField.cell?.truncatesLastVisibleLine = true
 
+        // Pagination dots container. Populated per-`present()` with one
+        // child CAShapeLayer per actionable alert in the rotation. Sits in
+        // the top-right of the bubble body.
+        indicatorDotsLayer.masksToBounds = false
+        indicatorDotsLayer.isHidden = true
+        root.addSublayer(indicatorDotsLayer)
+
         alphaValue = 0
         isHidden = true
     }
@@ -1271,10 +872,32 @@ final class BubbleView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     /// Show the bubble with the given content + styling.
-    func present(title: String, body: String?, priority: String, icon: String? = nil, action: [String: Any]?) {
+    ///
+    /// `tailSide` picks which edge the bubble's pointer protrudes from:
+    /// `.bottom` (default) is for full-mode bubbles that sit above the
+    /// character; `.left` is for mini-mode bubbles that sit to her right.
+    ///
+    /// `cyclePosition` is `(current, total)` when the user is flipping
+    /// through multiple pending alerts by clicking the character —
+    /// renders as a small "N/M" in the top-right corner so the user knows
+    /// where they are in the stack. Pass `nil` for fresh alerts and
+    /// single-entry replays.
+    func present(title: String, body: String?, priority: String, icon: String? = nil,
+                 action: [String: Any]?, tailSide: BubbleShape.Side = .bottom,
+                 cyclePosition: (Int, Int)? = nil) {
         self.action = action
         self.isUrgent = (priority == "urgent")
+        self.tailSide = tailSide
         let clickable = action != nil
+
+        // Only surface the indicator when there's actually a stack to
+        // page through — a single dot is noise.
+        if let (current, total) = cyclePosition, total > 1 {
+            buildIndicatorDots(current: current, total: total)
+            indicatorDotsLayer.isHidden = false
+        } else {
+            indicatorDotsLayer.isHidden = true
+        }
 
         // Set a plain title first so applyStyle can set color via .textColor;
         // we upgrade to an attributed title below if an icon resolves.
@@ -1367,7 +990,12 @@ final class BubbleView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         // Only accept clicks when visible and clickable (has an action)
         guard !isHidden, action != nil else { return nil }
-        return super.hitTest(point)
+        // The body field is a wrapping NSTextField — its default hit-testing
+        // absorbs clicks on the wrapped glyphs and stops `mouseDown` from
+        // propagating up to us. Claim the whole bubble rect so title, body,
+        // icon, and padding alike all route to our click handler.
+        let local = convert(point, from: superview)
+        return bounds.contains(local) ? self : nil
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -1456,19 +1084,45 @@ final class BubbleView: NSView {
         let bubbleWidth = contentWidth + 2 * horizPadding
         let gap: CGFloat = bodyField.isHidden ? 0 : 3
         let bodyAreaHeight = titleHeight + gap + bodyHeight + 2 * vertPadding
-        let totalHeight = bodyAreaHeight + tailHeight
+
+        // A side tail pokes out of a vertical edge instead of the bottom, so
+        // the overall bubble width grows by tailHeight while the height stays
+        // flush with the text box — no extra vertical padding for a tail
+        // stub that isn't there. Horizontal padding for the text shifts right
+        // by the tail reserve too, so glyphs don't overlap the pointer.
+        let totalWidth:   CGFloat
+        let totalHeight:  CGFloat
+        let xOffset:      CGFloat     // left-edge offset for text labels
+        let yOffsetBase:  CGFloat     // bottom-edge offset for text labels
+        switch tailSide {
+        case .bottom:
+            totalWidth = bubbleWidth
+            totalHeight = bodyAreaHeight + tailHeight
+            xOffset = 0
+            yOffsetBase = tailHeight
+        case .left:
+            totalWidth = bubbleWidth + tailHeight
+            totalHeight = bodyAreaHeight
+            xOffset = tailHeight
+            yOffsetBase = 0
+        case .right:
+            totalWidth = bubbleWidth + tailHeight
+            totalHeight = bodyAreaHeight
+            xOffset = 0
+            yOffsetBase = 0
+        }
 
         let origin = frame.origin
-        frame = CGRect(x: origin.x, y: origin.y, width: bubbleWidth, height: totalHeight)
+        frame = CGRect(x: origin.x, y: origin.y, width: totalWidth, height: totalHeight)
 
-        // Labels — view origin is bottom-left, so measure Y from bottom
-        let titleY = tailHeight + bodyAreaHeight - vertPadding - titleHeight
+        // Labels — view origin is bottom-left, so measure Y from bottom.
+        let titleY = yOffsetBase + bodyAreaHeight - vertPadding - titleHeight
         // Allow the title field to extend slightly into the horizontal padding
         // on each side — gives NSTextField extra rendering slack so the cell's
         // internal insets don't trigger truncation.
         let titleInset: CGFloat = 4
         titleField.frame = CGRect(
-            x: horizPadding - titleInset,
+            x: xOffset + horizPadding - titleInset,
             y: titleY,
             width: contentWidth + 2 * titleInset,
             height: titleHeight
@@ -1476,10 +1130,10 @@ final class BubbleView: NSView {
         if bodyField.isHidden {
             bodyField.frame = .zero
         } else {
-            let bodyY = tailHeight + vertPadding
+            let bodyY = yOffsetBase + vertPadding
             let bodyInset: CGFloat = 4
             bodyField.frame = CGRect(
-                x: horizPadding - bodyInset,
+                x: xOffset + horizPadding - bodyInset,
                 y: bodyY,
                 width: contentWidth + 2 * bodyInset,
                 height: bodyHeight
@@ -1491,8 +1145,62 @@ final class BubbleView: NSView {
             bubbleRect: bounds,
             tailHeight: tailHeight,
             cornerRadius: cornerRadius,
-            tailWidth: tailWidth
+            tailWidth: tailWidth,
+            tailSide: tailSide
         )
+
+        // Pagination dots centered along the top edge of the bubble body.
+        // Computing bodyMinX accommodates the .left tail's body offset so
+        // the row actually lines up under the visible center, not the
+        // whole-frame center.
+        if !indicatorDotsLayer.isHidden {
+            let indW = indicatorDotsLayer.frame.width
+            let indH = indicatorDotsLayer.frame.height
+            let bodyMinX: CGFloat = (tailSide == .left) ? tailHeight : 0
+            let bodyCenterX = bodyMinX + bubbleWidth / 2
+            let bodyMaxY = yOffsetBase + bodyAreaHeight
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            indicatorDotsLayer.frame.origin = CGPoint(
+                x: bodyCenterX - indW / 2,
+                y: bodyMaxY - indH - 5
+            )
+            CATransaction.commit()
+        }
+    }
+
+    /// Build one small dot per alert in the rotation, with the current
+    /// index filled in the pink accent and the rest muted. Called from
+    /// `present()` whenever the caller passes a multi-item cyclePosition.
+    private func buildIndicatorDots(current: Int, total: Int) {
+        let dotSize: CGFloat = 4
+        let dotSpacing: CGFloat = 4
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        indicatorDotsLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
+        for i in 0..<total {
+            let dot = CAShapeLayer()
+            let rect = CGRect(x: 0, y: 0, width: dotSize, height: dotSize)
+            dot.path = CGPath(ellipseIn: rect, transform: nil)
+            let isCurrent = (i + 1 == current)
+            // Softer palette than the full pink accent — the dots are
+            // metadata, not a call to action. The active dot still reads
+            // as warmer pink, the inactive ones fade into the bubble's
+            // own light-pink backdrop.
+            dot.fillColor = isCurrent
+                ? AxolCharacterView.hexColor("E8A4C2")     // soft pink
+                : AxolCharacterView.hexColor("EADDE3")     // barely-there gray
+            dot.frame = CGRect(
+                x: CGFloat(i) * (dotSize + dotSpacing),
+                y: 0,
+                width: dotSize,
+                height: dotSize
+            )
+            indicatorDotsLayer.addSublayer(dot)
+        }
+        let totalWidth = CGFloat(total) * dotSize + CGFloat(max(total - 1, 0)) * dotSpacing
+        indicatorDotsLayer.frame.size = CGSize(width: totalWidth, height: dotSize)
+        CATransaction.commit()
     }
 
     static func durationFor(text: String, isAlert: Bool) -> TimeInterval {
@@ -1542,106 +1250,6 @@ extension NSColor {
     }
 }
 
-// MARK: - Alert history storage
-
-struct AlertEntry {
-    let id: Int
-    let envelope: [String: Any]
-    let time: Date
-    var seenAt: Date?
-    /// Set when the user clicks through the bubble (or a history row) to run
-    /// the entry's action. Actioned entries are filtered out of the bubble
-    /// rotation — they remain in the history panel but won't replay.
-    var actionedAt: Date?
-
-    var title: String   { (envelope["title"] as? String) ?? "" }
-    var body: String?   { envelope["body"] as? String }
-    var source: String  { (envelope["source"] as? String) ?? "unknown" }
-    var priority: String { (envelope["priority"] as? String) ?? "normal" }
-    var action: [String: Any]? { (envelope["actions"] as? [[String: Any]])?.first }
-    var icon: String? { envelope["icon"] as? String }
-}
-
-/// Centralized alert history + seen-set. Newest first; capped at maxEntries.
-final class AlertStore {
-    private(set) var entries: [AlertEntry] = []
-    private var nextId: Int = 0
-    let maxEntries: Int = 5
-    let ttlAfterSeen: TimeInterval = 5 * 60
-
-    /// True if at least one archived entry has an action and is unseen.
-    /// Drives the "character has a pending alert" signal (worry bubbles).
-    var hasUnseenAlerts: Bool {
-        entries.contains { $0.seenAt == nil && $0.action != nil }
-    }
-
-    /// Most-recent archived entry that the user can still act on (has an
-    /// action and hasn't been clicked through yet).
-    var lastActionableAlert: AlertEntry? {
-        entries.first { $0.action != nil && $0.actionedAt == nil }
-    }
-
-    /// Count of entries the user hasn't seen yet.
-    var unseenCount: Int {
-        entries.filter { $0.seenAt == nil }.count
-    }
-
-    @discardableResult
-    func push(envelope: [String: Any]) -> AlertEntry {
-        nextId += 1
-        let entry = AlertEntry(id: nextId, envelope: envelope, time: Date(), seenAt: nil, actionedAt: nil)
-        entries.insert(entry, at: 0)
-        if entries.count > maxEntries {
-            entries = Array(entries.prefix(maxEntries))
-        }
-        return entry
-    }
-
-    func markSeen(id: Int) {
-        guard let idx = entries.firstIndex(where: { $0.id == id }) else { return }
-        if entries[idx].seenAt == nil { entries[idx].seenAt = Date() }
-    }
-
-    func markAllSeen() {
-        let now = Date()
-        for i in entries.indices where entries[i].seenAt == nil {
-            entries[i].seenAt = now
-        }
-    }
-
-    /// Records that the user clicked through to run the entry's action. Also
-    /// marks it seen (can't act on something without seeing it).
-    func markActioned(id: Int) {
-        guard let idx = entries.firstIndex(where: { $0.id == id }) else { return }
-        let now = Date()
-        if entries[idx].actionedAt == nil { entries[idx].actionedAt = now }
-        if entries[idx].seenAt == nil { entries[idx].seenAt = now }
-    }
-
-    /// Marks every entry as actioned — used by the explicit "clear alerts"
-    /// menu action, which dismisses the whole backlog at once.
-    func markAllActioned() {
-        let now = Date()
-        for i in entries.indices {
-            if entries[i].actionedAt == nil { entries[i].actionedAt = now }
-            if entries[i].seenAt == nil { entries[i].seenAt = now }
-        }
-    }
-
-    /// Remove entries that were marked seen more than `ttlAfterSeen` ago.
-    /// Returns the number of entries removed (for UI refresh decisions).
-    @discardableResult
-    func sweep() -> Int {
-        let cutoff = Date().addingTimeInterval(-ttlAfterSeen)
-        let before = entries.count
-        entries.removeAll { e in
-            if let seen = e.seenAt, seen < cutoff { return true }
-            return false
-        }
-        return before - entries.count
-    }
-}
-
 // MARK: - History panel UI
 
 /// Small pink-accent pill showing the alert's source field.
@@ -1659,10 +1267,6 @@ final class SourcePillView: NSView {
         label.font = NSFont.systemFont(ofSize: 9, weight: .semibold)
         label.textColor = NSColor.fromHex("D6457A")
         label.stringValue = text
-        label.isEditable = false
-        label.isBezeled = false
-        label.drawsBackground = false
-        label.isSelectable = false
         label.sizeToFit()
         addSubview(label)
 
@@ -1704,8 +1308,6 @@ final class HistoryRowView: NSView {
         // Title (left, flex, single-line, ellipsized)
         titleLabel.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
         titleLabel.textColor = NSColor.fromHex("2D2533")
-        titleLabel.isEditable = false; titleLabel.isBezeled = false
-        titleLabel.drawsBackground = false; titleLabel.isSelectable = false
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.maximumNumberOfLines = 1
         titleLabel.usesSingleLineMode = true
@@ -1735,8 +1337,6 @@ final class HistoryRowView: NSView {
         timeLabel.stringValue = Self.relativeTime(from: entry.time)
         timeLabel.font = NSFont.systemFont(ofSize: 10)
         timeLabel.textColor = NSColor.fromHex("A89CA3")
-        timeLabel.isEditable = false; timeLabel.isBezeled = false
-        timeLabel.drawsBackground = false; timeLabel.isSelectable = false
         timeLabel.alignment = .right
         addSubview(timeLabel)
 
@@ -1746,8 +1346,6 @@ final class HistoryRowView: NSView {
         if let bodyLabel = bodyLabel {
             bodyLabel.font = NSFont.systemFont(ofSize: 11)
             bodyLabel.textColor = NSColor.fromHex("998F96")
-            bodyLabel.isEditable = false; bodyLabel.isBezeled = false
-            bodyLabel.drawsBackground = false; bodyLabel.isSelectable = false
             bodyLabel.lineBreakMode = .byTruncatingTail
             bodyLabel.maximumNumberOfLines = 1
             bodyLabel.usesSingleLineMode = true
@@ -1843,7 +1441,14 @@ final class HistoryView: NSView {
     private let panelWidth:     CGFloat = 276
     private let maxBodyHeight:  CGFloat = 180
 
+    /// Which edge the panel's tail protrudes from. `.bottom` is the default
+    /// full-mode layout (panel above the character, tail down). `.right` is
+    /// for mini mode where the panel sits to the left of the character and
+    /// its tail points right at her. Set by the caller of `present(...)`.
+    private var tailSide: BubbleShape.Side = .bottom
+
     var onRowClick: ((AlertEntry) -> Void)?
+    var onHide: (() -> Void)?
     private let autoHideTimer = Scheduled()
 
     override init(frame: NSRect) {
@@ -1862,8 +1467,6 @@ final class HistoryView: NSView {
 
         headerLabel.font = NSFont.systemFont(ofSize: 10, weight: .semibold)
         headerLabel.textColor = NSColor.fromHex("999999")
-        headerLabel.isEditable = false; headerLabel.isBezeled = false
-        headerLabel.drawsBackground = false; headerLabel.isSelectable = false
         headerLabel.alignment = .left
         if let attr = NSMutableAttributedString(string: "RECENT ALERTS") as NSMutableAttributedString? {
             attr.addAttribute(.kern, value: 0.6, range: NSRange(location: 0, length: attr.length))
@@ -1888,7 +1491,11 @@ final class HistoryView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func present(in stage: NSView, entries: [AlertEntry]) {
+    func present(in stage: NSView, entries: [AlertEntry],
+                 tailSide: BubbleShape.Side = .bottom,
+                 origin: NSPoint? = nil,
+                 maxVisibleRows: Int? = nil) {
+        self.tailSide = tailSide
         rowsContainer.subviews.forEach { $0.removeFromSuperview() }
 
         let rowWidth = panelWidth - 2 * horizPadding
@@ -1902,32 +1509,73 @@ final class HistoryView: NSView {
             rows.append(row)
         }
         let rowsTotalHeight = rows.reduce(0) { $0 + $1.frame.height }
-        let scrollHeight = min(rowsTotalHeight, maxBodyHeight)
-        let panelHeight = headerHeight + scrollHeight + tailHeight
+        // In mini mode the caller caps visible rows to keep the panel
+        // compact. Rows beyond that remain in the rowsContainer and are
+        // reachable via the scroll view — the cap only shrinks the
+        // visible viewport.
+        let cappedHeight: CGFloat = {
+            guard let n = maxVisibleRows, n > 0, n < rows.count else {
+                return min(rowsTotalHeight, maxBodyHeight)
+            }
+            let firstN = rows.prefix(n).reduce(0) { $0 + $1.frame.height }
+            return min(firstN, maxBodyHeight)
+        }()
+        let scrollHeight = cappedHeight
 
-        let idealX = (stage.frame.width - panelWidth) / 2
-        let adjustedX = BubbleView.edgeAdjustedX(idealX: idealX, panelWidth: panelWidth, in: stage)
-        frame = CGRect(x: adjustedX,
-                       y: 128,
-                       width: panelWidth, height: panelHeight)
+        // Dimensions differ depending on which edge carries the tail. A side
+        // tail protrudes horizontally (adding tail reserve to width), a
+        // bottom tail protrudes downward (adding to height).
+        let panelHeight: CGFloat
+        let panelTotalWidth: CGFloat
+        let bodyXOffset: CGFloat    // shift content right when tail is on the left
+        let bodyYOffset: CGFloat    // shift content up when tail is on the bottom
+        switch tailSide {
+        case .bottom:
+            panelHeight = headerHeight + scrollHeight + tailHeight
+            panelTotalWidth = panelWidth
+            bodyXOffset = 0
+            bodyYOffset = tailHeight
+        case .left:
+            panelHeight = headerHeight + scrollHeight
+            panelTotalWidth = panelWidth + tailHeight
+            bodyXOffset = tailHeight
+            bodyYOffset = 0
+        case .right:
+            panelHeight = headerHeight + scrollHeight
+            panelTotalWidth = panelWidth + tailHeight
+            bodyXOffset = 0
+            bodyYOffset = 0
+        }
+
+        let frameOrigin: NSPoint
+        if let o = origin {
+            frameOrigin = o
+        } else {
+            let idealX = (stage.frame.width - panelTotalWidth) / 2
+            let adjustedX = BubbleView.edgeAdjustedX(idealX: idealX, panelWidth: panelTotalWidth, in: stage)
+            frameOrigin = NSPoint(x: adjustedX, y: 128)
+        }
+        frame = CGRect(origin: frameOrigin,
+                       size: NSSize(width: panelTotalWidth, height: panelHeight))
         backgroundLayer.frame = bounds
         backgroundLayer.path = BubbleShape.path(
             bubbleRect: bounds, tailHeight: tailHeight,
-            cornerRadius: cornerRadius, tailWidth: tailWidth)
+            cornerRadius: cornerRadius, tailWidth: tailWidth,
+            tailSide: tailSide)
 
         // Header label sized to its text height (~14 for 10pt) and centered
         // vertically in the 30px header band.
         let labelH: CGFloat = 14
         let labelY = panelHeight - headerHeight + (headerHeight - labelH) / 2
-        headerLabel.frame = CGRect(x: horizPadding + 2,
+        headerLabel.frame = CGRect(x: bodyXOffset + horizPadding + 2,
                                    y: labelY,
                                    width: panelWidth - 2 * horizPadding,
                                    height: labelH)
-        dividerLayer.frame = CGRect(x: 0, y: panelHeight - headerHeight,
+        dividerLayer.frame = CGRect(x: bodyXOffset, y: panelHeight - headerHeight,
                                     width: panelWidth, height: 1)
 
         // Scrollable rows area sits entirely below the header band.
-        scrollView.frame = CGRect(x: horizPadding, y: tailHeight,
+        scrollView.frame = CGRect(x: bodyXOffset + horizPadding, y: bodyYOffset,
                                   width: rowWidth, height: scrollHeight)
         rowsContainer.setFrameSize(NSSize(width: rowWidth, height: rowsTotalHeight))
 
@@ -1959,39 +1607,68 @@ final class HistoryView: NSView {
         autoHideTimer.run(after: 10) { [weak self] in self?.hide() }
     }
 
-    func presentEmpty(in stage: NSView) {
+    func presentEmpty(in stage: NSView,
+                      tailSide: BubbleShape.Side = .bottom,
+                      origin: NSPoint? = nil) {
+        self.tailSide = tailSide
         rowsContainer.subviews.forEach { $0.removeFromSuperview() }
 
         let empty = NSTextField(labelWithString: "No alerts yet.")
         empty.font = NSFont.systemFont(ofSize: 12)
         empty.textColor = NSColor.fromHex("A89CA3")
-        empty.isEditable = false; empty.isBezeled = false
-        empty.drawsBackground = false; empty.isSelectable = false
         empty.alignment = .left
         rowsContainer.addSubview(empty)
 
         let emptyBodyHeight: CGFloat = 28
-        let panelHeight = headerHeight + emptyBodyHeight + tailHeight
-        let idealX = (stage.frame.width - panelWidth) / 2
-        let adjustedX = BubbleView.edgeAdjustedX(idealX: idealX, panelWidth: panelWidth, in: stage)
-        frame = CGRect(x: adjustedX,
-                       y: 128, width: panelWidth, height: panelHeight)
+        let panelHeight: CGFloat
+        let panelTotalWidth: CGFloat
+        let bodyXOffset: CGFloat
+        let bodyYOffset: CGFloat
+        switch tailSide {
+        case .bottom:
+            panelHeight = headerHeight + emptyBodyHeight + tailHeight
+            panelTotalWidth = panelWidth
+            bodyXOffset = 0
+            bodyYOffset = tailHeight
+        case .left:
+            panelHeight = headerHeight + emptyBodyHeight
+            panelTotalWidth = panelWidth + tailHeight
+            bodyXOffset = tailHeight
+            bodyYOffset = 0
+        case .right:
+            panelHeight = headerHeight + emptyBodyHeight
+            panelTotalWidth = panelWidth + tailHeight
+            bodyXOffset = 0
+            bodyYOffset = 0
+        }
+
+        let frameOrigin: NSPoint
+        if let o = origin {
+            frameOrigin = o
+        } else {
+            let idealX = (stage.frame.width - panelTotalWidth) / 2
+            let adjustedX = BubbleView.edgeAdjustedX(idealX: idealX, panelWidth: panelTotalWidth, in: stage)
+            frameOrigin = NSPoint(x: adjustedX, y: 128)
+        }
+        frame = CGRect(origin: frameOrigin,
+                       size: NSSize(width: panelTotalWidth, height: panelHeight))
 
         backgroundLayer.frame = bounds
         backgroundLayer.path = BubbleShape.path(
             bubbleRect: bounds, tailHeight: tailHeight,
-            cornerRadius: cornerRadius, tailWidth: tailWidth)
+            cornerRadius: cornerRadius, tailWidth: tailWidth,
+            tailSide: tailSide)
 
         let labelH: CGFloat = 14
-        headerLabel.frame = CGRect(x: horizPadding + 2,
+        headerLabel.frame = CGRect(x: bodyXOffset + horizPadding + 2,
                                    y: panelHeight - headerHeight + (headerHeight - labelH) / 2,
                                    width: panelWidth - 2 * horizPadding,
                                    height: labelH)
-        dividerLayer.frame = CGRect(x: 0, y: panelHeight - headerHeight,
+        dividerLayer.frame = CGRect(x: bodyXOffset, y: panelHeight - headerHeight,
                                     width: panelWidth, height: 1)
 
         let rowWidth = panelWidth - 2 * horizPadding
-        scrollView.frame = CGRect(x: horizPadding, y: tailHeight,
+        scrollView.frame = CGRect(x: bodyXOffset + horizPadding, y: bodyYOffset,
                                   width: rowWidth, height: emptyBodyHeight)
         rowsContainer.setFrameSize(NSSize(width: rowWidth, height: emptyBodyHeight))
         empty.frame = CGRect(x: 4, y: 6, width: rowWidth - 8, height: 16)
@@ -2011,7 +1688,9 @@ final class HistoryView: NSView {
             ctx.duration = 0.22
             animator().alphaValue = 0
         }, completionHandler: { [weak self] in
-            self?.isHidden = true
+            guard let self = self else { return }
+            self.isHidden = true
+            self.onHide?()
         })
     }
 
@@ -2027,28 +1706,85 @@ final class HistoryView: NSView {
 /// Rounded body with a downward-pointing triangle tail, drawn as one path so
 /// fill + stroke apply cleanly along the whole outline (no seam at the tail).
 enum BubbleShape {
+    /// Which edge the tail protrudes from. `.bottom` is the default (bubble
+    /// above the character, tail pointing down). `.right` is for mini mode,
+    /// where the bubble sits to the left of the character with its tail
+    /// pointing right at her. `.left` exists for symmetry but isn't wired
+    /// up anywhere today.
+    enum Side { case bottom, left, right }
+
     static func path(bubbleRect: CGRect, tailHeight: CGFloat,
-                     cornerRadius r: CGFloat, tailWidth: CGFloat) -> CGPath {
-        let body = CGRect(x: bubbleRect.minX, y: bubbleRect.minY + tailHeight,
-                          width: bubbleRect.width, height: bubbleRect.height - tailHeight)
-        let tailCX = body.midX
+                     cornerRadius r: CGFloat, tailWidth: CGFloat,
+                     tailSide: Side = .bottom) -> CGPath {
         let path = CGMutablePath()
-        path.move(to: CGPoint(x: body.minX + r, y: body.maxY))
-        path.addLine(to: CGPoint(x: body.maxX - r, y: body.maxY))
-        path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY),
-                    tangent2End: CGPoint(x: body.maxX, y: body.maxY - r), radius: r)
-        path.addLine(to: CGPoint(x: body.maxX, y: body.minY + r))
-        path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY),
-                    tangent2End: CGPoint(x: body.maxX - r, y: body.minY), radius: r)
-        path.addLine(to: CGPoint(x: tailCX + tailWidth / 2, y: body.minY))
-        path.addLine(to: CGPoint(x: tailCX, y: bubbleRect.minY))
-        path.addLine(to: CGPoint(x: tailCX - tailWidth / 2, y: body.minY))
-        path.addLine(to: CGPoint(x: body.minX + r, y: body.minY))
-        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY),
-                    tangent2End: CGPoint(x: body.minX, y: body.minY + r), radius: r)
-        path.addLine(to: CGPoint(x: body.minX, y: body.maxY - r))
-        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY),
-                    tangent2End: CGPoint(x: body.minX + r, y: body.maxY), radius: r)
+        switch tailSide {
+        case .bottom:
+            let body = CGRect(x: bubbleRect.minX, y: bubbleRect.minY + tailHeight,
+                              width: bubbleRect.width, height: bubbleRect.height - tailHeight)
+            let tailCX = body.midX
+            path.move(to: CGPoint(x: body.minX + r, y: body.maxY))
+            path.addLine(to: CGPoint(x: body.maxX - r, y: body.maxY))
+            path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY),
+                        tangent2End: CGPoint(x: body.maxX, y: body.maxY - r), radius: r)
+            path.addLine(to: CGPoint(x: body.maxX, y: body.minY + r))
+            path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY),
+                        tangent2End: CGPoint(x: body.maxX - r, y: body.minY), radius: r)
+            path.addLine(to: CGPoint(x: tailCX + tailWidth / 2, y: body.minY))
+            path.addLine(to: CGPoint(x: tailCX, y: bubbleRect.minY))
+            path.addLine(to: CGPoint(x: tailCX - tailWidth / 2, y: body.minY))
+            path.addLine(to: CGPoint(x: body.minX + r, y: body.minY))
+            path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY),
+                        tangent2End: CGPoint(x: body.minX, y: body.minY + r), radius: r)
+            path.addLine(to: CGPoint(x: body.minX, y: body.maxY - r))
+            path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY),
+                        tangent2End: CGPoint(x: body.minX + r, y: body.maxY), radius: r)
+
+        case .left:
+            // Body is shifted right by the tail reserve; tail pokes out of
+            // the body's left edge at mid-height.
+            let body = CGRect(x: bubbleRect.minX + tailHeight, y: bubbleRect.minY,
+                              width: bubbleRect.width - tailHeight, height: bubbleRect.height)
+            let tailCY = body.midY
+            path.move(to: CGPoint(x: body.minX + r, y: body.maxY))
+            path.addLine(to: CGPoint(x: body.maxX - r, y: body.maxY))
+            path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY),
+                        tangent2End: CGPoint(x: body.maxX, y: body.maxY - r), radius: r)
+            path.addLine(to: CGPoint(x: body.maxX, y: body.minY + r))
+            path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY),
+                        tangent2End: CGPoint(x: body.maxX - r, y: body.minY), radius: r)
+            path.addLine(to: CGPoint(x: body.minX + r, y: body.minY))
+            path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY),
+                        tangent2End: CGPoint(x: body.minX, y: body.minY + r), radius: r)
+            path.addLine(to: CGPoint(x: body.minX, y: tailCY - tailWidth / 2))
+            path.addLine(to: CGPoint(x: bubbleRect.minX, y: tailCY))
+            path.addLine(to: CGPoint(x: body.minX, y: tailCY + tailWidth / 2))
+            path.addLine(to: CGPoint(x: body.minX, y: body.maxY - r))
+            path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY),
+                        tangent2End: CGPoint(x: body.minX + r, y: body.maxY), radius: r)
+
+        case .right:
+            // Body stays flush-left; tail pokes out of the body's right
+            // edge at mid-height. Mirror of `.left`.
+            let body = CGRect(x: bubbleRect.minX, y: bubbleRect.minY,
+                              width: bubbleRect.width - tailHeight, height: bubbleRect.height)
+            let tailCY = body.midY
+            path.move(to: CGPoint(x: body.minX + r, y: body.maxY))
+            path.addLine(to: CGPoint(x: body.maxX - r, y: body.maxY))
+            path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY),
+                        tangent2End: CGPoint(x: body.maxX, y: body.maxY - r), radius: r)
+            path.addLine(to: CGPoint(x: body.maxX, y: tailCY + tailWidth / 2))
+            path.addLine(to: CGPoint(x: bubbleRect.maxX, y: tailCY))
+            path.addLine(to: CGPoint(x: body.maxX, y: tailCY - tailWidth / 2))
+            path.addLine(to: CGPoint(x: body.maxX, y: body.minY + r))
+            path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY),
+                        tangent2End: CGPoint(x: body.maxX - r, y: body.minY), radius: r)
+            path.addLine(to: CGPoint(x: body.minX + r, y: body.minY))
+            path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY),
+                        tangent2End: CGPoint(x: body.minX, y: body.minY + r), radius: r)
+            path.addLine(to: CGPoint(x: body.minX, y: body.maxY - r))
+            path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY),
+                        tangent2End: CGPoint(x: body.minX + r, y: body.maxY), radius: r)
+        }
         path.closeSubpath()
         return path
     }
@@ -2235,15 +1971,18 @@ final class ZsView: NSView {
 }
 
 /// Small static-character view with an optional alert-count badge, shown
-/// when the user minimizes to compact mode via the right-click menu.
-final class CompactView: NSView {
-    static let size: CGFloat = 62
+/// when the user minimizes to micro mode via the right-click menu.
+/// Smaller than mini mode — occupies a 48×48 footprint with the character
+/// rendered at 40px wide. No ambient animations (she stays still here).
+final class MicroView: NSView {
+    static let size: CGFloat = 48
     let character: AxolCharacterView
     private let badgeLayer = CAShapeLayer()
     private let badgeLabel = NSTextField(labelWithString: "")
 
     var onTap: (() -> Void)?
     var onCmdClick: (() -> Void)?
+    var onRightClick: (() -> Void)?
     var onDragDelta: ((CGFloat, CGFloat) -> Void)?
     var onDragEnd: (() -> Void)?
 
@@ -2251,14 +1990,17 @@ final class CompactView: NSView {
     private var moveAccum: CGFloat = 0
     private var lastMouseLocation: CGPoint = .zero
 
-    override init(frame: NSRect) {
+    init(frame: NSRect, theme: Theme = .builtin) {
         // Reuse AxolCharacterView for visual consistency but keep it static
         // (no startAmbientAnimations call).
-        let charWidth: CGFloat = 50
+        let charWidth: CGFloat = 40
         let charHeight = charWidth * (AxolCharacterView.svgHeight / AxolCharacterView.svgWidth)
         let charX = (frame.width - charWidth) / 2
         let charY = (frame.height - charHeight) / 2
-        character = AxolCharacterView(frame: NSRect(x: charX, y: charY, width: charWidth, height: charHeight))
+        character = AxolCharacterView(
+            frame: NSRect(x: charX, y: charY, width: charWidth, height: charHeight),
+            theme: theme
+        )
 
         super.init(frame: frame)
         wantsLayer = true
@@ -2267,9 +2009,14 @@ final class CompactView: NSView {
         addSubview(character)
 
         // The inner AxolCharacterView handles its own mouse events; forward
-        // them up to the compact view so taps/drags reach the app delegate.
+        // them up to the micro view so taps/drags reach the app delegate.
+        // Double-click also triggers onTap so rapid clicks don't feel inert
+        // — micro has nothing meaningful to do with a double-click that
+        // differs from a single-click (both mean "expand").
         character.onLeftClick   = { [weak self] in self?.onTap?() }
+        character.onDoubleClick = { [weak self] in self?.onTap?() }
         character.onCmdClick    = { [weak self] in self?.onCmdClick?() }
+        character.onRightClick  = { [weak self] in self?.onRightClick?() }
         character.onDragDelta   = { [weak self] dx, dy in self?.onDragDelta?(dx, dy) }
         character.onDragEnd     = { [weak self] in self?.onDragEnd?() }
 
@@ -2281,10 +2028,8 @@ final class CompactView: NSView {
         badgeLayer.shadowOffset = CGSize(width: 0, height: -1)
         layer?.addSublayer(badgeLayer)
 
-        badgeLabel.font = NSFont.systemFont(ofSize: 10, weight: .bold)
+        badgeLabel.font = NSFont.systemFont(ofSize: 9, weight: .bold)
         badgeLabel.textColor = .white
-        badgeLabel.isEditable = false; badgeLabel.isBezeled = false
-        badgeLabel.drawsBackground = false; badgeLabel.isSelectable = false
         badgeLabel.alignment = .center
         badgeLabel.isHidden = true
         addSubview(badgeLabel)
@@ -2319,15 +2064,15 @@ final class CompactView: NSView {
     private func layoutBadge() {
         let text = badgeLabel.stringValue
         let textSize = (text as NSString).size(withAttributes: [.font: badgeLabel.font!])
-        let badgeW = max(18, ceil(textSize.width) + 10)
-        let badgeH: CGFloat = 18
-        let rect = CGRect(x: 2,
-                          y: bounds.height - badgeH - 5,
+        let badgeH: CGFloat = 14
+        let badgeW = max(badgeH, ceil(textSize.width) + 8)
+        let rect = CGRect(x: 1,
+                          y: bounds.height - badgeH - 3,
                           width: badgeW, height: badgeH)
         badgeLayer.frame = rect
         badgeLayer.path = CGPath(roundedRect: CGRect(origin: .zero, size: rect.size),
                                  cornerWidth: badgeH / 2, cornerHeight: badgeH / 2, transform: nil)
-        badgeLabel.frame = rect.insetBy(dx: 0, dy: 1)
+        badgeLabel.frame = rect.insetBy(dx: 0, dy: 0)
     }
 
     override func layout() {
@@ -2339,22 +2084,96 @@ final class CompactView: NSView {
     // we wire to our own onTap / onDragDelta / onDragEnd in init.
 }
 
-/// Container view that composes the character + overlays + bubble + compact.
+/// Tiny blue alert-count pill shown in mini mode. Non-interactive — the
+/// character underneath still handles clicks/drags through it. Unlike the
+/// pink micro-mode badge, this one is always blue (mini mode's accent) and
+/// only appears when unseen alerts are stacked up.
+final class MiniBadgeView: NSView {
+    private let badgeLayer = CAShapeLayer()
+    private let badgeLabel = NSTextField(labelWithString: "")
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer = CALayer()
+        layer?.masksToBounds = false
+
+        badgeLayer.fillColor = AxolCharacterView.hexColor("4A90E2")
+        badgeLayer.shadowColor = NSColor.black.cgColor
+        badgeLayer.shadowOpacity = 0.18
+        badgeLayer.shadowRadius = 2
+        badgeLayer.shadowOffset = CGSize(width: 0, height: -1)
+        layer?.addSublayer(badgeLayer)
+
+        badgeLabel.font = NSFont.systemFont(ofSize: 9, weight: .bold)
+        badgeLabel.textColor = .white
+        badgeLabel.alignment = .center
+        addSubview(badgeLabel)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    // Passes all clicks through — the character view sits below and should
+    // receive drag/click events even when the badge overlaps its head.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func update(count: Int) {
+        if count <= 0 {
+            isHidden = true
+            return
+        }
+        isHidden = false
+        badgeLabel.stringValue = count > 99 ? "99+" : "\(count)"
+        let text = badgeLabel.stringValue
+        let textSize = (text as NSString).size(withAttributes: [.font: badgeLabel.font!])
+        let h: CGFloat = 14
+        let w = max(h, ceil(textSize.width) + 8)
+        frame.size = CGSize(width: w, height: h)
+        badgeLayer.frame = bounds
+        badgeLayer.path = CGPath(roundedRect: bounds, cornerWidth: h / 2, cornerHeight: h / 2, transform: nil)
+        badgeLabel.frame = bounds.insetBy(dx: 0, dy: 0)
+    }
+}
+
+/// Container view that composes the character + overlays + bubble + micro.
 /// Subview order matters for z-order: later subviews paint on top.
 final class StageView: NSView {
     let character: AxolCharacterView
+    /// Dedicated small-render character used while in mini mode. Rendered
+    /// at ~60×54 so it doesn't need a runtime scale transform — the
+    /// AxolCharacterView init already sets the CALayer content scale from
+    /// the frame width, and transform-based scaling interacts unreliably
+    /// with layout when the view stays on screen long-term (unlike the
+    /// 300ms micro-mode animation).
+    let miniCharacter: AxolCharacterView
     let worryBubbles: WorryBubblesView
     let zs: ZsView
     let bubble: BubbleView
     let history: HistoryView
-    let compact: CompactView
+    let micro: MicroView
+    let miniBadge: MiniBadgeView
 
-    override init(frame: NSRect) {
+    /// Render size used for the mini-mode character instance. Small enough to
+    /// tuck into the 62×56 mini window with ~1–2 px of margin.
+    static let miniCharacterRenderWidth: CGFloat = 58
+
+    init(frame: NSRect, theme: Theme = .builtin) {
         let charSize = NSSize(width: AxolCharacterView.renderWidth,
                               height: AxolCharacterView.renderWidth * (AxolCharacterView.svgHeight / AxolCharacterView.svgWidth))
         let charX = (frame.width - charSize.width) / 2
         let charY: CGFloat = 4
-        character = AxolCharacterView(frame: NSRect(origin: CGPoint(x: charX, y: charY), size: charSize))
+        character = AxolCharacterView(
+            frame: NSRect(origin: CGPoint(x: charX, y: charY), size: charSize),
+            theme: theme
+        )
+
+        let miniCharW = Self.miniCharacterRenderWidth
+        let miniCharH = miniCharW * (AxolCharacterView.svgHeight / AxolCharacterView.svgWidth)
+        miniCharacter = AxolCharacterView(
+            frame: NSRect(x: 0, y: 0, width: miniCharW, height: miniCharH),
+            theme: theme
+        )
+        miniCharacter.isHidden = true
 
         let overlayWidth: CGFloat = 40
         let overlayHeight: CGFloat = 80
@@ -2365,17 +2184,26 @@ final class StageView: NSView {
 
         bubble = BubbleView(frame: NSRect(x: 0, y: 0, width: 200, height: 60))
         history = HistoryView(frame: NSRect(x: 0, y: 0, width: 236, height: 100))
-        compact = CompactView(frame: NSRect(x: 0, y: 0, width: CompactView.size, height: CompactView.size))
-        compact.isHidden = true
+        micro = MicroView(frame: NSRect(x: 0, y: 0, width: MicroView.size, height: MicroView.size),
+                          theme: theme)
+        micro.isHidden = true
+        miniBadge = MiniBadgeView(frame: NSRect(x: 0, y: 0, width: 0, height: 0))
+        miniBadge.isHidden = true
 
         super.init(frame: frame)
         wantsLayer = true
         addSubview(character)
+        addSubview(miniCharacter)
         addSubview(worryBubbles)
         addSubview(zs)
         addSubview(bubble)
         addSubview(history)
-        addSubview(compact)
+        addSubview(micro)
+        // The mini badge is a child of the mini character (not stage) so it
+        // follows her through drags and ambient animations automatically,
+        // without a per-frame reposition dance. `layoutMiniBadge` still runs
+        // once on show/update to size the pill to its numeric content.
+        miniCharacter.addSubview(miniBadge)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -2406,6 +2234,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return NSPoint(x: x, y: y)
     }
 
+    func loadSavedMode() -> AxolMode {
+        guard let data = try? Data(contentsOf: stateURL),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let raw = obj["mode"] as? String else { return .full }
+        // `"compact"` was the pre-rename name for `.micro`; migrate silently
+        // so users who saved their state before the rename aren't dropped
+        // back to full on first launch after upgrading.
+        if raw == "compact" { return .micro }
+        return AxolMode(rawValue: raw) ?? .full
+    }
+
     func originFitsOnAScreen(_ origin: NSPoint, size: NSSize) -> Bool {
         let rect = NSRect(origin: origin, size: size)
         for screen in NSScreen.screens where screen.frame.intersects(rect) {
@@ -2417,7 +2256,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func savePosition() {
         guard let w = window else { return }
         let o = w.frame.origin
-        let dict: [String: Any] = ["x": o.x, "y": o.y]
+        let dict: [String: Any] = ["x": o.x, "y": o.y, "mode": mode.rawValue]
         if let data = try? JSONSerialization.data(withJSONObject: dict) {
             try? data.write(to: stateURL, options: .atomic)
         }
@@ -2438,7 +2277,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                   originFitsOnAScreen(saved, size: size) else {
                 return defaultOrigin
             }
-            // Saved origin may have been recorded at a smaller (compact)
+            // Saved origin may have been recorded at a smaller (micro)
             // size. Clamp inline (self.window isn't assigned yet here, so
             // we can't call clampOriginToScreen which dereferences it).
             let margin: CGFloat = 4
@@ -2462,7 +2301,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.isMovableByWindowBackground = false
         window.acceptsMouseMovedEvents = true
 
-        stage = StageView(frame: NSRect(x: 0, y: 0, width: w, height: h))
+        let theme = ThemeLoader.loadAtStartup()
+        stage = StageView(frame: NSRect(x: 0, y: 0, width: w, height: h), theme: theme)
         stage.autoresizingMask = [.width, .height]
         window.contentView = stage
         window.makeKeyAndOrderFront(nil)
@@ -2480,6 +2320,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.forwardToUI(data)
         })
         server?.start(port: 47329)
+
+        // Restore saved mode from last run. Skip for .full since we already
+        // initialized the window at full size above — setting it to .full
+        // would be a no-op cycle.
+        let saved = loadSavedMode()
+        if saved != .full {
+            setMode(saved)
+        }
     }
 
     /// Routes an incoming server payload through the adapter pipeline and
@@ -2577,10 +2425,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         case "reveal-file":
             if let path = action["path"] as? String {
+                // Resolve tilde and any `..` segments, then follow symlinks, so
+                // a path like `~/../../etc/passwd` or a user-placed symlink
+                // to outside $HOME can't escape the home prefix. `hasPrefix`
+                // on the pre-canonicalized string is not enough.
                 let expanded = (path as NSString).expandingTildeInPath
-                let home = NSHomeDirectory()
-                if expanded.hasPrefix(home + "/") && FileManager.default.fileExists(atPath: expanded) {
-                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: expanded)])
+                let canonical = URL(fileURLWithPath: expanded)
+                    .standardizedFileURL
+                    .resolvingSymlinksInPath()
+                    .path
+                let home = URL(fileURLWithPath: NSHomeDirectory())
+                    .standardizedFileURL
+                    .resolvingSymlinksInPath()
+                    .path
+                if canonical.hasPrefix(home + "/") && FileManager.default.fileExists(atPath: canonical) {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: canonical)])
                 }
             }
         case "noop":
@@ -2709,11 +2568,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func showMenu() {
         let menu = NSMenu()
 
-        let compactItem = NSMenuItem(title: isCompact ? "Expand" : "Compact Mode",
-                                     action: #selector(doHide),
-                                     keyEquivalent: "")
-        compactItem.target = self
-        menu.addItem(compactItem)
+        // Three explicit size options — radio-style checkmark on the
+        // current mode. Users can also cmd-click the character to cycle
+        // through these without opening the menu.
+        for (title, target, selector) in [
+            ("Full",    AxolMode.full,    #selector(setModeFull)),
+            ("Mini",    AxolMode.mini,    #selector(setModeMini)),
+            ("Micro", AxolMode.micro, #selector(setModeMicroAction)),
+        ] {
+            let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+            item.target = self
+            item.state = (mode == target) ? .on : .off
+            menu.addItem(item)
+        }
 
         menu.addItem(.separator())
 
@@ -2768,9 +2635,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // bubble rotation here.
             let actionable = self.alertStore.entries.filter { $0.action != nil && $0.actionedAt == nil }
             if !actionable.isEmpty {
-                let entry = actionable[self.historyCycleIndex % actionable.count]
+                let idx = self.historyCycleIndex % actionable.count
+                let entry = actionable[idx]
                 self.historyCycleIndex = (self.historyCycleIndex + 1) % actionable.count
-                self.replay(entry: entry)
+                // Pass (1-based position, total) so the bubble can render a
+                // subtle "2/3" indicator while the user flips through.
+                self.replay(entry: entry, cyclePosition: (idx + 1, actionable.count))
             } else {
                 self.doSpeak()
             }
@@ -2782,7 +2652,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.showHistory()
         }
         stage.character.onCmdClick = { [weak self] in
-            self?.toggleCompact()
+            self?.cycleMode()
+        }
+
+        // miniCharacter mirrors the same handlers so mini mode supports the
+        // same drag / click / cmd-click / double-click interactions.
+        stage.miniCharacter.onLeftClick   = { [weak self] in self?.stage.character.onLeftClick?() }
+        stage.miniCharacter.onCmdClick    = { [weak self] in self?.cycleMode() }
+        stage.miniCharacter.onRightClick  = { [weak self] in self?.showMenu() }
+        stage.miniCharacter.onDoubleClick = { [weak self] in self?.showHistory() }
+        stage.miniCharacter.onDragStart   = { [weak self] in
+            if self?.isNapping == true { self?.endNap() }
+        }
+        stage.miniCharacter.onDragDelta = { [weak self] dx, dy in
+            guard let self = self, let w = self.window else { return }
+            let proposed = CGPoint(x: w.frame.origin.x + dx, y: w.frame.origin.y + dy)
+            w.setFrameOrigin(self.clampOriginToScreen(proposed, size: w.frame.size))
+            self.savePositionDebounced()
         }
 
         stage.bubble.onAction = { [weak self] action in
@@ -2804,6 +2690,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.currentBubbleEntryId = nil
             self.stage.character.stopTalking()
             self.updateWorryBubbles()
+            // Empty-collapse the mini window back to character-only when
+            // nothing else is currently taking up the side-panel slot. Use
+            // `isHidden` rather than the `isVisible` computed property —
+            // `isVisible` gates on `alphaValue > 0`, and that's briefly
+            // false during the history panel's fade-in. showHistory() hides
+            // an open bubble, which fires this onHide ~220 ms later, so
+            // the history fade can still be mid-ramp when we read it.
+            if self.mode == .mini
+                && self.pendingBubbles.isEmpty
+                && self.stage.history.isHidden {
+                self.collapseMiniToEmpty()
+            }
             self.drainPendingBubbles()
         }
 
@@ -2819,13 +2717,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.updateWorryBubbles()
         }
 
-        stage.compact.onTap = { [weak self] in
-            self?.expandToFull()
+        stage.micro.onTap = { [weak self] in
+            self?.setMode(.full)
         }
-        stage.compact.onCmdClick = { [weak self] in
-            self?.toggleCompact()
+        stage.micro.onCmdClick = { [weak self] in
+            self?.cycleMode()
         }
-        stage.compact.onDragDelta = { [weak self] dx, dy in
+        stage.micro.onRightClick = { [weak self] in
+            self?.showMenu()
+        }
+        stage.micro.onDragDelta = { [weak self] dx, dy in
             guard let self = self, let w = self.window else { return }
             let proposed = CGPoint(x: w.frame.origin.x + dx, y: w.frame.origin.y + dy)
             w.setFrameOrigin(self.clampOriginToScreen(proposed, size: w.frame.size))
@@ -2834,12 +2735,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Replays an archived alert in the bubble.
-    private func replay(entry: AlertEntry) {
-        stage.bubble.present(title: entry.title, body: entry.body,
-                             priority: entry.priority, icon: entry.icon, action: entry.action)
+    private func replay(entry: AlertEntry, cyclePosition: (Int, Int)? = nil) {
+        presentBubbleInCurrentMode(title: entry.title, body: entry.body,
+                                   priority: entry.priority, icon: entry.icon,
+                                   action: entry.action,
+                                   cyclePosition: cyclePosition)
         currentBubbleEntryId = entry.id
         alertStore.markSeen(id: entry.id)
         updateWorryBubbles()
+    }
+
+    /// Every bubble-entry code path (fresh alert, replay, quip, wave, about)
+    /// goes through this helper so the mini-mode side-tail + reposition is
+    /// applied consistently. Without it, a direct `stage.bubble.present(...)`
+    /// paints a tail-below-character bubble over top of mini-mode's
+    /// character-on-the-right layout.
+    private func presentBubbleInCurrentMode(title: String, body: String?,
+                                            priority: String, icon: String? = nil,
+                                            action: [String: Any]?,
+                                            cyclePosition: (Int, Int)? = nil) {
+        let side: BubbleShape.Side = (mode == .mini) ? .right : .bottom
+        stage.bubble.present(title: title, body: body, priority: priority,
+                             icon: icon, action: action, tailSide: side,
+                             cyclePosition: cyclePosition)
+        if mode == .mini {
+            placeMiniBubble()
+        }
     }
 
     // MARK: - Nap scheduler
@@ -2931,7 +2852,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let priority = (envelope["priority"] as? String) ?? "normal"
         let icon     = envelope["icon"] as? String
         let action   = (envelope["actions"] as? [[String: Any]])?.first
-        stage.bubble.present(title: title, body: body, priority: priority, icon: icon, action: action)
+        presentBubbleInCurrentMode(title: title, body: body, priority: priority,
+                                   icon: icon, action: action)
         currentBubbleEntryId = entryId
         lastBubbleOpenedAt = Date()
 
@@ -2944,27 +2866,85 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateWorryBubbles() {
+        // Worry bubbles only make sense in full mode. Mini and micro both
+        // show a numeric badge instead; worry dots would collide visually
+        // with the side bubble / micro icon.
         let shouldRun = alertStore.hasUnseenAlerts
                         && !stage.bubble.isVisible
                         && !stage.history.isVisible
-                        && !isCompact
+                        && mode == .full
         if shouldRun {
             stage.worryBubbles.start()
         } else {
             stage.worryBubbles.stop()
         }
-        if isCompact {
-            stage.compact.updateBadge(count: alertStore.unseenCount)
+        switch mode {
+        case .micro:
+            stage.micro.updateBadge(count: alertStore.unseenCount)
+        case .mini:
+            stage.miniBadge.update(count: alertStore.unseenCount)
+            layoutMiniBadge()
+        case .full:
+            break
         }
     }
 
-    // MARK: - Compact mode
+    // MARK: - Mode transitions (full / mini / micro)
 
-    private var isCompact = false
+    /// Current size-mode. Source of truth for which of the three layout
+    /// branches is active; persisted via `savePosition()` so a quit+relaunch
+    /// restores whichever mode the user was in.
+    private var mode: AxolMode = .full
     private var savedFullFrame: NSRect?
 
-    private func toggleCompact() {
-        if isCompact { expandToFull() } else { shrinkToCompact() }
+    /// Target window size for mini mode in its two sub-states. The
+    /// with-bubble size must fit `BubbleView.maxBubbleWidth` (200) plus the
+    /// tail reserve (6) plus the character slot (~60) plus a little margin.
+    private static let miniEmptySize = NSSize(width: 62, height: 56)
+    private static let miniWithBubbleSize = NSSize(width: 290, height: 80)
+    /// Transform scale applied to `stage.character` when in mini mode. The
+    /// full character is rendered at `renderWidth=150` and we want her to
+    /// fill ~50px of the 62px mini footprint, so 50/150 ≈ 0.33.
+    private static let miniCharacterScale: CGFloat = 0.33
+    /// Transform scale used by the micro animation. Used here too when
+    /// transitioning mini → micro so the character doesn't pop larger
+    /// before the swap to MicroView.
+    private static let microCharacterScale: CGFloat = 0.38
+
+    private func cycleMode() {
+        setMode(mode.next)
+    }
+
+    private func setMode(_ target: AxolMode) {
+        guard target != mode else { return }
+        let previous = mode
+        // Use the polished animated transitions for direct full ↔ micro.
+        // Mini transitions are instant — cheap enough to not warrant the
+        // choreography apparatus, and the mini footprint is small enough
+        // that a scale-animation doesn't read as much more than a blink.
+        switch (previous, target) {
+        case (.full, .micro):
+            mode = .micro
+            shrinkToMicro()
+        case (.micro, .full):
+            mode = .full
+            expandToFull()
+        case (.full, .mini):
+            mode = .mini
+            enterMini(from: .full)
+        case (.mini, .full):
+            mode = .full
+            exitMini(to: .full)
+        case (.mini, .micro):
+            mode = .micro
+            exitMini(to: .micro)
+        case (.micro, .mini):
+            mode = .mini
+            enterMini(from: .micro)
+        default:
+            break
+        }
+        savePositionDebounced()
     }
 
     /// CATransform3D that scales a view around its own geometric center —
@@ -2980,9 +2960,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return t
     }
 
-    private func shrinkToCompact() {
-        guard !isCompact else { return }
-        isCompact = true
+    private func shrinkToMicro() {
         savedFullFrame = window.frame
 
         // Hide transient overlays but leave the character visible for phase 1.
@@ -2999,7 +2977,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // diagonal drift on top of the pure shrink.
         stage.character.stopIdles()
 
-        let s = CompactView.size
+        let s = MicroView.size
         let old = window.frame
         let targetScale: CGFloat = 0.38
 
@@ -3016,17 +2994,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         scaleDown.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         scaleDown.fillMode = .forwards
         scaleDown.isRemovedOnCompletion = false
-        stage.character.layer?.add(scaleDown, forKey: "compact-shrink")
+        stage.character.layer?.add(scaleDown, forKey: "micro-shrink")
 
-        // Phase 2 — hand off to the compact view and slide the window to
-        // its compact footprint. NSWindow.setFrame(animate:true) does the
+        // Phase 2 — hand off to the micro view and slide the window to
+        // its micro footprint. NSWindow.setFrame(animate:true) does the
         // actual slide; anchoring at the right edge keeps her visually
         // tucked into the same corner throughout.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
             guard let self = self else { return }
 
-            // Center the compact window on where the (scaled) character
-            // currently sits, so the snap-to-compact-size doesn't appear
+            // Center the micro window on where the (scaled) character
+            // currently sits, so the snap-to-micro-size doesn't appear
             // to slide — she just stays in place and the window contracts
             // to fit her.
             let charFrame = self.stage.character.frame
@@ -3041,13 +3019,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.stage.character.isHidden = true
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.stage.character.layer?.removeAnimation(forKey: "compact-shrink")
+            self.stage.character.layer?.removeAnimation(forKey: "micro-shrink")
             self.stage.character.layer?.transform = CATransform3DIdentity
             CATransaction.commit()
 
-            self.stage.compact.frame = NSRect(x: 0, y: 0, width: s, height: s)
-            self.stage.compact.isHidden = false
-            self.stage.compact.updateBadge(count: self.alertStore.unseenCount)
+            self.stage.micro.frame = NSRect(x: 0, y: 0, width: s, height: s)
+            self.stage.micro.isHidden = false
+            self.stage.micro.updateBadge(count: self.alertStore.unseenCount)
 
             // Instant resize — no slide animation.
             self.window.setFrame(newFrame, display: true, animate: false)
@@ -3055,32 +3033,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func expandToFull() {
-        guard isCompact else { return }
-        isCompact = false
-
         let pending = alertStore.lastActionableAlert
         let savedSize = savedFullFrame?.size ?? NSSize(width: 300, height: 360)
-        let compactFrame = window.frame
+        let microFrame = window.frame
 
         // Target full frame — size from savedFullFrame but positioned so the
-        // character's layer center lands where the compact center currently
+        // character's layer center lands where the micro center currently
         // is. Mirrors the shrink math so the transition reads as a pure
         // scale at the same on-screen point (no slide).
         let charCenterInStage = CGPoint(x: stage.character.frame.midX,
                                         y: stage.character.frame.midY)
-        let fullCenterScreen  = CGPoint(x: compactFrame.midX,
-                                        y: compactFrame.midY)
+        let fullCenterScreen  = CGPoint(x: microFrame.midX,
+                                        y: microFrame.midY)
         let proposedOrigin = CGPoint(x: fullCenterScreen.x - charCenterInStage.x,
                                      y: fullCenterScreen.y - charCenterInStage.y)
         let clamped = clampOriginToScreen(proposedOrigin, size: savedSize)
         let newFrame = NSRect(origin: clamped, size: savedSize)
 
         // Snap the window to full size (no slide), then reveal the
-        // character pre-scaled to the compact size and grow her back up
+        // character pre-scaled to the micro size and grow her back up
         // from her own visual center (see centeredScale rationale above).
         let targetScale: CGFloat = 0.38
         window.setFrame(newFrame, display: true, animate: false)
-        stage.compact.isHidden = true
+        stage.micro.isHidden = true
         stage.worryBubbles.isHidden = false
         stage.zs.isHidden = false
 
@@ -3097,13 +3072,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         scaleUp.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         scaleUp.fillMode = .forwards
         scaleUp.isRemovedOnCompletion = false
-        stage.character.layer?.add(scaleUp, forKey: "compact-expand")
+        stage.character.layer?.add(scaleUp, forKey: "micro-expand")
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
             guard let self = self else { return }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.stage.character.layer?.removeAnimation(forKey: "compact-expand")
+            self.stage.character.layer?.removeAnimation(forKey: "micro-expand")
             self.stage.character.layer?.transform = CATransform3DIdentity
             CATransaction.commit()
 
@@ -3112,6 +3087,208 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             if let p = pending { self.replay(entry: p) }
         }
+    }
+
+    /// Enter mini mode from either full or micro. Swaps the visible
+    /// character from the full-size `stage.character` to the mini-sized
+    /// `stage.miniCharacter`, resizes the window around the character's
+    /// on-screen center, and replays any pending actionable alert.
+    private func enterMini(from previous: AxolMode) {
+        if previous == .full { savedFullFrame = window.frame }
+
+        // Anchor the new window so the visible character's on-screen center
+        // stays put. In full mode that's `stage.character.frame.midX/Y`; in
+        // micro it's the center of the micro view.
+        let currentFrame = window.frame
+        let screenAnchor: CGPoint = {
+            switch previous {
+            case .full:
+                return CGPoint(x: currentFrame.minX + stage.character.frame.midX,
+                               y: currentFrame.minY + stage.character.frame.midY)
+            case .micro:
+                return CGPoint(x: currentFrame.midX, y: currentFrame.midY)
+            case .mini:
+                return CGPoint(x: currentFrame.midX, y: currentFrame.midY)
+            }
+        }()
+        let targetSize = Self.miniEmptySize
+        let proposed = CGPoint(x: screenAnchor.x - targetSize.width / 2,
+                               y: screenAnchor.y - targetSize.height / 2)
+        let origin = clampOriginToScreen(proposed, size: targetSize)
+
+        // Tear down full-mode overlays and hide the full character.
+        stage.bubble.hide()
+        stage.history.hide()
+        stage.worryBubbles.isHidden = true
+        stage.zs.isHidden = true
+        stage.worryBubbles.stop()
+        stage.zs.stop()
+        stage.character.stopIdles()
+        stage.character.stopAmbientAnimations()
+        stage.character.isHidden = true
+        stage.micro.isHidden = true
+
+        window.setFrame(NSRect(origin: origin, size: targetSize), display: true, animate: false)
+
+        // Show + start the mini character. It renders at its own natural
+        // render size (see StageView.miniCharacterRenderWidth), no transform.
+        stage.miniCharacter.isHidden = false
+        stage.miniCharacter.startAmbientAnimations()
+        positionCharacterForMini()
+
+        updateWorryBubbles()
+
+        if let pending = alertStore.lastActionableAlert {
+            replay(entry: pending)
+        }
+    }
+
+    /// Exit mini mode, either back to full or forward to micro.
+    private func exitMini(to target: AxolMode) {
+        stage.bubble.hide()
+        stage.miniBadge.isHidden = true
+        stage.miniCharacter.stopIdles()
+        stage.miniCharacter.stopAmbientAnimations()
+
+        switch target {
+        case .full:
+            // Expand window back to savedFullFrame, re-anchored on the
+            // mini character's current screen center so she stays put.
+            let miniFrame = window.frame
+            let miniCharScreenX = miniFrame.minX + stage.miniCharacter.frame.midX
+            let miniCharScreenY = miniFrame.minY + stage.miniCharacter.frame.midY
+            let size = savedFullFrame?.size ?? NSSize(width: 300, height: 360)
+            // Full-mode character sits near the top-center of the stage
+            // (see StageView init: charX = centered, charY = 4). Anchor so
+            // her full-mode visual center lands where she is now.
+            let fullCharCenterInStage = CGPoint(
+                x: size.width / 2,
+                y: 4 + stage.character.bounds.height / 2
+            )
+            let proposed = CGPoint(x: miniCharScreenX - fullCharCenterInStage.x,
+                                   y: miniCharScreenY - fullCharCenterInStage.y)
+            let origin = clampOriginToScreen(proposed, size: size)
+            window.setFrame(NSRect(origin: origin, size: size), display: true, animate: false)
+
+            restoreCharacterFullLayout()
+            stage.miniCharacter.isHidden = true
+            stage.worryBubbles.isHidden = false
+            stage.zs.isHidden = false
+            stage.character.isHidden = false
+            stage.character.startAmbientAnimations()
+            updateWorryBubbles()
+        case .micro:
+            // Swap to micro, anchored on mini character's current center.
+            let miniFrame = window.frame
+            let s = MicroView.size
+            let miniCharScreenX = miniFrame.minX + stage.miniCharacter.frame.midX
+            let miniCharScreenY = miniFrame.minY + stage.miniCharacter.frame.midY
+            let proposed = CGPoint(x: miniCharScreenX - s / 2, y: miniCharScreenY - s / 2)
+            let origin = clampOriginToScreen(proposed, size: NSSize(width: s, height: s))
+            window.setFrame(NSRect(origin: origin, size: NSSize(width: s, height: s)),
+                            display: true, animate: false)
+
+            stage.miniCharacter.isHidden = true
+            stage.micro.frame = NSRect(x: 0, y: 0, width: s, height: s)
+            stage.micro.isHidden = false
+            stage.micro.updateBadge(count: alertStore.unseenCount)
+        case .mini:
+            break // unreachable
+        }
+    }
+
+    /// Restore the character to its full-mode frame position (centered near
+    /// the top of the stage, same as StageView's init).
+    private func restoreCharacterFullLayout() {
+        let charSize = stage.character.bounds.size
+        let charX = (stage.bounds.width - charSize.width) / 2
+        stage.character.frame.origin = CGPoint(x: charX, y: 4)
+    }
+
+    /// Position the mini character within the current stage bounds. In empty
+    /// mini she's centered; in with-bubble mini she's right-aligned so the
+    /// bubble has room on the left.
+    private func positionCharacterForMini() {
+        let mc = stage.miniCharacter
+        let isEmpty = stage.bounds.width <= Self.miniEmptySize.width + 10
+        let centerX = isEmpty
+            ? stage.bounds.width / 2
+            : stage.bounds.width - Self.miniEmptySize.width / 2
+        let centerY = stage.bounds.height / 2
+        mc.frame.origin = CGPoint(
+            x: centerX - mc.bounds.width / 2,
+            y: centerY - mc.bounds.height / 2
+        )
+    }
+
+    /// Grow the mini window leftward to fit a speech bubble on the left and
+    /// position the bubble so its right-pointing tail meets the character's
+    /// cheek. The character's on-screen position stays fixed — only the
+    /// window's origin.x shifts left to make room.
+    private func placeMiniBubble() {
+        let currentFrame = window.frame
+        let grown = Self.miniWithBubbleSize
+
+        let charScreenX = currentFrame.minX + stage.miniCharacter.frame.midX
+        let charScreenY = currentFrame.minY + stage.miniCharacter.frame.midY
+        // In the grown window the character's center lands at
+        // (grown.width - miniEmptySize.width/2, grown.height/2).
+        let newOriginX = charScreenX - (grown.width - Self.miniEmptySize.width / 2)
+        let newOriginY = charScreenY - grown.height / 2
+        let origin = clampOriginToScreen(CGPoint(x: newOriginX, y: newOriginY), size: grown)
+
+        if currentFrame.size != grown {
+            window.setFrame(NSRect(origin: origin, size: grown), display: true, animate: false)
+        }
+        positionCharacterForMini()
+
+        // Bubble on the left of the mini character. Its frame includes the
+        // tail reserve on the right; place so the tail tip meets her cheek.
+        let b = stage.bubble
+        let charVisualLeft = stage.miniCharacter.frame.minX
+        b.frame.origin = CGPoint(
+            x: charVisualLeft - b.frame.width + 4,
+            y: stage.miniCharacter.frame.midY - b.frame.height / 2
+        )
+
+        layoutMiniBadge()
+    }
+
+    /// Shrink the mini-mode window back to character-only once the bubble
+    /// dismisses. Keeps the mini character's on-screen position fixed by
+    /// retracting origin.x rightward.
+    private func collapseMiniToEmpty() {
+        guard mode == .mini else { return }
+        let currentFrame = window.frame
+        let shrunk = Self.miniEmptySize
+
+        let charScreenX = currentFrame.minX + stage.miniCharacter.frame.midX
+        let charScreenY = currentFrame.minY + stage.miniCharacter.frame.midY
+        let newOriginX = charScreenX - shrunk.width / 2
+        let newOriginY = charScreenY - shrunk.height / 2
+        let origin = clampOriginToScreen(CGPoint(x: newOriginX, y: newOriginY), size: shrunk)
+
+        window.setFrame(NSRect(origin: origin, size: shrunk), display: true, animate: false)
+        positionCharacterForMini()
+        layoutMiniBadge()
+    }
+
+    /// Pin the mini badge over the character's upper-right gill. The badge
+    /// is a subview of the character (not stage), so these coordinates are
+    /// in the character's local space — the badge moves with her for free
+    /// during drags / ambient animations. The ~13 px inset compensates for
+    /// the AxolCharacterView frame's padding around the visible gills AND
+    /// leaves a few pixels of headroom for her bob animation — without it,
+    /// the top of the badge gets clipped by the window on the up-beat.
+    private func layoutMiniBadge() {
+        guard mode == .mini, !stage.miniBadge.isHidden else { return }
+        let mc = stage.miniCharacter
+        let badge = stage.miniBadge
+        let visualInset: CGFloat = 13
+        badge.frame.origin = CGPoint(
+            x: mc.bounds.maxX - visualInset - badge.frame.width / 2,
+            y: mc.bounds.maxY - visualInset - badge.frame.height / 2
+        )
     }
 
     private func startHistorySweeper() {
@@ -3133,13 +3310,70 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             stage.bubble.hide()
         }
         stage.character.stopIdles()
-        if alertStore.entries.isEmpty {
-            stage.history.presentEmpty(in: stage)
+
+        if mode == .mini {
+            presentHistoryInMini()
         } else {
-            stage.history.present(in: stage, entries: alertStore.entries)
+            if alertStore.entries.isEmpty {
+                stage.history.presentEmpty(in: stage)
+            } else {
+                stage.history.present(in: stage, entries: alertStore.entries)
+            }
         }
         alertStore.markAllSeen()
         updateWorryBubbles()
+    }
+
+    /// Grow the mini window to fit the history panel on the left of the
+    /// character, present the panel with a right-pointing tail so it reads
+    /// like an oversized side bubble, and shrink back when it dismisses.
+    private func presentHistoryInMini() {
+        let currentFrame = window.frame
+        let charScreenX = currentFrame.minX + stage.miniCharacter.frame.midX
+        let charScreenY = currentFrame.minY + stage.miniCharacter.frame.midY
+
+        // Target window: history-panel width + tail + character slot + a
+        // breath of margin. History panel is 276 wide + 6px tail = 282;
+        // plus 58 for the mini character footprint = 340. Height is sized
+        // to the panel's tallest state (~216 with maxBodyHeight 180 +
+        // header 30 + some margin).
+        let historyAreaW: CGFloat = 282
+        let charSlotW: CGFloat = Self.miniEmptySize.width
+        let targetW: CGFloat = historyAreaW + charSlotW
+        let targetH: CGFloat = 216
+        let grown = NSSize(width: targetW, height: targetH)
+
+        // Anchor so the character's on-screen center stays put.
+        let newOriginX = charScreenX - (targetW - charSlotW / 2)
+        let newOriginY = charScreenY - targetH / 2
+        let origin = clampOriginToScreen(CGPoint(x: newOriginX, y: newOriginY), size: grown)
+
+        window.setFrame(NSRect(origin: origin, size: grown), display: true, animate: false)
+        positionCharacterForMini()
+
+        // Present the history panel flush-left first (its actual height
+        // depends on row count), then immediately reposition so it's
+        // vertically centered on the character — the panel's right-pointing
+        // tail emerges from its vertical midpoint, so centering here makes
+        // the tail tip meet the character's cheek.
+        if alertStore.entries.isEmpty {
+            stage.history.presentEmpty(in: stage, tailSide: .right, origin: .zero)
+        } else {
+            stage.history.present(in: stage, entries: alertStore.entries,
+                                  tailSide: .right, origin: .zero,
+                                  maxVisibleRows: 2)
+        }
+        let panelH = stage.history.frame.height
+        let charMidY = stage.miniCharacter.frame.midY
+        stage.history.frame.origin = NSPoint(x: 0, y: charMidY - panelH / 2)
+
+        // Collapse the window back to empty-mini when the history dismisses.
+        stage.history.onHide = { [weak self] in
+            guard let self = self, self.mode == .mini else { return }
+            self.collapseMiniToEmpty()
+        }
+
+        layoutMiniBadge()
     }
 
     // MARK: - Idle scheduler
@@ -3238,11 +3472,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard nudgesEnabled else { return }
         let pool = woundUp >= woundAgitated ? frazzledMessages : calmMessages
         let msg = pool.randomElement() ?? "Hi."
-        stage.bubble.present(title: msg, body: nil, priority: "normal", action: nil)
+        presentBubbleInCurrentMode(title: msg, body: nil, priority: "normal", action: nil)
     }
     @objc func doWave() {
         stage.character.wave()
-        stage.bubble.present(title: "👋 hi there!", body: nil, priority: "normal", action: nil)
+        presentBubbleInCurrentMode(title: "👋 hi there!", body: nil, priority: "normal", action: nil)
     }
     @objc func doAbout() {
         let openRepo: [String: Any] = [
@@ -3251,7 +3485,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             "label": "Open GitHub repo"
         ]
         stage.bubble.present(
-            title: "Axol v1.0 — a desktop companion.",
+            title: "Axol v2.0 — a desktop companion.",
             body: "github.com/Roach/axol",
             priority: "normal",
             action: openRepo
@@ -3278,7 +3512,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let kind = AxolCharacterView.idlePool.randomElement() ?? .tilt
         stage.character.playIdle(kind)
     }
-    @objc func doHide() { toggleCompact() }
+    @objc func setModeFull()           { setMode(.full) }
+    @objc func setModeMini()           { setMode(.mini) }
+    @objc func setModeMicroAction()  { setMode(.micro) }
 
     /// Keeps the given window origin inside the active screen's visible frame
     /// (respecting the menu bar + Dock). Called from drag handlers.
@@ -3300,8 +3536,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)
-app.run()
+// Entry point lives in main.swift so swiftc can distinguish the driver file
+// from the library files when compiling the multi-file target.

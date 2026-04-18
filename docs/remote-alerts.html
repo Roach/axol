@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — remote alerts</title>
+<meta name="description" content="Axol's remote-alerts pipeline: a signed cloud intake (neuromast), a local forwarder (lateral line), and the full adapter + bubble delivery path on your Mac." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — remote alerts" />
+<meta property="og:description" content="Signed cloud intake, local forwarder, and the full adapter + bubble delivery path on your Mac." />
+<meta property="og:url" content="https://roach.github.io/axol/remote-alerts.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA;
+    --pink-2: #FFE5F0;
+    --pink-3: #FFC9E2;
+    --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533;
+    --ink-soft: #6E5F6B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+
+  .backlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1F3A56;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero {
+    padding: 28px 0 18px;
+    text-align: center;
+  }
+  .hero-stage {
+    position: relative;
+    display: inline-block;
+    width: 130px;
+    height: 160px;
+    margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 110px;
+    height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Signal dots drift down from above Axol, representing incoming alerts
+     caught by the lateral line. Three dots, staggered, on a 3.6s loop. */
+  .hero-signals {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 70px;
+    height: 96px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .hero-signal {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 8px;
+    height: 8px;
+    margin-left: -4px;
+    border-radius: 50%;
+    background: var(--pink-accent);
+    box-shadow: 0 0 0 3px rgba(214, 69, 122, 0.15);
+    opacity: 0;
+    animation: hero-signal-drop 3.6s ease-in infinite;
+  }
+  .hero-signal-1 { left: 38%; animation-delay: 0s; }
+  .hero-signal-2 { left: 62%; animation-delay: 1.2s; }
+  .hero-signal-3 { left: 50%; animation-delay: 2.4s; }
+  @keyframes hero-signal-drop {
+    0%   { opacity: 0; transform: translateY(-8px) scale(0.6); }
+    15%  { opacity: 1; transform: translateY(0)     scale(1); }
+    70%  { opacity: 0.85; transform: translateY(80px) scale(0.9); }
+    88%  { opacity: 0; transform: translateY(96px)   scale(0.4); }
+    100% { opacity: 0; transform: translateY(96px)   scale(0.4); }
+  }
+
+  h1 {
+    font-size: 48px;
+    margin: 10px 0 10px;
+    letter-spacing: -0.01em;
+    color: #1F3A56;
+    line-height: 1.05;
+  }
+  .tagline {
+    font-size: 17px;
+    color: rgba(31, 58, 86, 0.78);
+    margin: 0 auto 18px;
+    max-width: 580px;
+  }
+  .pill {
+    display: inline-block;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  /* Concept glyphs — neuromast (single sensor + ripples) vs lateral line
+     (row of sensors along a nerve). Sized to sit inline next to headings
+     and flow-step labels. */
+  .glyph {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: -6px;
+    color: var(--pink-accent);
+    flex: 0 0 auto;
+  }
+  .glyph svg { width: 100%; height: 100%; display: block; }
+  .glyph-lg {
+    width: 44px;
+    height: 44px;
+    vertical-align: -11px;
+  }
+  .glyph-xl {
+    width: 64px;
+    height: 64px;
+    vertical-align: middle;
+  }
+  .glyph-inline {
+    margin-right: 8px;
+  }
+  .flow-step b .glyph {
+    vertical-align: -5px;
+    margin-right: 6px;
+  }
+
+  /* Anatomy — side-by-side concept cards with large glyphs and a
+     biology-then-role layout. Collapses to a single column on narrow. */
+  .anatomy {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 14px;
+  }
+  .anatomy-card {
+    padding: 4px 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .anatomy-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .anatomy-head .glyph {
+    margin-right: 0;
+  }
+  .anatomy-head h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .anatomy-card p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .anatomy-card p b { color: var(--ink); }
+  .anatomy-card p + p { margin-top: 4px; }
+
+  @media (max-width: 600px) {
+    .anatomy { grid-template-columns: 1fr; }
+  }
+  .hero .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--pink-accent);
+    color: white;
+    padding: 11px 22px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 14px -4px rgba(214, 69, 122, 0.45);
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .hero .cta:hover {
+    background: #B8355F;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px -4px rgba(214, 69, 122, 0.55);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    /* Blanket rule: compress any not-explicitly-handled animation to an
+       instant so nothing loops or hovers visibly. Specific safe-default
+       rules below (and the later flow-animated block) override where a
+       static end state would look wrong. */
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-signal { animation: none !important; }
+    .hero-signal { opacity: 0.7; }
+  }
+
+  section {
+    background: white;
+    border-radius: 20px;
+    padding: 26px 30px 28px;
+    margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 {
+    font-size: 21px;
+    margin: 0 0 10px;
+    color: var(--pink-accent);
+  }
+  section h3 {
+    font-size: 15px;
+    margin: 18px 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 8px 0 16px;
+    color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+  .tok-flag  { color: #B33A7A; }
+  .tok-cmd   { color: #3A4A7A; font-weight: 600; }
+  .tok-str   { color: #3A6E4A; }
+  .tok-key   { color: #B33A7A; }
+  .tok-string { color: #3A6E4A; }
+  .tok-punct { color: #9A8E95; }
+
+  /* Data-flow diagram */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 10px 0 18px;
+    position: relative;
+    /* Own stacking context so .flow-arrow's z-index stays local. */
+    isolation: isolate;
+  }
+  .flow-step {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px 14px;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 14px;
+    align-items: start;
+    transition: border-color 0.35s ease, background 0.35s ease, box-shadow 0.35s ease;
+  }
+  .flow-step b {
+    color: var(--pink-accent);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding-top: 4px;
+  }
+  .flow-step .desc {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .flow-step .desc code {
+    background: white;
+    border: 1px solid #F3DDE9;
+  }
+  .flow-arrow {
+    position: relative;
+    z-index: 0;
+    align-self: center;
+    width: 14px;
+    height: 40px;
+    margin-left: 54px;
+    flex: 0 0 auto;
+    /* overflow: visible — lets dots visually extend all the way to the
+       adjacent stage's inner edge instead of stopping at the track.
+       z-index: 0 keeps them behind the stage boxes, so a dot reaching
+       into a stage's territory is "absorbed" by the box visual. */
+  }
+  .flow-arrow .arrow-dot {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    margin-left: -5px;
+    border-radius: 50%;
+    background: var(--pink-accent);
+    opacity: 0;
+  }
+
+  /* Four distinct keyframes scheduled against a shared 8s cycle — no
+     animation-delay (which would cause drift against the node pulses).
+     Each keyframe holds the dot hidden for most of the cycle and plays
+     its short travel inside a specific percentage window. */
+  .flow-arrow.arrow-1 .arrow-dot           { animation: farrow1-fwd 7.2s linear infinite; }
+  .flow-arrow.arrow-2 .arrow-dot.fetch     { animation: farrow2-fetch-rise 7.2s linear infinite; }
+  .flow-arrow.arrow-2 .arrow-dot.response  { animation: farrow2-response-drop 7.2s linear infinite; }
+  .flow-arrow.arrow-3 .arrow-dot           { animation: farrow3-fwd 7.2s linear infinite; }
+
+  /* Each dot starts from the source stage's center and lands at the
+     destination stage's center — "-50px" and "calc(100% + 50px)" reach
+     into the adjacent stages (parent is overflow: visible). */
+
+  /* Dot 1: sender → neuromast, drop (visible 10–18%) */
+  @keyframes farrow1-fwd {
+    0%, 9%   { top: -50px;              opacity: 0; }
+    11%      { top: -30px;              opacity: 1; }
+    17%      { top: calc(100% + 30px);  opacity: 1; }
+    19%      { top: calc(100% + 50px);  opacity: 0; }
+    100%     { top: calc(100% + 50px);  opacity: 0; }
+  }
+  /* Fetch (faint): lateral-line → neuromast, rise (visible 38–46%) */
+  @keyframes farrow2-fetch-rise {
+    0%, 37%  { top: calc(100% + 50px);  opacity: 0; }
+    39%      { top: calc(100% + 30px);  opacity: 0.3; }
+    45%      { top: -30px;              opacity: 0.3; }
+    47%      { top: -50px;              opacity: 0; }
+    100%     { top: -50px;              opacity: 0; }
+  }
+  /* Response (full): neuromast → lateral-line, drop (visible 52–60%) */
+  @keyframes farrow2-response-drop {
+    0%, 51%  { top: -50px;              opacity: 0; }
+    53%      { top: -30px;              opacity: 1; }
+    59%      { top: calc(100% + 30px);  opacity: 1; }
+    61%      { top: calc(100% + 50px);  opacity: 0; }
+    100%     { top: calc(100% + 50px);  opacity: 0; }
+  }
+  /* Dot 4: lateral-line → axol, drop (visible 66–74%). Splashes at axol's
+     center (+50px past arrow edge). */
+  @keyframes farrow3-fwd {
+    0%, 65%  { top: -50px;              opacity: 0;   transform: scale(1); }
+    67%      { top: -30px;              opacity: 1;   transform: scale(1); }
+    73%      { top: calc(100% + 30px);  opacity: 1;   transform: scale(1); }
+    75%      { top: calc(100% + 40px);  opacity: 0.9; transform: scale(1.8); }
+    78%      { top: calc(100% + 50px);  opacity: 0;   transform: scale(2.8); }
+    100%     { top: calc(100% + 50px);  opacity: 0;   transform: scale(2.8); }
+  }
+
+  @media (max-width: 520px) {
+    .flow-step { grid-template-columns: 1fr; gap: 6px; }
+    .flow-step b { padding-top: 0; }
+    .flow-arrow { margin-left: 12px; }
+  }
+
+  /* Animated flow — each stage pulses in sequence, arrows brighten
+     between them, and a demo bubble pops at the end. Seven events evenly
+     spaced ~1s apart in the 7.2s cycle; all keyframes absolute-timed. */
+  .flow-animated .flow-step {
+    animation: step-pulse 7.2s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+  .flow-animated .flow-step:nth-of-type(1) { animation-name: step-sender-pulse; }
+  .flow-animated .flow-step:nth-of-type(3) { animation-name: step-neuromast-pulse; }
+  .flow-animated .flow-step:nth-of-type(5) { animation-name: step-lateral-pulse; }
+  .flow-animated .flow-step:nth-of-type(7) { animation-name: step-axol-pulse; }
+
+  @keyframes step-sender-pulse {
+    0%, 4.5%, 9.5%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    6%, 8% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  @keyframes step-neuromast-pulse {
+    0%, 18.5%, 23.5%, 46.5%, 51.5%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    20%, 22% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    48%, 50% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  @keyframes step-lateral-pulse {
+    0%, 32.5%, 37.5%, 60.5%, 65.5%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    34%, 36% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    62%, 64% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  @keyframes step-axol-pulse {
+    0%, 74.5%, 79.5%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    76%, 78% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+
+  @keyframes step-pulse {
+    0%, 15%, 100% {
+      border-color: #F3DDE9;
+      background: #FAF2F7;
+      box-shadow: none;
+    }
+    3%, 10% {
+      border-color: var(--pink-accent);
+      background: #FFF4FA;
+      box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12);
+    }
+  }
+
+  /* Demo message — a tiny Axol + bubble that lights up when the packet
+     reaches the last stage. Lives inside the "axol" flow-step so it sits
+     exactly under the rest of the diagram. */
+  .flow-demo {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #F3DDE9;
+  }
+  .flow-demo-axol {
+    width: 54px;
+    height: 48px;
+    flex: 0 0 auto;
+    filter: drop-shadow(0 4px 8px rgba(200, 80, 140, 0.18));
+    animation: demo-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+  .flow-demo-axol svg { width: 100%; height: auto; display: block; }
+  @keyframes demo-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+
+  .flow-demo-bubble {
+    position: relative;
+    background: white;
+    border: 1.5px solid var(--pink-3);
+    border-radius: 12px;
+    padding: 8px 12px 10px;
+    max-width: 320px;
+    min-width: 180px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--ink);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    animation: demo-bubble 7.2s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+  .flow-demo-bubble::after {
+    content: '';
+    position: absolute;
+    left: -8px;
+    bottom: 16px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-left: 1.5px solid var(--pink-3);
+    border-bottom: 1.5px solid var(--pink-3);
+    transform: rotate(45deg);
+  }
+  .flow-demo-bubble .btitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .flow-demo-bubble .btitle svg { width: 13px; height: 13px; color: var(--ink); }
+  .flow-demo-bubble .bbody {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  /* Compressed so the dismiss lands before the 7.2s page cycle loops. At
+     5.67s delay, bubble 21% ≈ page t=7.18s — keep activity under 20%. */
+  /* Absolute-timed: visible 82–92% (page t≈5.9–6.6s), dismiss at 94%. */
+  @keyframes demo-bubble {
+    0%, 80% { opacity: 0; transform: translateY(6px)  scale(0.96); }
+    82%     { opacity: 1; transform: translateY(0)    scale(1); }
+    92%     { opacity: 1; transform: translateY(0)    scale(1); }
+    94%     { opacity: 0; transform: translateY(-3px) scale(0.92); }
+    100%    { opacity: 0; transform: translateY(6px)  scale(0.96); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flow-animated .flow-step,
+    .flow-animated .flow-arrow,
+    .flow-arrow .arrow-dot,
+    .flow-demo-axol,
+    .flow-demo-bubble {
+      animation: none;
+    }
+    .arrow-dot { opacity: 0.55; top: 50%; margin-top: -5px; transform: none; }
+    .flow-demo-bubble { opacity: 1; transform: none; }
+    .flow-animated .flow-arrow { opacity: 0.55; }
+  }
+
+  /* HMAC scheme table */
+  table.schemes {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 4px;
+    font-size: 13.5px;
+  }
+  table.schemes th, table.schemes td {
+    border-bottom: 1px solid #F3DDE9;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.schemes th {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pink-accent);
+    font-weight: 700;
+  }
+  table.schemes tr:last-child td { border-bottom: none; }
+  table.schemes td:first-child { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--pink-accent); white-space: nowrap; }
+
+  .setup-steps {
+    counter-reset: step;
+    padding: 0;
+    margin: 8px 0 4px;
+    list-style: none;
+  }
+  .setup-steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 2px 36px;
+    margin-bottom: 18px;
+  }
+  .setup-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .setup-steps > li h3 { margin-top: 0; }
+
+  .callout {
+    background: #FFF9FB;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .callout b { color: var(--ink); }
+
+  /* Deploy guides — card grid pointing at per-target setup pages. */
+  .guides-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .guide-card {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--ink);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .guide-card:hover {
+    border-color: var(--pink-accent);
+    background: #FFF4FA;
+    transform: translateY(-1px);
+  }
+  .guide-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .guide-icon svg { width: 20px; height: 20px; }
+  /* Brand-accurate logo variant — fills the whole tile instead of sitting
+     in a pink circle. Used for guide cards that represent a third-party
+     platform's official mark. */
+  .guide-icon-brand {
+    background: transparent;
+    padding: 0;
+  }
+  .guide-icon-brand svg { width: 100%; height: 100%; display: block; }
+  .guide-body b {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .guide-body span {
+    display: block;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+  .guide-arrow {
+    color: var(--pink-accent);
+    font-size: 18px;
+    opacity: 0.55;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .guide-card:hover .guide-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  footer {
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 13px;
+    padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 36px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Reusable concept glyphs. Neuromast: one sensor + ripples. Lateral
+     line: row of sensors along a nerve, with signal intensity ramping. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="glyph-neuromast" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+    <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.25" opacity="0.55"/>
+    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1" opacity="0.28"/>
+  </symbol>
+  <symbol id="glyph-lateral-line" viewBox="0 0 24 24">
+    <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.25" opacity="0.45"/>
+    <circle cx="4"  cy="12" r="1.6" fill="currentColor" opacity="0.3"/>
+    <circle cx="10" cy="12" r="2.2" fill="currentColor" opacity="0.6"/>
+    <circle cx="16" cy="12" r="2.8" fill="currentColor"/>
+    <circle cx="22" cy="12" r="1.3" fill="currentColor" opacity="0.35"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-signals">
+        <span class="hero-signal hero-signal-1"></span>
+        <span class="hero-signal hero-signal-2"></span>
+        <span class="hero-signal hero-signal-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBody" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <radialGradient id="heroBelly" cx="50%" cy="60%" r="50%">
+            <stop offset="0%" stop-color="#FFE5F0" />
+            <stop offset="100%" stop-color="#FFCCE2" />
+          </radialGradient>
+        </defs>
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div>
+      <span class="pill">optional add-on</span>
+    </div>
+    <h1>Remote alerts</h1>
+    <p class="tagline">How alerts from the wider internet reach Axol's speech bubble — the full path from a signed webhook to a rendered notification, end to end.</p>
+    <a class="cta" href="#deploy-guides">Deploy guides →</a>
+  </header>
+
+  <section>
+    <h2>why</h2>
+    <p>Axol's receiver binds to <code>127.0.0.1:47329</code> — loopback only, no exceptions. Anything you can <code>curl</code> from the same machine can talk to her, but GitHub / Stripe / Sentry / anything with a webhook has no way in.</p>
+    <p>The lateral line gives Axol a dangling antenna: a public, signed endpoint that queues remote alerts, and a shell script on your Mac that periodically fetches them and posts them to the loopback port. It's named after the row of sensory cells down a fish's flank (axolotls have one too) — each inbound webhook is one <em>neuromast</em> picking up pressure from the outside, and the script is the nerve pulling signal back toward the brain.</p>
+  </section>
+
+  <section>
+    <h2>anatomy</h2>
+    <p>Two pieces, both borrowed from fish biology, each doing one job:</p>
+    <div class="anatomy">
+      <div class="anatomy-card">
+        <div class="anatomy-head">
+          <span class="glyph glyph-xl" aria-hidden="true"><svg><use href="#glyph-neuromast"/></svg></span>
+          <h3>neuromast</h3>
+        </div>
+        <p><b>In fish:</b> a cluster of sensory hair cells on the skin that detects pressure changes in the surrounding water — a single pickup point.</p>
+        <p><b>In Axol:</b> one signed cloud endpoint. Accepts a webhook POST, verifies the sender's HMAC (or falls back to a shared query key), and parks the raw body in a short-TTL queue. A tiny serverless function — ~60 KB bundle, no runtime deps.</p>
+        <p><b>Scales to:</b> as many neuromasts as you want. Each mount path or deploy target is its own sensor with its own auth config, all feeding the same lateral line downstream.</p>
+      </div>
+      <div class="anatomy-card">
+        <div class="anatomy-head">
+          <span class="glyph glyph-xl" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>
+          <h3>lateral line</h3>
+        </div>
+        <p><b>In fish:</b> the nerve pathway running along the flank, wiring every neuromast back to the brain — the channel that carries signals home.</p>
+        <p><b>In Axol:</b> a 60-line bash script on your Mac, run by <code>launchd</code> every 15 seconds. Pulls each neuromast's queue with a bearer token, POSTs the bodies to <code>127.0.0.1:47329</code>, acks on success. Cursor lives at <code>~/Library/Application Support/Axol/lateral-line.cursor</code>.</p>
+        <p><b>Guarantees:</b> at-least-once. Items stay queued if Axol's offline; a crashed ack causes at most one duplicate bubble. No cloud redeploy needed when adding sources — Axol's local adapter system handles translation.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>data flow</h2>
+    <p style="margin-bottom: 14px;">Each stage pulses in turn as a webhook traces the path from sender to bubble.</p>
+    <div class="flow flow-animated">
+      <div class="flow-step">
+        <b>
+          <span class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383"/>
+              <path d="M7.646 4.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V14.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708z"/>
+            </svg>
+          </span>sender
+        </b>
+        <div class="desc">GitHub, Stripe, anything with a webhook. POSTs JSON to a Webflow Cloud URL — signed with HMAC (github / stripe / generic) or gated by a shared query key.</div>
+      </div>
+      <div class="flow-arrow arrow-1" aria-hidden="true"><span class="arrow-dot"></span></div>
+      <div class="flow-step">
+        <b><span class="glyph" aria-hidden="true"><svg><use href="#glyph-neuromast"/></svg></span>neuromast</b>
+        <div class="desc">A small serverless function — runs on any modern edge runtime. Verifies the signature / key, parks the raw body in a short-TTL queue, returns <code>204</code>. Total bundle: ~60 KB, no runtime dependencies.</div>
+      </div>
+      <div class="flow-arrow arrow-2" aria-hidden="true">
+        <span class="arrow-dot fetch"></span>
+        <span class="arrow-dot response"></span>
+      </div>
+      <div class="flow-step">
+        <b><span class="glyph" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>lateral-line</b>
+        <div class="desc">A 60-line bash script run by <code>launchd</code> every 15 seconds. Fetches each neuromast's queue with a bearer token, POSTs each body unchanged to <code>127.0.0.1:47329</code>, acks on success. At-least-once: if Axol is offline, items stay queued until she's back.</div>
+      </div>
+      <div class="flow-arrow arrow-3" aria-hidden="true"><span class="arrow-dot"></span></div>
+      <div class="flow-step">
+        <b>
+          <span class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="flowStepAxolBody" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#FFC9E2" />
+                  <stop offset="100%" stop-color="#FFA6CF" />
+                </radialGradient>
+              </defs>
+              <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+              <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+              <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+              <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+              <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+              <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+              <circle cx="132" cy="105" r="7" fill="#2D2533" />
+              <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+            </svg>
+          </span>axol
+        </b>
+        <div class="desc">
+          <p style="margin: 0 0 6px;">The loopback receiver (<code>127.0.0.1:47329</code>, hardened at the socket level) parses the POST body and walks it through four stages:</p>
+          <ul style="margin: 0 0 8px 18px; padding: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.5;">
+            <li><b>Adapter match</b> — JSON files in <code>adapters/</code> and <code>~/Library/Application Support/Axol/adapters/</code> are tried alphabetically; first match wins. The winner renders an envelope via the <code>{{field}}</code> template language. <a href="plugins.html">Spec →</a></li>
+            <li><b>Validator</b> — closed vocabulary: priorities <code>low | normal | high | urgent</code>, actions <code>focus-pid</code> / <code>open-url</code> / <code>reveal-file</code> / <code>noop</code>. URLs must be <code>http(s)://</code>, file reveals must live in <code>$HOME</code>. No shell execution path.</li>
+            <li><b>Alert store</b> — newest-first, capped at 5 entries, 5-minute seen-TTL.</li>
+            <li><b>Speech bubble</b> — priority-styled, with worry bubbles rising for unresolved high/urgent alerts. Click fires the first action.</li>
+          </ul>
+          <p style="margin: 0 0 8px;"><em>Remote alerts transports the body here; <a href="plugins.html">plugins</a> translate it.</em></p>
+          <div class="flow-demo">
+            <div class="flow-demo-axol" aria-hidden="true">
+              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <radialGradient id="demoBody" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#FFC9E2" />
+                    <stop offset="100%" stop-color="#FFA6CF" />
+                  </radialGradient>
+                  <radialGradient id="demoBelly" cx="50%" cy="60%" r="50%">
+                    <stop offset="0%" stop-color="#FFE5F0" />
+                    <stop offset="100%" stop-color="#FFCCE2" />
+                  </radialGradient>
+                </defs>
+                <g>
+                  <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+                  <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+                  <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+                  <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+                  <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+                  <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+                </g>
+                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+                <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+                <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+                <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+                <circle cx="132" cy="105" r="7" fill="#2D2533" />
+                <circle cx="90"  cy="102" r="2.2" fill="white" />
+                <circle cx="134" cy="102" r="2.2" fill="white" />
+                <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+                <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="flow-demo-bubble" role="status" aria-live="polite">
+              <span class="btitle">
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+                main
+              </span>
+              <span class="bbody">CI passed · workflow #482</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>authentication</h2>
+    <p>The <code>/hooks/{source}</code> route resolves auth in a fixed order:</p>
+    <ol>
+      <li>If <code>HOOK_SCHEME_&lt;SOURCE&gt;</code> is set for this URL segment, verify the request's signature with that scheme.</li>
+      <li>Otherwise, accept if <code>?key=&lt;SHARED_SECRET&gt;</code> matches (constant-time compare).</li>
+      <li>Otherwise, <code>401</code>.</li>
+    </ol>
+
+    <h3>HMAC schemes</h3>
+    <table class="schemes">
+      <thead>
+        <tr>
+          <th>Scheme</th>
+          <th>Header</th>
+          <th>Signed input</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>github</td>
+          <td><code>X-Hub-Signature-256</code></td>
+          <td>raw body</td>
+          <td>Matches GitHub's default webhook signing.</td>
+        </tr>
+        <tr>
+          <td>stripe</td>
+          <td><code>Stripe-Signature</code></td>
+          <td><code>&lt;ts&gt;.&lt;body&gt;</code></td>
+          <td>5-minute replay window. Tolerates key rotation (multiple <code>v1=</code> values).</td>
+        </tr>
+        <tr>
+          <td>generic</td>
+          <td><code>X-Signature-256</code></td>
+          <td>raw body</td>
+          <td>Our own convention for ad-hoc senders. <code>sha256=&lt;hex&gt;</code> format.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <b>Adding a scheme</b> — one entry in <code>neuromast/src/lib/hmac.ts</code>. Verifiers use Web Crypto's <code>subtle.sign</code> (available natively in Workers); no deps.
+    </div>
+
+    <p><b>Optional replay window for github / generic.</b> Both schemes HMAC the raw body by default. Senders that care about replay protection can include an <code>X-Signature-Timestamp</code> header (unix seconds); neuromast verifies it's within 300 seconds and then signs <code>&lt;ts&gt;.&lt;body&gt;</code> instead — Stripe-style. Stripe's scheme already bakes the timestamp in, so this only matters for the other two.</p>
+  </section>
+
+  <section>
+    <h2>delivery semantics</h2>
+    <p><b>At-least-once.</b> The forwarder only acks items after the local Axol returns <code>204</code>. If Axol is offline, items stay queued and retry on the next tick. If the forwarder crashes between POSTing to Axol and calling <code>/ack</code>, you'll see one duplicate bubble — rare, and a fair trade for not silently dropping an alert.</p>
+    <p><b>Bounded queue.</b> The queue index is capped at the 100 most-recent items. Older unacked entries age out of the index (though their bodies linger until the backing store's own expiration). For a single user this is effectively unlimited headroom — it's a backstop for a forwarder that's been offline for a week, not a broadcast queue.</p>
+    <p><b>Body size limit.</b> <code>/app/api/hooks/{source}</code> rejects payloads larger than 1 MB with <code>HTTP 413</code>. Real-world webhooks (GitHub PR events, Stripe event objects) sit well under this ceiling.</p>
+    <p><b>No dedup on Axol's side.</b> Axol today doesn't track inbound alert IDs, so the same payload POSTed twice renders two bubbles. If you care, that's a one-field addition in <code>AlertStore.push</code>.</p>
+
+    <h3 style="margin-top: 28px;">queue item shape</h3>
+    <p>Each entry the forwarder pulls back from <code>/app/api/pull</code> has this shape. <code>body</code> is the raw webhook payload, verbatim — Axol's adapters do the translation.</p>
+    <pre><code>{
+  "id":         "00001715881200000-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "source":     "github",
+  "receivedAt": 1715881200000,
+  "body":       { "workflow_run": { "conclusion": "success", ... } }
+}</code></pre>
+    <p><code>id</code> is monotonic (timestamp-prefixed UUID), so <code>since=&lt;last-id&gt;</code> on the next pull fetches only newer items.</p>
+  </section>
+
+  <section id="deploy-guides">
+    <h2>deploy guides</h2>
+    <p>Step-by-step setup for the cloud side of the lateral line, per target.</p>
+    <div class="guides-grid">
+      <a class="guide-card" href="deploy-webflow.html">
+        <span class="guide-icon guide-icon-brand" role="img" aria-label="Webflow">
+          <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="1080" height="1080" fill="#146EF5"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M898.312 337.5L683.467 757.5H481.667L571.579 583.434H567.545C493.368 679.726 382.694 743.115 225 757.5V585.843C225 585.843 325.88 579.884 385.185 517.534H225V337.503H405.031V485.576L409.072 485.559L482.639 337.503H618.791V484.637L622.832 484.631L699.159 337.5H898.312Z" fill="white"/>
+          </svg>
+        </span>
+        <div class="guide-body">
+          <b>Webflow Cloud</b>
+          <span>Astro + Cloudflare Workers under Webflow's tenancy. No Cloudflare account needed.</span>
+        </div>
+        <span class="guide-arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="guide-card" href="deploy-railway.html">
+        <span class="guide-icon guide-icon-brand" role="img" aria-label="Railway" style="background: #1F2937; display: inline-flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width: 72%; height: 72%;">
+            <path d="M4.756 438.175A520.713 520.713 0 0 0 0 489.735h777.799c-2.716-5.306-6.365-10.09-10.045-14.772-132.97-171.791-204.498-156.896-306.819-161.26-34.114-1.403-57.249-1.967-193.037-1.967-72.677 0-151.688.185-228.628.39-9.96 26.884-19.566 52.942-24.243 74.14h398.571v51.909H4.756ZM783.93 541.696H.399c.82 13.851 2.112 27.517 3.978 40.999h723.39c32.248 0 50.299-18.297 56.162-40.999ZM45.017 724.306S164.941 1018.77 511.46 1024c207.112 0 385.071-123.006 465.907-299.694H45.017Z" fill="#fff"/>
+            <path d="M511.454 0C319.953 0 153.311 105.16 65.31 260.612c68.771-.144 202.704-.226 202.704-.226h.031v-.051c158.309 0 164.193.707 195.118 1.998l19.149.706c66.7 2.224 148.683 9.384 213.19 58.19 35.015 26.471 85.571 84.896 115.708 126.52 27.861 38.499 35.876 82.756 16.933 125.158-17.436 38.97-54.952 62.215-100.383 62.215H16.69s4.233 17.944 10.58 37.751h970.632A510.385 510.385 0 0 0 1024 512.218C1024.01 229.355 794.532 0 511.454 0Z" fill="#fff"/>
+          </svg>
+        </span>
+        <div class="guide-body">
+          <b>Railway</b>
+          <span>Astro Node standalone + Redis plugin. Git-push deploys on a plain Node runtime.</span>
+        </div>
+        <span class="guide-arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="guide-card" href="deploy-cloudflare.html">
+        <span class="guide-icon guide-icon-brand" role="img" aria-label="Cloudflare" style="background: #F38020; display: inline-flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white" aria-hidden="true" style="width: 72%; height: 72%;">
+            <path d="M16.5 11.5c-.2 0-.4 0-.6.05-.5-1.9-2.2-3.3-4.3-3.3-1.6 0-3 .9-3.8 2.2a3 3 0 00-.8-.1C5.3 10.35 4 11.6 4 13.2s1.3 2.85 3 2.85h9.5c1.4 0 2.5-1.1 2.5-2.5 0-1.4-1.1-2.05-2.5-2.05z"/>
+          </svg>
+        </span>
+        <div class="guide-body">
+          <b>Cloudflare Workers</b>
+          <span>Direct <code>wrangler deploy</code> to the edge. Same runtime as Webflow Cloud, your own domain.</span>
+        </div>
+        <span class="guide-arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="guide-card" href="deploy-fly.html">
+        <span class="guide-icon guide-icon-brand" role="img" aria-label="Fly.io" style="background: #6B3EFA; display: inline-flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white" aria-hidden="true" style="width: 72%; height: 72%;">
+            <path d="M12 2c-3.5 0-6 2.8-6 6.2 0 2.5 1.4 4.7 3.4 5.9L9 17l1.5.5L11 15h2l.5 2.5L15 17l-.4-2.9c2-1.2 3.4-3.4 3.4-5.9C18 4.8 15.5 2 12 2zm0 10c-2 0-3.5-1.6-3.5-3.8S10 4.5 12 4.5s3.5 1.6 3.5 3.7S14 12 12 12zm-1 6.5v2c0 .3.2.5.5.5h1c.3 0 .5-.2.5-.5v-2h-2z"/>
+          </svg>
+        </span>
+        <div class="guide-body">
+          <b>Fly.io</b>
+          <span>Astro Node + Upstash Redis on Fly's global edge. <code>fly launch</code> + <code>fly deploy</code>.</span>
+        </div>
+        <span class="guide-arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="guide-card" href="deploy-render.html">
+        <span class="guide-icon guide-icon-brand" role="img" aria-label="Render" style="background: #0B1728; display: inline-flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#46E3B7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width: 62%; height: 62%;">
+            <circle cx="6"  cy="18" r="2.2" fill="#46E3B7" />
+            <circle cx="18" cy="18" r="2.2" fill="#46E3B7" />
+            <circle cx="12" cy="6"  r="2.2" fill="#46E3B7" />
+            <line x1="6"  y1="18" x2="12" y2="6" />
+            <line x1="18" y1="18" x2="12" y2="6" />
+            <line x1="6"  y1="18" x2="18" y2="18" />
+          </svg>
+        </span>
+        <div class="guide-body">
+          <b>Render</b>
+          <span>GitHub-connected Node service + Render Redis. Free tier covers personal use.</span>
+        </div>
+        <span class="guide-arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+</body>
+</html>

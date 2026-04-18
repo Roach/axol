@@ -4,17 +4,18 @@
 
 import type { APIRoute } from 'astro';
 import { ackIds } from '../../lib/queue';
+import { getQueueStore, resolveEnv, type StorageEnv } from '../../lib/storage';
 import { timingSafeEqualString } from '../../lib/hmac';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = locals.runtime.env as unknown as {
-    QUEUE: KVNamespace;
+  const env = resolveEnv(locals) as unknown as StorageEnv & {
     POLL_TOKEN: string;
   };
 
   if (!checkBearer(request, env.POLL_TOKEN)) {
+    console.log('neuromast: ack rejected (bad bearer)');
     return new Response(null, { status: 401 });
   }
 
@@ -29,7 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(null, { status: 400 });
   }
 
-  await ackIds(env, payload.ids as string[]);
+  await ackIds(await getQueueStore(env), payload.ids as string[]);
   return new Response(null, { status: 204 });
 };
 

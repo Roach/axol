@@ -1,0 +1,23 @@
+name: axol
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'axol/**'
+      - '.github/workflows/axol.yml'
+  pull_request:
+    paths:
+      - 'axol/**'
+      - '.github/workflows/axol.yml'
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: axol
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./build.sh
+      - run: ./test.sh

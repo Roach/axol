@@ -1,0 +1,31 @@
+{
+  "name": "sentry",
+  "match": { "field": "data.issue.id", "exists": true },
+  "switch": "data.issue.level",
+  "cases": {
+    "fatal": {
+      "title":    "{{data.issue.project.slug | default 'sentry'}}",
+      "body":     "{{data.issue.title}}",
+      "priority": "urgent",
+      "source":   "sentry",
+      "icon":     "error",
+      "actions":  [{ "type": "open-url", "url": "{{data.issue.permalink}}", "label": "View in Sentry" }]
+    },
+    "error": {
+      "title":    "{{data.issue.project.slug | default 'sentry'}}",
+      "body":     "{{data.issue.title}}",
+      "priority": "urgent",
+      "source":   "sentry",
+      "icon":     "error",
+      "actions":  [{ "type": "open-url", "url": "{{data.issue.permalink}}", "label": "View in Sentry" }]
+    },
+    "warning": {
+      "title":    "{{data.issue.project.slug | default 'sentry'}}",
+      "body":     "{{data.issue.title}}",
+      "priority": "high",
+      "source":   "sentry",
+      "icon":     "warn",
+      "actions":  [{ "type": "open-url", "url": "{{data.issue.permalink}}", "label": "View in Sentry" }]
+    }
+  }
+}

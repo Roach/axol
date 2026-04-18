@@ -8,18 +8,58 @@ She also listens for alerts on localhost and surfaces them as speech bubbles —
 
 Pure Cocoa + Core Animation: a single ~300 KB binary with no webview or helper processes. Resident memory is ~40 MB and idle CPU is ~0%.
 
+## Repo layout
+
+Three deployable components sit side-by-side at the root:
+
+| Directory | What it is |
+|---|---|
+| [`axol/`](./axol/) | The macOS app — Swift sources, bundled adapters, unit tests, `build.sh`, `test.sh`. |
+| [`neuromast/`](./neuromast/) | Cloudflare Workers endpoint that parks remote webhook payloads in a KV queue. |
+| [`lateral-line/`](./lateral-line/) | Local bash forwarder + launchd agent that drains the queue into Axol's loopback port. |
+| [`docs/`](./docs/) | Static site published on GitHub Pages. |
+
+`neuromast/` and `lateral-line/` are optional — Axol works fine on its own for anything that can POST to `127.0.0.1:47329`. They exist so webhook senders that can't reach loopback (GitHub, Stripe, CI) can still talk to her.
+
 ## Running
 
 Requires the Xcode command line tools (`xcode-select --install`).
 
 ```sh
+cd axol
 ./build.sh
 ./axol
 ```
 
-`build.sh` compiles `Axol.swift` into a single `axol` binary in the project directory. The binary loads adapters from `./adapters/` (bundled with this repo) and `~/Library/Application Support/Axol/adapters/` (your own).
+`build.sh` compiles the Swift sources in `axol/` into a single ~300 KB stripped `axol` binary. The binary loads adapters from `axol/adapters/` (bundled with this repo) and `~/Library/Application Support/Axol/adapters/` (your own).
+
+For a debuggable build with symbols intact, run `NO_STRIP=1 ./build.sh`. Run `./test.sh` to execute the adapter unit-test suite.
 
 Window position is persisted to `~/Library/Application Support/Axol/state.json`.
+
+## Themes
+
+Axol's character palette is themeable. Drop a `theme.json` into `~/Library/Application Support/Axol/` and relaunch:
+
+```json
+{
+  "name": "mint",
+  "character": {
+    "gillBase":  "#7ED4B8",
+    "gillTip":   "#4FB893",
+    "body":      "#9BD6B8",
+    "belly":     "#C4E8D8",
+    "eye":       "#1E3028",
+    "highlight": "#FFFFFF",
+    "cheek":     "#F5B8A0",
+    "mouth":     "#2F5A48"
+  }
+}
+```
+
+All eight keys are required. Unknown keys or malformed hex (anything that isn't 3- or 6-digit hex, with or without `#`) cause the file to be rejected and Axol falls back to the bundled default. `axol/themes/` ships `pink` (default), `mint`, and `purple` as references.
+
+UI chrome (bubbles, badges, history panel) stays pink-branded — themes only re-color the character.
 
 ## Sending alerts
 
@@ -93,7 +133,7 @@ Unknown action types (and anything resembling shell execution) are silently drop
 
 ### Adapters
 
-An adapter is a JSON file that describes how to translate a non-envelope payload into an envelope. Axol ships with one bundled adapter for Claude Code; drop your own into `~/Library/Application Support/Axol/adapters/` to add more.
+An adapter is a JSON file that describes how to translate a non-envelope payload into an envelope. Axol ships with five bundled adapters (`claude-code`, `github-actions`, `sentry`, `stripe`, `zz-generic`); drop your own into `~/Library/Application Support/Axol/adapters/` to add more. See the [plugins reference](https://roach.github.io/axol/plugins.html#built-ins) for a catalog.
 
 ```json
 {
@@ -141,27 +181,38 @@ Adapters are loaded on startup in filename order. First match wins. Adapter outp
 
 ## Remote alerts (lateral line)
 
-Axol's receiver is loopback-only. To route third-party webhooks (GitHub, Stripe, anything posting JSON) into the same bubble UX, two optional pieces live alongside this repo:
+Axol's receiver binds to `127.0.0.1:47329` — loopback only. For services that live off-machine (GitHub, Stripe, Sentry, anything with a webhook), she grows a dangling antenna: a signed endpoint in the cloud that parks inbound alerts in a queue, plus a 60-line local forwarder that fetches them and posts them to the loopback port on a 15-second tick. Named after the row of sensory neuromasts down a fish's flank.
 
-- **`neuromast/`** — a tiny Astro + Cloudflare Workers app, deployed to [Webflow Cloud](https://developers.webflow.com/webflow-cloud), that accepts signed webhooks and parks them in a KV queue. Supports GitHub / Stripe HMAC out of the box plus a generic `sha256=<hex>` scheme; falls back to a `?key=<SHARED_SECRET>` query param for senders that can't sign.
-- **`lateral-line/`** — a ~50-line bash script, run by `launchd` every 30 seconds, that pulls the queue, posts each body into `127.0.0.1:47329`, and acks on success.
+Two sibling directories in this repo:
 
-The poller posts raw webhook bodies unchanged; Axol's existing adapter system does the translation, so adding a new source is one `adapters/<source>.json` file and no cloud redeploy.
+- **[`neuromast/`](./neuromast/)** — the cloud endpoint. A small serverless webhook intake (~60 KB bundle, zero runtime deps). Three routes: `POST /app/api/hooks/{source}` (tiered auth: per-source HMAC — GitHub / Stripe / generic — falling back to `?key=<SHARED_SECRET>`), `GET /app/api/pull?since=<cursor>` (bearer-gated), `POST /app/api/ack` (bearer-gated, deletes delivered ids).
+- **[`lateral-line/`](./lateral-line/)** — the local forwarder. A bash script on `launchd`, a cursor file, and an idempotent installer. Posts each queued body verbatim to Axol's loopback port; at-least-once delivery (items stay queued if Axol is offline).
 
-Quickstart:
+No Axol-side changes: the forwarder posts raw webhook bodies and the existing adapter system does the translation. Adding a new source is one `adapters/<source>.json` file with no cloud redeploy.
+
+### Deploy guides
+
+Platform-specific setup lives per target:
+
+- **Webflow Cloud** — [`docs/deploy-webflow.html`](https://roach.github.io/axol/deploy-webflow.html)
+
+### Quickstart (after following a deploy guide)
 
 ```sh
-# once, after deploying neuromast and setting POLL_TOKEN + SHARED_SECRET
+AXOL_CLOUD_URL=https://<your-cloud-url> \
+AXOL_POLL_TOKEN=<the-bearer-you-just-set> \
+./lateral-line/install.sh
+
 curl -X POST "$AXOL_CLOUD_URL/app/api/hooks/test?key=$SHARED_SECRET" \
      -H 'content-type: application/json' \
      -d '{"title":"hello","body":"from the cloud"}'
 ```
 
-See [`neuromast/README.md`](./neuromast/README.md) and [`lateral-line/README.md`](./lateral-line/README.md) for setup.
+Within 15 seconds a bubble should pop. Overview: [remote-alerts docs page](https://roach.github.io/axol/remote-alerts.html). Details: [`neuromast/README.md`](./neuromast/README.md), [`lateral-line/README.md`](./lateral-line/README.md).
 
 ## Claude Code integration
 
-Claude Code support is provided by the bundled `adapters/claude-code.json`. It recognizes `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until you handle them), and `Stop` (normal). The internal "waiting for your input" chatter is dropped via a `skip_if`.
+Claude Code support is provided by the bundled `axol/adapters/claude-code.json`. It recognizes `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until you handle them), and `Stop` (normal). The internal "waiting for your input" chatter is dropped via a `skip_if`.
 
 Include an `X-Claude-PID` header with the Claude Code process ID (`$PPID` works) so clicking the speech bubble focuses the right terminal.
 
@@ -187,11 +238,16 @@ Example hook configuration (in your Claude Code `settings.json`):
 ## Interactions
 
 - **Left-click** — replays the most recent actionable alert, or cycles through the recent ones. If there aren't any pending, she speaks a quip. Wakes her up from a nap.
-- **⌘-click** — toggles Compact Mode (same as the right-click menu item).
-- **Double-click** — opens the recent-alerts panel (scrollable, with sticky header). Closes automatically after 10s; click a row to run its action.
-- **Right-click** — compact menu: **Idle Animations** (checkbox), **Compact Mode / Expand**, **About**, **Quit**.
+- **⌘-click** — cycles through three size modes: **full** → **mini** → **micro** → full. The current mode persists across launches.
+- **Double-click** — opens the recent-alerts panel (scrollable, with sticky header). Closes automatically after 10s; click a row to run its action. In mini mode the panel renders off-to-the-side with a right-pointing tail into her cheek and is capped to 2 visible rows (scroll for the rest).
+- **Right-click** — menu: **Full / Mini / Micro** (radio-style), **Idle Animations**, **Nudges**, **About**, **Quit**.
 - **Drag** — move the window; position is persisted across launches. Drags are clamped to the visible screen so she can't be lost off-edge.
-- **Compact mode** — shrinks the window to a 62×62 static icon with a pink alert-count badge (top-left). Click the compact icon to expand back; any pending actionable alert replays in the bubble automatically once the resize settles.
+
+### Size modes
+
+- **Full** (~300×360) — the default. Character near the top of the pane, bubbles appear above her head with a downward tail, worry bubbles and nap `z`s render above her.
+- **Mini** (~62×56 empty, grows leftward to ~290×80 when a bubble is showing) — a smaller character anchored on the right with a side bubble on the left. A small blue count badge floats over her upper-right gill when there are unseen alerts.
+- **Micro** (48×48) — just a small static character + a pink count badge, no ambient animation. Click to expand back to full; ⌘-click cycles; right-click for the menu.
 
 Ambient behavior: she bobs, blinks, sways her gills, and occasionally fires a subtle idle animation (peek / stretch / tilt / wiggle). Worry bubbles rise from above her head while an alert is unresolved. She takes naps on a ~1.5–4 min initial schedule (5–15 min thereafter), waking on any incoming alert, click, or drag. The "Idle Animations" menu toggle disables both idles and naps.
 

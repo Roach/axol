@@ -11,9 +11,15 @@
 
 import type { APIRoute } from 'astro';
 import { enqueue } from '../../../lib/queue';
+import { getQueueStore, resolveEnv, type StorageEnv } from '../../../lib/storage';
 import { verify, timingSafeEqualString } from '../../../lib/hmac';
 
 export const prerender = false;
+
+// Webhook payloads in the wild (GitHub PR events with a large diff summary,
+// Stripe event objects) stay comfortably under ~256 KB. 1 MB is a generous
+// ceiling that still rejects garbage uploads before they consume KV quota.
+const MAX_BODY_BYTES = 1_000_000;
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const source = String(params.source ?? '').toLowerCase();
@@ -21,14 +27,21 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     return new Response(null, { status: 404 });
   }
 
-  const env = locals.runtime.env as unknown as {
-    QUEUE: KVNamespace;
+  const env = resolveEnv(locals) as unknown as StorageEnv & {
     SHARED_SECRET?: string;
     [key: string]: unknown;
   };
 
+  // Quick pre-check via Content-Length; the authoritative check below still
+  // runs after we read the body (clients can lie or omit the header).
+  const declared = Number(request.headers.get('content-length') ?? '');
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return new Response(null, { status: 413 });
+  }
+
   const rawBody = await request.text();
   if (rawBody.length === 0) return new Response(null, { status: 400 });
+  if (rawBody.length > MAX_BODY_BYTES) return new Response(null, { status: 413 });
 
   // Tier 1 — per-source HMAC.
   const schemeKey = `HOOK_SCHEME_${source.toUpperCase()}`;
@@ -59,6 +72,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     return new Response(null, { status: 400 });
   }
 
-  await enqueue(env, { source, body });
+  await enqueue(await getQueueStore(env), { source, body });
   return new Response(null, { status: 204 });
 };

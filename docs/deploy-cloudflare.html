@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — deploying neuromast to Cloudflare Workers</title>
+<meta name="description" content="Deploy Axol's webhook intake (neuromast) straight to Cloudflare Workers + KV with wrangler, skipping the Webflow Cloud wrapper." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — deploying neuromast to Cloudflare Workers" />
+<meta property="og:description" content="Deploy Axol's webhook intake to Cloudflare Workers directly, no Webflow Cloud wrapper." />
+<meta property="og:url" content="https://roach.github.io/axol/deploy-cloudflare.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA; --pink-2: #FFE5F0; --pink-3: #FFC9E2; --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533; --ink-soft: #6E5F6B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap { position: relative; z-index: 10; max-width: 860px; margin: 0 auto; padding: 24px 32px 80px; }
+  .backlink {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #1F3A56; text-decoration: none;
+    font-size: 14px; font-weight: 500; opacity: 0.75; margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero { padding: 10px 0 8px; text-align: center; }
+  .hero-stage {
+    position: relative; display: inline-block;
+    width: 120px; height: 120px; margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 110px; height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Orange Cloudflare sparks — cloud droplets falling toward Axol. */
+  .hero-sparks {
+    position: absolute; left: 50%; top: 0;
+    width: 80px; height: 96px; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .hero-spark {
+    position: absolute; top: 0;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #F38020;
+    box-shadow: 0 0 0 3px rgba(243, 128, 32, 0.18);
+    opacity: 0;
+    animation: hero-spark-drop 3.8s ease-in infinite;
+  }
+  .hero-spark-1 { left: 26%; animation-delay: 0s; }
+  .hero-spark-2 { left: 66%; animation-delay: 1.25s; }
+  .hero-spark-3 { left: 48%; animation-delay: 2.5s; }
+  @keyframes hero-spark-drop {
+    0%   { opacity: 0;    transform: translateY(-10px) scale(0.6); }
+    15%  { opacity: 1;    transform: translateY(0)     scale(1); }
+    70%  { opacity: 0.85; transform: translateY(78px)  scale(0.95); }
+    88%  { opacity: 0;    transform: translateY(96px)  scale(0.4); }
+    100% { opacity: 0;    transform: translateY(96px)  scale(0.4); }
+  }
+
+  h1 { font-size: 48px; margin: 10px 0 10px; letter-spacing: -0.01em; color: #1F3A56; line-height: 1.05; }
+  .tagline { font-size: 17px; color: rgba(31, 58, 86, 0.78); margin: 0 auto 12px; max-width: 620px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-spark { animation: none !important; }
+    .hero-spark { opacity: 0.7; }
+  }
+
+  .pill {
+    display: inline-block; background: var(--pink-2); color: var(--pink-accent);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .brand-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 8px 0 0; padding: 6px 14px 6px 6px;
+    background: white; border: 1px solid #E5ECF5;
+    border-radius: 999px; text-decoration: none;
+    font-size: 13px; font-weight: 600; color: #080808;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .brand-chip:hover {
+    border-color: #F38020;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(243, 128, 32, 0.45);
+  }
+  .brand-chip-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px; overflow: hidden;
+    background: #F38020;
+  }
+  .brand-chip-mark svg { width: 78%; height: 78%; display: block; }
+  .brand-chip-arrow { font-size: 14px; color: #F38020; opacity: 0.7; transition: opacity 0.15s ease, transform 0.15s ease; }
+  .brand-chip:hover .brand-chip-arrow { opacity: 1; transform: translateX(2px); }
+
+  section {
+    background: white; border-radius: 20px;
+    padding: 26px 30px 28px; margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 { font-size: 21px; margin: 0 0 10px; color: var(--pink-accent); }
+  section h3 { font-size: 15px; margin: 18px 0 6px; color: var(--ink); letter-spacing: -0.005em; }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7; border: 1px solid #F3DDE9; border-radius: 12px;
+    padding: 14px 16px; font-size: 13px; overflow-x: auto;
+    margin: 8px 0 16px; color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7; border-radius: 5px; padding: 1px 6px; font-size: 0.92em;
+  }
+  .tok-flag  { color: #B33A7A; }
+  .tok-cmd   { color: #3A4A7A; font-weight: 600; }
+  .tok-str   { color: #3A6E4A; }
+
+  .setup-steps { counter-reset: step; padding: 0; margin: 8px 0 4px; list-style: none; }
+  .setup-steps > li {
+    counter-increment: step; position: relative;
+    padding: 0 0 2px 36px; margin-bottom: 22px;
+  }
+  .setup-steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: -1px;
+    width: 26px; height: 26px; display: inline-flex;
+    align-items: center; justify-content: center;
+    background: var(--pink-2); color: var(--pink-accent);
+    border-radius: 50%; font-size: 13px; font-weight: 700;
+  }
+  .setup-steps > li h3 { margin-top: 0; }
+
+  .callout {
+    background: #FFF9FB; border: 1px solid #F3DDE9; border-radius: 12px;
+    padding: 12px 16px; font-size: 13.5px; color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .callout b { color: var(--ink); }
+
+  .troubleshooting { margin: 0; padding: 0; list-style: none; }
+  .troubleshooting > li {
+    margin-bottom: 16px; padding-bottom: 14px;
+    border-bottom: 1px solid #F3DDE9;
+  }
+  .troubleshooting > li:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .troubleshooting b { color: var(--ink); }
+
+  footer {
+    text-align: center; color: rgba(31, 58, 86, 0.75);
+    font-size: 13px; padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 34px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-sparks">
+        <span class="hero-spark hero-spark-1"></span>
+        <span class="hero-spark hero-spark-2"></span>
+        <span class="hero-spark hero-spark-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBodyCf" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#FFC9E2"/><stop offset="100%" stop-color="#FFA6CF"/></radialGradient>
+          <radialGradient id="heroBellyCf" cx="50%" cy="60%" r="50%"><stop offset="0%" stop-color="#FFE5F0"/><stop offset="100%" stop-color="#FFCCE2"/></radialGradient>
+        </defs>
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div><span class="pill">deploy guide</span></div>
+    <h1>Deploy to Cloudflare Workers</h1>
+    <p class="tagline">Straight <code>wrangler deploy</code> to Cloudflare's edge — same runtime Webflow Cloud uses under the hood, just without the wrapper. Best if you already have a Cloudflare account and want a custom domain or the free tier's generous limits.</p>
+    <a class="brand-chip" href="https://developers.cloudflare.com/workers/" target="_blank" rel="noopener">
+      <span class="brand-chip-mark" aria-hidden="true">
+        <!-- Cloudflare's simplified cloud mark: two overlapping cloud shapes. -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white">
+          <path d="M16.5 11.5c-.2 0-.4 0-.6.05-.5-1.9-2.2-3.3-4.3-3.3-1.6 0-3 .9-3.8 2.2a3 3 0 00-.8-.1C5.3 10.35 4 11.6 4 13.2s1.3 2.85 3 2.85h9.5c1.4 0 2.5-1.1 2.5-2.5 0-1.4-1.1-2.05-2.5-2.05z"/>
+        </svg>
+      </span>
+      <span>Cloudflare Workers docs</span>
+      <span class="brand-chip-arrow" aria-hidden="true">↗</span>
+    </a>
+  </header>
+
+  <section>
+    <h2>why pick Cloudflare direct</h2>
+    <ul>
+      <li><b>Native runtime</b> — neuromast already targets Workers via <code>@astrojs/cloudflare</code>. No adapter switch, no Redis, no Node server.</li>
+      <li><b>Custom domain</b> — Webflow Cloud mounts under <code>/app</code> on a Webflow site. Direct Cloudflare gives you the root of a domain you own.</li>
+      <li><b>Free tier covers most hobby traffic</b> — 100 k requests/day + 1 GB KV storage, comfortably more than Axol's per-user load.</li>
+      <li><b>Wrangler CLI</b> — deploys are <code>wrangler deploy</code>, no GitHub connection required. Continuous deployment is optional via a GitHub Action if you want it.</li>
+    </ul>
+    <div class="callout">
+      <b>If you're choosing between this and Webflow Cloud:</b> Webflow Cloud is simpler if your alerts live next to an existing Webflow site — it handles the mount path and publishes automatically. Direct Cloudflare is more control, a better domain story, and one less vendor in the chain.
+    </div>
+  </section>
+
+  <section>
+    <h2>prerequisites</h2>
+    <ul>
+      <li><b>A Cloudflare account</b> — the free tier is plenty. No credit card needed until you exceed the free limits.</li>
+      <li><b>Node 20+</b> and <code>npm</code> on your machine.</li>
+      <li><b>The Wrangler CLI</b> — installed globally or via <code>npx</code>. The repo's <code>package.json</code> already lists it as a devDep.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>1 · set up the project</h2>
+    <ol class="setup-steps">
+      <li>
+        <h3>Install deps</h3>
+<pre><code><span class="tok-cmd">cd</span> neuromast
+<span class="tok-cmd">npm</span> install</code></pre>
+      </li>
+      <li>
+        <h3>Log in to Cloudflare</h3>
+<pre><code><span class="tok-cmd">npx</span> wrangler login</code></pre>
+        <p>Opens a browser for OAuth. Stores the token in your user profile; persists across terminals.</p>
+      </li>
+      <li>
+        <h3>Create the KV namespace</h3>
+<pre><code><span class="tok-cmd">npx</span> wrangler kv namespace create QUEUE</code></pre>
+        <p>Wrangler prints a snippet to paste into <code>wrangler.json</code>:</p>
+<pre><code>"kv_namespaces": [
+  { "binding": "QUEUE", "id": "&lt;generated-id&gt;" }
+]</code></pre>
+        <p>Paste it into <code>wrangler.json</code> at the top level (next to <code>compatibility_date</code>). The binding name must be <code>QUEUE</code> — that's what the storage factory auto-detects.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>2 · deploy</h2>
+    <ol class="setup-steps">
+      <li>
+        <h3>Set secrets</h3>
+        <p>Wrangler stores these encrypted with the project; they're not in the repo and don't ship in the bundle:</p>
+<pre><code><span class="tok-cmd">npx</span> wrangler secret put POLL_TOKEN
+<span class="tok-cmd">npx</span> wrangler secret put SHARED_SECRET     <span class="tok-flag"># optional, for ?key= fallback</span>
+<span class="tok-cmd">npx</span> wrangler secret put HOOK_SCHEME_GITHUB <span class="tok-flag"># e.g. "github"</span>
+<span class="tok-cmd">npx</span> wrangler secret put HOOK_SECRET_GITHUB <span class="tok-flag"># your webhook secret</span></code></pre>
+        <p>Each one prompts for the value. Repeat for every signed source.</p>
+      </li>
+      <li>
+        <h3>Deploy</h3>
+<pre><code><span class="tok-cmd">npx</span> wrangler deploy</code></pre>
+        <p>Wrangler builds the Astro bundle, packages it as a Worker, and uploads it. You'll get a <code>https://neuromast.&lt;your-account&gt;.workers.dev</code> URL in the output.</p>
+        <p>For a custom domain: <b>dashboard → Workers &amp; Pages → your worker → Settings → Domains &amp; Routes → Add Custom Domain</b>. Point a DNS record at Cloudflare first if the domain isn't already on your account.</p>
+      </li>
+      <li>
+        <h3>Probe the endpoints</h3>
+<pre><code><span class="tok-cmd">export</span> AXOL_CLOUD_URL=https://neuromast.&lt;your-account&gt;.workers.dev
+<span class="tok-cmd">export</span> POLL_TOKEN=<span class="tok-str">'the-bearer-you-set'</span>
+<span class="tok-cmd">export</span> SHARED_SECRET=<span class="tok-str">'the-shared-key-you-set'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-X</span> POST <span class="tok-str">"$AXOL_CLOUD_URL/app/api/hooks/smoke?key=$SHARED_SECRET"</span> \
+  <span class="tok-flag">-H</span> <span class="tok-str">'content-type: application/json'</span> \
+  <span class="tok-flag">-d</span> <span class="tok-str">'{"title":"hello","body":"from cloudflare"}'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-H</span> <span class="tok-str">"Authorization: Bearer $POLL_TOKEN"</span> <span class="tok-str">"$AXOL_CLOUD_URL/app/api/pull"</span></code></pre>
+        <p>Expect <code>204</code> on the POST, JSON with your item on the GET. Routes live under <code>/app/api/…</code> because the Astro config has <code>base: '/app'</code> — remove it if you want the routes at the domain root.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3 · connect the local forwarder</h2>
+<pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
+<span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
+./lateral-line/install.sh</code></pre>
+  </section>
+
+  <section>
+    <h2>day-2 operations</h2>
+
+    <h3>Redeploying</h3>
+<pre><code><span class="tok-cmd">npx</span> wrangler deploy</code></pre>
+    <p>To automate on <code>git push</code>, use Cloudflare's official GitHub Action (<code>cloudflare/wrangler-action</code>). One workflow file, one <code>CLOUDFLARE_API_TOKEN</code> secret in the repo. Optional — the manual CLI path is equally valid for a solo user.</p>
+
+    <h3>Rotating secrets</h3>
+    <p><code>wrangler secret put &lt;NAME&gt;</code> overwrites the existing value. The next request uses the new secret automatically (Workers don't need an explicit restart).</p>
+
+    <h3>Cost</h3>
+    <p>Free tier: 100 k requests/day, 1 GB KV storage, 30 MB bundle size. Axol's traffic pattern sits well under this; a paid plan only matters if you're hosting many users or running heavy integrations.</p>
+  </section>
+
+  <section>
+    <h2>troubleshooting</h2>
+    <ul class="troubleshooting">
+      <li>
+        <b><code>wrangler deploy</code> fails with "Invalid binding <code>QUEUE</code>"</b>
+        <p>The KV namespace isn't declared in <code>wrangler.json</code>, or its <code>id</code> doesn't match a namespace on your account. Re-run <code>wrangler kv namespace create QUEUE</code> and paste the output.</p>
+      </li>
+      <li>
+        <b><code>401</code> on every request</b>
+        <p>Secrets aren't set yet or haven't propagated. Confirm with <code>wrangler secret list</code>, then try again.</p>
+      </li>
+      <li>
+        <b>Bundle size warning on deploy</b>
+        <p>Free-tier Workers cap at 1 MB gzipped (10 MB paid). The default build sits around 950 KB — you're fine. If it creeps past 1 MB, review <code>npm ls</code> for accidental dependencies.</p>
+      </li>
+      <li>
+        <b>Custom domain shows "no route"</b>
+        <p>DNS takes a minute to propagate; Cloudflare also needs to attach a route for the worker. Dashboard → Workers &amp; Pages → your worker → Triggers → Routes.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+</body>
+</html>
