@@ -6,7 +6,7 @@ A cheerful little axolotl that lives in the corner of your screen. Drag her arou
 
 She also listens for alerts on localhost and surfaces them as speech bubbles — clickable alerts can focus a terminal, open a URL, or reveal a file in Finder. Any tool that can POST JSON can talk to her; a plugin framework translates source-specific payloads (Claude Code hooks, GitHub webhooks, CI events, etc.) into a common envelope.
 
-Pure Cocoa + Core Animation: a single ~300 KB binary with no webview or helper processes. Resident memory is ~40 MB and idle CPU is ~0%.
+Pure Cocoa + Core Animation: a single ~350 KB binary with no webview or helper processes. Resident memory is ~40 MB and idle CPU is ~0%.
 
 ## Repo layout
 
@@ -31,7 +31,7 @@ cd axol
 ./axol
 ```
 
-`build.sh` compiles the Swift sources in `axol/` into a single ~300 KB stripped `axol` binary. The binary loads adapters from `axol/adapters/` (bundled with this repo) and `~/Library/Application Support/Axol/adapters/` (your own).
+`build.sh` compiles the Swift sources in `axol/` into a single ~350 KB stripped `axol` binary. The binary loads adapters from `axol/adapters/` (bundled with this repo) and `~/Library/Application Support/Axol/adapters/` (your own).
 
 For a debuggable build with symbols intact, run `NO_STRIP=1 ./build.sh`. Run `./test.sh` to execute the adapter unit-test suite.
 

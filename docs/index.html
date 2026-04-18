@@ -603,6 +603,11 @@
     justify-content: center;
   }
   .mode-preview svg { display: block; }
+  /* The full-mode preview's SVG puts the bubble above the axol, so
+     flex-centering the whole SVG drops her face below the center line.
+     Nudge this one up so her face lines up with the mini + micro axols
+     (which are already vertically centered in their SVGs). */
+  .mode-card:nth-child(1) .mode-preview svg { transform: translateY(-21px); }
   .mode-card h3 {
     font-size: 15px;
     font-weight: 700;
@@ -1539,11 +1544,6 @@
     </div>
     <h1>Axol</h1>
     <p class="tagline">A tiny axolotl that lives in the corner of your screen, surfaces alerts from any tool that can POST JSON, and cheers you on.</p>
-    <a class="cta" href="https://github.com/Roach/axol">
-      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-      View on GitHub
-    </a>
-
     <div class="pitch">
       <article class="pitch-card">
         <div class="pitch-icon" aria-hidden="true">
@@ -1572,7 +1572,7 @@
           </svg>
         </div>
         <h3>Nothing heavy.</h3>
-        <p>One 700&#8239;KB Swift binary. No Electron, no helpers, no telemetry. Idles at 0&nbsp;% CPU and ~40&nbsp;MB RAM.</p>
+        <p>One 350&#8239;KB Swift binary. No Electron, no helpers, no telemetry. Idles at 0&nbsp;% CPU and ~40&nbsp;MB RAM.</p>
       </article>
     </div>
   </header>
@@ -1588,11 +1588,32 @@
 
   <section id="install">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>install</h2>
-    <p>On macOS with the Xcode command line tools:</p>
+    <p>macOS only, for now. You'll need the Xcode command-line tools — if <code>xcode-select -p</code> returns a path, you're good; otherwise run <code>xcode-select --install</code> first.</p>
+
 <pre><code class="lang-sh">git clone https://github.com/Roach/axol.git
 cd axol/axol
 ./build.sh
 ./axol</code></pre>
+
+    <p><code>build.sh</code> compiles the Swift sources into a single ~350&nbsp;KB stripped binary — no Xcode project, no package manager, no code signing. Run <code>NO_STRIP=1 ./build.sh</code> for a debuggable build with symbols, or <code>./test.sh</code> for the 71-assertion adapter test suite.</p>
+
+    <h3 style="margin-top: 20px;">Keep her around</h3>
+    <p>Open <b>System Settings → General → Login Items</b> and drag the <code>axol</code> binary into <b>"Open at Login"</b>. That's it — no <code>launchctl</code> dance, no helper process. Her window position, size mode, and alert history persist to <code>~/Library/Application Support/Axol/</code> across reboots.</p>
+
+    <h3 style="margin-top: 20px;">What's next</h3>
+    <p>Pick a thread:</p>
+    <ul style="margin: 6px 0 14px; padding-left: 20px;">
+      <li><a href="#alerts">Send her alerts</a> from your own scripts with a <code>curl</code> one-liner.</li>
+      <li><a href="#remote">Set up the remote-alerts bridge</a> so GitHub, Stripe, and Sentry can reach her too.</li>
+      <li><a href="#plugins">Write a plugin</a> for any webhook source — or use one of the five that ship with her.</li>
+    </ul>
+
+    <p style="margin-top: 18px;">
+      <a class="cta" href="https://github.com/Roach/axol">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        View source on GitHub
+      </a>
+    </p>
   </section>
 
   <!-- Reusable miniature axolotl for the size-mode previews. Shapes + colors
@@ -1747,7 +1768,7 @@ cd axol/axol
 
   <section id="remote">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-remote"/></svg></span>remote alerts <span class="pill">optional</span></h2>
-    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she can also pick up alerts through a dangling antenna called the <b>lateral line</b>: a signed webhook endpoint in the cloud plus a 60-line bash forwarder that fetches queued alerts and posts them to the loopback port on a 15-second tick.</p>
+    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she picks up alerts through a two-part bridge: a signed webhook endpoint in the cloud (the <b>neuromast</b>) and a local 60-line bash forwarder (the <b>lateral line</b>) that drains its queue into the loopback port every 15 seconds.</p>
 
     <div class="ll-flow remote-flow" aria-label="Lateral-line data flow">
       <div class="ll-node">
@@ -1823,14 +1844,14 @@ cd axol/axol
         <span class="gloss-icon" aria-hidden="true"><svg><use href="#glyph-neuromast"/></svg></span>
         <div class="gloss-body">
           <b>neuromast</b>
-          <span>one signed cloud endpoint that catches a webhook and parks it in a queue. Scales to many — one per source or mount path.</span>
+          <span>The cloud half. A signed endpoint that receives a webhook, verifies the signature, and parks the body in a short-TTL queue until the lateral line asks for it. Named after the pressure sensors on a fish's skin.</span>
         </div>
       </div>
       <div class="gloss-item">
         <span class="gloss-icon" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>
         <div class="gloss-body">
           <b>lateral line</b>
-          <span>the local forwarder on your Mac — polls every neuromast, hands each body to Axol's loopback port, acks on delivery.</span>
+          <span>The local half. A bash script on your Mac that polls the neuromast every 15 seconds and posts each queued body into Axol's loopback port. Named after the nerve running along a fish's flank that wires those sensors back to her brain.</span>
         </div>
       </div>
     </div>
@@ -1841,7 +1862,7 @@ cd axol/axol
   </section>
 
   <section id="plugins">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-plugins"/></svg></span>plugins <span class="pill">optional</span></h2>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-plugins"/></svg></span>plugins</h2>
     <p>Adapters are JSON files that translate a third-party payload into Axol's envelope. Drop one into <code>~/Library/Application Support/Axol/adapters/</code> and anything that POSTs JSON to <code>localhost:47329</code> can talk to her — no code required.</p>
 
     <div class="envelope-flow-mini" role="img" aria-label="Multiple payload shapes converge through an adapter, become an envelope, and render as a speech bubble above Axol.">
@@ -1908,10 +1929,10 @@ cd axol/axol
         </g>
 
         <!-- Arrow: envelope → bubble (arched curve) -->
-        <path d="M 456 85 C 500 85, 525 50, 568 60" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+        <path d="M 456 85 C 500 85, 525 50, 568 49" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
 
         <!-- Axolotl (anchor for bubble) -->
-        <g transform="translate(640,118) scale(0.7)" filter="url(#efmShadow)">
+        <g transform="translate(640,107) scale(0.7)" filter="url(#efmShadow)">
           <g>
             <ellipse cx="-38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(-35 -38 -19)" />
             <ellipse cx="-45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(-8 -45 0)" />
@@ -1930,11 +1951,10 @@ cd axol/axol
         </g>
 
         <!-- Bubble — anchored just above axolotl's head, drawn last so it sits on top -->
-        <g transform="translate(575,40)" filter="url(#efmShadow)">
-          <rect width="130" height="40" rx="10" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
+        <g transform="translate(575,29)" filter="url(#efmShadow)">
+          <path d="M 10 0 H 120 A 10 10 0 0 1 130 10 V 30 A 10 10 0 0 1 120 40 L 72 40 L 65 54 L 58 40 L 10 40 A 10 10 0 0 1 0 30 V 10 A 10 10 0 0 1 10 0 Z" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
           <text x="65" y="17" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#2D2533">main</text>
           <text x="65" y="31" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" fill="#6E5F6B">CI passed</text>
-          <path d="M 58 40 L 65 54 L 72 40 Z" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
         </g>
       </svg>
     </div>

@@ -60,20 +60,19 @@
     margin: 0 auto;
     padding: 24px 32px 80px;
   }
-
-  .backlink {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #1F3A56;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0.75;
-    margin-bottom: 8px;
+  .breadcrumbs {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-size: 14px; margin-bottom: 8px;
+    color: rgba(31, 58, 86, 0.75);
   }
-  .backlink:hover { opacity: 1; }
-  .backlink svg { width: 14px; height: 14px; }
+  .breadcrumbs a {
+    color: #1F3A56; text-decoration: none;
+    opacity: 0.72; font-weight: 500;
+    transition: opacity 0.15s ease;
+  }
+  .breadcrumbs a:hover { opacity: 1; }
+  .breadcrumbs .crumb-sep { opacity: 0.35; font-weight: 400; }
+  .breadcrumbs .crumb-current { color: #1F3A56; font-weight: 500; opacity: 0.95; }
 
   .hero {
     padding: 28px 0 18px;
@@ -705,6 +704,60 @@
     transform: translateX(2px);
   }
 
+  /* Featured variant — lifted out of the grid as the recommended path.
+     Larger, full-width card with a branded ring + a small "RECOMMENDED"
+     pill in the top corner. Visually separated from the grid below. */
+  .guide-card-featured {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: 20px;
+    align-items: center;
+    padding: 22px 26px;
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFF7FB 100%);
+    border: 1.5px solid var(--pink-accent);
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--ink);
+    margin: 30px 0 20px;
+    position: relative;
+    box-shadow: 0 6px 22px -8px rgba(214, 69, 122, 0.3);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .guide-card-featured:hover {
+    box-shadow: 0 10px 28px -8px rgba(214, 69, 122, 0.45);
+    transform: translateY(-2px);
+  }
+  .guide-card-featured .guide-icon-brand {
+    width: 64px; height: 64px; border-radius: 14px;
+  }
+  .guide-card-featured .guide-body b {
+    font-size: 17px;
+    letter-spacing: -0.005em;
+  }
+  .guide-card-featured .guide-body span {
+    font-size: 13.5px;
+    margin-top: 4px;
+  }
+  .guide-card-featured .guide-arrow {
+    font-size: 22px; opacity: 0.7;
+  }
+  .guide-featured-pill {
+    position: absolute; top: -10px; left: 22px;
+    background: var(--pink-accent); color: white;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+    box-shadow: 0 4px 10px -4px rgba(214, 69, 122, 0.6);
+  }
+  /* Subtle divider label before the grid of alternatives. */
+  .guide-alt-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 8px 0 -2px; padding-top: 14px;
+    border-top: 1px dashed #F3DDE9;
+  }
+
   footer {
     text-align: center;
     color: rgba(31, 58, 86, 0.75);
@@ -742,10 +795,7 @@
 
 <div class="wrap">
 
-  <a class="backlink" href="index.html">
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
-    back to Axol
-  </a>
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Axol</a><span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-current" aria-current="page">Remote alerts</span></nav>
 
   <header class="hero">
     <div class="hero-stage" aria-hidden="true">
@@ -810,7 +860,7 @@
           <h3>neuromast</h3>
         </div>
         <p><b>In fish:</b> a cluster of sensory hair cells on the skin that detects pressure changes in the surrounding water — a single pickup point.</p>
-        <p><b>In Axol:</b> one signed cloud endpoint. Accepts a webhook POST, verifies the sender's HMAC (or falls back to a shared query key), and parks the raw body in a short-TTL queue. A tiny serverless function — ~60 KB bundle, no runtime deps.</p>
+        <p><b>In Axol:</b> one signed cloud endpoint. Accepts a webhook POST, verifies the sender's HMAC (or falls back to a shared query key), and parks the raw body in a short-TTL queue. An Astro app — runs on Cloudflare Workers + KV, or a Node runtime + Redis. ~60 KB bundle.</p>
         <p><b>Scales to:</b> as many neuromasts as you want. Each mount path or deploy target is its own sensor with its own auth config, all feeding the same lateral line downstream.</p>
       </div>
       <div class="anatomy-card">
@@ -838,12 +888,12 @@
             </svg>
           </span>sender
         </b>
-        <div class="desc">GitHub, Stripe, anything with a webhook. POSTs JSON to a Webflow Cloud URL — signed with HMAC (github / stripe / generic) or gated by a shared query key.</div>
+        <div class="desc">GitHub, Stripe, anything with a webhook. POSTs JSON to your neuromast's public URL — signed with HMAC (github / stripe / generic) or gated by a shared query key.</div>
       </div>
       <div class="flow-arrow arrow-1" aria-hidden="true"><span class="arrow-dot"></span></div>
       <div class="flow-step">
         <b><span class="glyph" aria-hidden="true"><svg><use href="#glyph-neuromast"/></svg></span>neuromast</b>
-        <div class="desc">A small serverless function — runs on any modern edge runtime. Verifies the signature / key, parks the raw body in a short-TTL queue, returns <code>204</code>. Total bundle: ~60 KB, no runtime dependencies.</div>
+        <div class="desc">An Astro app that runs on either Cloudflare Workers + KV or a Node runtime + Redis. Verifies the signature / key, parks the raw body in a short-TTL queue, returns <code>204</code>. ~60 KB bundle.</div>
       </div>
       <div class="flow-arrow arrow-2" aria-hidden="true">
         <span class="arrow-dot fetch"></span>
@@ -1000,20 +1050,24 @@
   <section id="deploy-guides">
     <h2>deploy guides</h2>
     <p>Step-by-step setup for the cloud side of the lateral line, per target.</p>
+
+    <a class="guide-card-featured" href="deploy-webflow.html">
+      <span class="guide-featured-pill">Recommended</span>
+      <span class="guide-icon guide-icon-brand" role="img" aria-label="Webflow">
+        <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="1080" height="1080" fill="#146EF5"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M898.312 337.5L683.467 757.5H481.667L571.579 583.434H567.545C493.368 679.726 382.694 743.115 225 757.5V585.843C225 585.843 325.88 579.884 385.185 517.534H225V337.503H405.031V485.576L409.072 485.559L482.639 337.503H618.791V484.637L622.832 484.631L699.159 337.5H898.312Z" fill="white"/>
+        </svg>
+      </span>
+      <div class="guide-body">
+        <b>Webflow Cloud</b>
+        <span>Astro + Cloudflare Workers under Webflow's tenancy. GitHub-connected deploys, generous free tier, and no separate Cloudflare account needed — the shortest path from zero to a working neuromast.</span>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <p class="guide-alt-label">Other deploy targets</p>
     <div class="guides-grid">
-      <a class="guide-card" href="deploy-webflow.html">
-        <span class="guide-icon guide-icon-brand" role="img" aria-label="Webflow">
-          <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="1080" height="1080" fill="#146EF5"/>
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M898.312 337.5L683.467 757.5H481.667L571.579 583.434H567.545C493.368 679.726 382.694 743.115 225 757.5V585.843C225 585.843 325.88 579.884 385.185 517.534H225V337.503H405.031V485.576L409.072 485.559L482.639 337.503H618.791V484.637L622.832 484.631L699.159 337.5H898.312Z" fill="white"/>
-          </svg>
-        </span>
-        <div class="guide-body">
-          <b>Webflow Cloud</b>
-          <span>Astro + Cloudflare Workers under Webflow's tenancy. No Cloudflare account needed.</span>
-        </div>
-        <span class="guide-arrow" aria-hidden="true">→</span>
-      </a>
       <a class="guide-card" href="deploy-railway.html">
         <span class="guide-icon guide-icon-brand" role="img" aria-label="Railway" style="background: #1F2937; display: inline-flex; align-items: center; justify-content: center;">
           <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width: 72%; height: 72%;">

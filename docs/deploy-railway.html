@@ -60,20 +60,19 @@
     margin: 0 auto;
     padding: 24px 32px 80px;
   }
-
-  .backlink {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #1F3A56;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0.75;
-    margin-bottom: 8px;
+  .breadcrumbs {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-size: 14px; margin-bottom: 8px;
+    color: rgba(31, 58, 86, 0.75);
   }
-  .backlink:hover { opacity: 1; }
-  .backlink svg { width: 14px; height: 14px; }
+  .breadcrumbs a {
+    color: #1F3A56; text-decoration: none;
+    opacity: 0.72; font-weight: 500;
+    transition: opacity 0.15s ease;
+  }
+  .breadcrumbs a:hover { opacity: 1; }
+  .breadcrumbs .crumb-sep { opacity: 0.35; font-weight: 400; }
+  .breadcrumbs .crumb-current { color: #1F3A56; font-weight: 500; opacity: 0.95; }
 
   .hero {
     padding: 28px 0 18px;
@@ -338,10 +337,7 @@
 
 <div class="wrap">
 
-  <a class="backlink" href="index.html">
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
-    back to Axol
-  </a>
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Axol</a><span class="crumb-sep" aria-hidden="true">›</span><a href="remote-alerts.html">Remote alerts</a><span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-current" aria-current="page">Railway</span></nav>
 
   <header class="hero">
     <div class="hero-stage" aria-hidden="true">
@@ -383,9 +379,7 @@
       </svg>
     </div>
     <div><span class="pill">deploy guide</span></div>
-    <h1>Deploy to Railway</h1>
-    <p class="tagline">Fork the repo, let Railway auto-detect the Node build, add the Redis plugin for the queue, and every <code>git push</code> deploys. Nice for anyone who'd rather run their own infrastructure than sit on a vendor-specific edge runtime.</p>
-    <a class="brand-chip" href="https://docs.railway.com/" target="_blank" rel="noopener">
+    <h1>Deploy to Railway</h1>    <a class="brand-chip" href="https://docs.railway.com/" target="_blank" rel="noopener">
       <span class="brand-chip-mark" aria-hidden="true">
         <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
           <path d="M4.756 438.175A520.713 520.713 0 0 0 0 489.735h777.799c-2.716-5.306-6.365-10.09-10.045-14.772-132.97-171.791-204.498-156.896-306.819-161.26-34.114-1.403-57.249-1.967-193.037-1.967-72.677 0-151.688.185-228.628.39-9.96 26.884-19.566 52.942-24.243 74.14h398.571v51.909H4.756ZM783.93 541.696H.399c.82 13.851 2.112 27.517 3.978 40.999h723.39c32.248 0 50.299-18.297 56.162-40.999ZM45.017 724.306S164.941 1018.77 511.46 1024c207.112 0 385.071-123.006 465.907-299.694H45.017Z" fill="#fff"/>

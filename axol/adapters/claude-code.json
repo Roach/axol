@@ -28,7 +28,7 @@
     },
     "Stop": {
       "title": "{{basename cwd}}",
-      "body": "finished",
+      "body": "{{note | default 'finished'}}",
       "priority": "normal",
       "source": "claude-code",
       "icon": "claude",

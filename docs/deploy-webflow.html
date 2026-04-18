@@ -60,20 +60,19 @@
     margin: 0 auto;
     padding: 24px 32px 80px;
   }
-
-  .backlink {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #1F3A56;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0.75;
-    margin-bottom: 8px;
+  .breadcrumbs {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-size: 14px; margin-bottom: 8px;
+    color: rgba(31, 58, 86, 0.75);
   }
-  .backlink:hover { opacity: 1; }
-  .backlink svg { width: 14px; height: 14px; }
+  .breadcrumbs a {
+    color: #1F3A56; text-decoration: none;
+    opacity: 0.72; font-weight: 500;
+    transition: opacity 0.15s ease;
+  }
+  .breadcrumbs a:hover { opacity: 1; }
+  .breadcrumbs .crumb-sep { opacity: 0.35; font-weight: 400; }
+  .breadcrumbs .crumb-current { color: #1F3A56; font-weight: 500; opacity: 0.95; }
 
   .hero {
     padding: 28px 0 18px;
@@ -359,10 +358,7 @@
 
 <div class="wrap">
 
-  <a class="backlink" href="index.html">
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
-    back to Axol
-  </a>
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Axol</a><span class="crumb-sep" aria-hidden="true">›</span><a href="remote-alerts.html">Remote alerts</a><span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-current" aria-current="page">Webflow Cloud</span></nav>
 
   <header class="hero">
     <div class="hero-stage" aria-hidden="true">
@@ -405,7 +401,6 @@
     </div>
     <div><span class="pill">deploy guide</span></div>
     <h1>Deploy to Webflow Cloud</h1>
-    <p class="tagline">Push <code>neuromast/</code> to GitHub, connect it in the Webflow Cloud dashboard, and from then on <code>git push</code> deploys. No Cloudflare account in the mix.</p>
     <a class="brand-chip" href="https://developers.webflow.com/webflow-cloud" target="_blank" rel="noopener">
       <span class="brand-chip-mark" aria-hidden="true">
         <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
