@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — deploying neuromast to Railway</title>
+<meta name="description" content="Step-by-step deploy of Axol's webhook intake (neuromast) to Railway: fork the repo, add the Redis plugin, set env vars, and git push to deploy." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — deploying neuromast to Railway" />
+<meta property="og:description" content="Step-by-step deploy of Axol's webhook intake to Railway." />
+<meta property="og:url" content="https://roach.github.io/axol/deploy-railway.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA;
+    --pink-2: #FFE5F0;
+    --pink-3: #FFC9E2;
+    --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533;
+    --ink-soft: #6E5F6B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+
+  .backlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1F3A56;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero {
+    padding: 28px 0 18px;
+    text-align: center;
+  }
+  .hero-stage {
+    position: relative;
+    display: inline-block;
+    width: 130px;
+    height: 160px;
+    margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 110px;
+    height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Railway-themed signal: three small track-ties falling toward the
+     axolotl, riffing on Railway's rail-line logo motif. Dark, because
+     Railway's brand reads as monochrome + minimal. */
+  .hero-sparks {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 80px;
+    height: 96px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .hero-spark {
+    position: absolute;
+    top: 0;
+    width: 16px;
+    height: 4px;
+    border-radius: 1px;
+    background: #1F2937;
+    box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.12);
+    opacity: 0;
+    animation: hero-spark-drop 3.8s ease-in infinite;
+  }
+  .hero-spark-1 { left: 26%; animation-delay: 0s; }
+  .hero-spark-2 { left: 66%; animation-delay: 1.25s; }
+  .hero-spark-3 { left: 48%; animation-delay: 2.5s; }
+  @keyframes hero-spark-drop {
+    0%   { opacity: 0;    transform: translateY(-10px) scale(0.6); }
+    15%  { opacity: 1;    transform: translateY(0)     scale(1); }
+    70%  { opacity: 0.85; transform: translateY(78px)  scale(0.95); }
+    88%  { opacity: 0;    transform: translateY(96px)  scale(0.4); }
+    100% { opacity: 0;    transform: translateY(96px)  scale(0.4); }
+  }
+
+  h1 {
+    font-size: 48px;
+    margin: 10px 0 10px;
+    letter-spacing: -0.01em;
+    color: #1F3A56;
+    line-height: 1.05;
+  }
+  .tagline {
+    font-size: 17px;
+    color: rgba(31, 58, 86, 0.78);
+    margin: 0 auto 12px;
+    max-width: 620px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-spark { animation: none !important; }
+    .hero-spark { opacity: 0.7; }
+  }
+
+  .pill {
+    display: inline-block;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  /* Railway-branded chip link to their docs. Dark background to match
+     Railway's signature monochrome look. */
+  .brand-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 0;
+    padding: 6px 14px 6px 6px;
+    background: white;
+    border: 1px solid #E5ECF5;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: #080808;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .brand-chip:hover {
+    border-color: #1F2937;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(31, 41, 55, 0.35);
+  }
+  .brand-chip-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1F2937;
+  }
+  .brand-chip-mark svg { width: 72%; height: 72%; display: block; }
+  .brand-chip-arrow {
+    font-size: 14px;
+    color: #1F2937;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .brand-chip:hover .brand-chip-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  section {
+    background: white;
+    border-radius: 20px;
+    padding: 26px 30px 28px;
+    margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 {
+    font-size: 21px;
+    margin: 0 0 10px;
+    color: var(--pink-accent);
+  }
+  section h3 {
+    font-size: 15px;
+    margin: 18px 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 8px 0 16px;
+    color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+  .tok-flag  { color: #B33A7A; }
+  .tok-cmd   { color: #3A4A7A; font-weight: 600; }
+  .tok-str   { color: #3A6E4A; }
+
+  .setup-steps {
+    counter-reset: step;
+    padding: 0;
+    margin: 8px 0 4px;
+    list-style: none;
+  }
+  .setup-steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 2px 36px;
+    margin-bottom: 22px;
+  }
+  .setup-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .setup-steps > li h3 { margin-top: 0; }
+
+  .callout {
+    background: #FFF9FB;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .callout b { color: var(--ink); }
+
+  .troubleshooting {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .troubleshooting > li {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #F3DDE9;
+  }
+  .troubleshooting > li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  .troubleshooting b { color: var(--ink); }
+
+  footer {
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 13px;
+    padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 34px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-sparks">
+        <span class="hero-spark hero-spark-1"></span>
+        <span class="hero-spark hero-spark-2"></span>
+        <span class="hero-spark hero-spark-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBodyRail" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <radialGradient id="heroBellyRail" cx="50%" cy="60%" r="50%">
+            <stop offset="0%" stop-color="#FFE5F0" />
+            <stop offset="100%" stop-color="#FFCCE2" />
+          </radialGradient>
+        </defs>
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div><span class="pill">deploy guide</span></div>
+    <h1>Deploy to Railway</h1>
+    <p class="tagline">Fork the repo, let Railway auto-detect the Node build, add the Redis plugin for the queue, and every <code>git push</code> deploys. Nice for anyone who'd rather run their own infrastructure than sit on a vendor-specific edge runtime.</p>
+    <a class="brand-chip" href="https://docs.railway.com/" target="_blank" rel="noopener">
+      <span class="brand-chip-mark" aria-hidden="true">
+        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.756 438.175A520.713 520.713 0 0 0 0 489.735h777.799c-2.716-5.306-6.365-10.09-10.045-14.772-132.97-171.791-204.498-156.896-306.819-161.26-34.114-1.403-57.249-1.967-193.037-1.967-72.677 0-151.688.185-228.628.39-9.96 26.884-19.566 52.942-24.243 74.14h398.571v51.909H4.756ZM783.93 541.696H.399c.82 13.851 2.112 27.517 3.978 40.999h723.39c32.248 0 50.299-18.297 56.162-40.999ZM45.017 724.306S164.941 1018.77 511.46 1024c207.112 0 385.071-123.006 465.907-299.694H45.017Z" fill="#fff"/>
+          <path d="M511.454 0C319.953 0 153.311 105.16 65.31 260.612c68.771-.144 202.704-.226 202.704-.226h.031v-.051c158.309 0 164.193.707 195.118 1.998l19.149.706c66.7 2.224 148.683 9.384 213.19 58.19 35.015 26.471 85.571 84.896 115.708 126.52 27.861 38.499 35.876 82.756 16.933 125.158-17.436 38.97-54.952 62.215-100.383 62.215H16.69s4.233 17.944 10.58 37.751h970.632A510.385 510.385 0 0 0 1024 512.218C1024.01 229.355 794.532 0 511.454 0Z" fill="#fff"/>
+        </svg>
+      </span>
+      <span>Railway docs</span>
+      <span class="brand-chip-arrow" aria-hidden="true">↗</span>
+    </a>
+  </header>
+
+  <section>
+    <h2>why pick Railway</h2>
+    <ul>
+      <li><b>Standard Node runtime</b> — neuromast runs as a plain Astro app via <code>@astrojs/node</code>, not a Cloudflare Worker. Easier to reason about, easier to debug locally, no edge-specific quirks.</li>
+      <li><b>Redis as a one-click plugin</b> — Railway provisions a Redis instance with a DNS name and auto-injects <code>REDIS_URL</code> into the web service. Neuromast's <code>STORAGE_KIND=redis</code> factory picks it up automatically.</li>
+      <li><b>Git-push deploys</b> — connect a GitHub repo once, every push to the tracked branch triggers a new build.</li>
+      <li><b>Persistent process</b> — Node standalone means the Redis connection pool lives across requests, warm-starts aren't a thing, and long-running tasks (if you ever add any) just work.</li>
+    </ul>
+    <div class="callout">
+      <b>If you're choosing between this and Webflow Cloud:</b> Webflow Cloud is the shortest path if your alerts live near an existing Webflow site. Railway is a better fit if you're treating neuromast as just another backend service alongside your other infra, or if you want to swap the storage later (Postgres, Redis clusters, your own boxes).
+    </div>
+  </section>
+
+  <section>
+    <h2>prerequisites</h2>
+    <ul>
+      <li><b>A Railway account</b> — the free hobby plan covers this comfortably until you have real traffic.</li>
+      <li><b>A GitHub account and a repo you own</b> containing the <code>neuromast/</code> code. Railway watches the branch you connect, so it needs a repo you control. Fork Axol, or copy <code>neuromast/</code> into a fresh repo.</li>
+      <li><b>No Docker knowledge required.</b> Railway auto-detects Node projects from <code>package.json</code> and runs <code>npm install</code> + the build + start script. A <code>Dockerfile</code> is optional.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>1 · push <code>neuromast/</code> to your own GitHub repo</h2>
+    <p>If you forked Axol, skip to step 2. Otherwise seed a fresh repo with just the <code>neuromast/</code> tree:</p>
+<pre><code><span class="tok-cmd">cp</span> <span class="tok-flag">-r</span> neuromast /tmp/my-neuromast
+<span class="tok-cmd">cd</span> /tmp/my-neuromast
+<span class="tok-cmd">git</span> init <span class="tok-flag">-b</span> main
+<span class="tok-cmd">git</span> add <span class="tok-str">.</span>
+<span class="tok-cmd">git</span> commit <span class="tok-flag">-m</span> <span class="tok-str">"seed neuromast"</span>
+<span class="tok-cmd">gh</span> repo create my-neuromast <span class="tok-flag">--private</span> <span class="tok-flag">--source=.</span> <span class="tok-flag">--push</span></code></pre>
+  </section>
+
+  <section>
+    <h2>2 · create the Railway project</h2>
+    <ol class="setup-steps">
+      <li>
+        <h3>New project from your repo</h3>
+        <p>Railway dashboard → <b>New Project</b> → <b>Deploy from GitHub repo</b> → pick your neuromast repo. If you forked the whole Axol monorepo, set <b>Root Directory</b> to <code>neuromast</code> in the service's Settings tab so Railway builds from there instead of the repo root.</p>
+        <p>Railway detects <code>package.json</code>, installs deps, and runs <code>npm run build</code> followed by <code>npm start</code>. Our <code>start</code> script is <code>node ./dist/server/entry.mjs</code> — the Astro Node adapter's standalone output.</p>
+      </li>
+      <li>
+        <h3>Add the Redis plugin</h3>
+        <p>In the project canvas: <b>+ New → Database → Add Redis</b>. Railway provisions a small Redis instance in the same region and wires it up automatically.</p>
+        <p>Open the web service's <b>Variables</b> tab — Railway injects <code>REDIS_URL</code> via a reference variable (something like <code>${{Redis.REDIS_URL}}</code>). Neuromast's storage factory auto-detects this and selects the Redis backend. Nothing else to configure.</p>
+      </li>
+      <li>
+        <h3>Tell Astro to build for Node</h3>
+        <p>In the web service's <b>Variables</b> tab, add:</p>
+<pre><code><span class="tok-cmd">ADAPTER</span>=<span class="tok-str">node</span></code></pre>
+        <p><code>astro.config.mjs</code> reads this at build time and swaps in <code>@astrojs/node</code> instead of the Cloudflare adapter. Output becomes a standalone Node server at <code>dist/server/entry.mjs</code>.</p>
+      </li>
+      <li>
+        <h3>Set the bearer + HMAC secrets</h3>
+        <p>Still in <b>Variables</b>, add the neuromast-specific secrets (mark each as a secret — Railway masks them in the UI):</p>
+        <ul>
+          <li><code>POLL_TOKEN</code> — bearer the local forwarder uses for <code>/pull</code> + <code>/ack</code>. <code>openssl rand -hex 32</code>.</li>
+          <li><code>SHARED_SECRET</code> <em>(optional)</em> — query-key fallback for senders that can't sign. Same command.</li>
+          <li><code>HOOK_SCHEME_&lt;SOURCE&gt;</code> + <code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source (e.g. <code>HOOK_SCHEME_GITHUB=github</code>).</li>
+        </ul>
+      </li>
+      <li>
+        <h3>Expose a public URL</h3>
+        <p>Service → <b>Settings → Networking → Generate Domain</b>. Railway gives you a <code>&lt;service&gt;.up.railway.app</code> URL. Copy it — that's your <code>AXOL_CLOUD_URL</code>.</p>
+        <p>Unlike Webflow Cloud, Railway owns the full domain; there's no mount path to worry about. Routes live at <code>https://&lt;your&gt;.up.railway.app/app/api/…</code> because neuromast's <code>astro.config.mjs</code> still has <code>base: '/app'</code> for URL parity with the Webflow deploy. Remove it if you want the routes at the root.</p>
+      </li>
+      <li>
+        <h3>Probe the endpoints</h3>
+<pre><code><span class="tok-cmd">export</span> AXOL_CLOUD_URL=https://&lt;your&gt;.up.railway.app
+<span class="tok-cmd">export</span> POLL_TOKEN=<span class="tok-str">'the-bearer-you-set'</span>
+<span class="tok-cmd">export</span> SHARED_SECRET=<span class="tok-str">'the-shared-key-you-set'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-X</span> POST <span class="tok-str">"$AXOL_CLOUD_URL/app/api/hooks/smoke?key=$SHARED_SECRET"</span> \
+  <span class="tok-flag">-H</span> <span class="tok-str">'content-type: application/json'</span> \
+  <span class="tok-flag">-d</span> <span class="tok-str">'{"title":"hello","body":"from railway"}'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-H</span> <span class="tok-str">"Authorization: Bearer $POLL_TOKEN"</span> <span class="tok-str">"$AXOL_CLOUD_URL/app/api/pull"</span></code></pre>
+        <p>Expect <code>204</code> on the POST and a JSON body with your item on the GET. <code>401</code> on either means the bearer or shared secret mismatch. <code>500</code> or "cannot connect to Redis" in the deploy logs means <code>REDIS_URL</code> isn't wired — re-check the Variables tab references the Redis plugin.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3 · connect the local forwarder</h2>
+    <p>Same as the Webflow deploy — point the forwarder's <code>AXOL_CLOUD_URL</code> at your Railway domain:</p>
+<pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
+<span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
+./lateral-line/install.sh</code></pre>
+    <p>With Axol running, post a test webhook and watch <code>~/Library/Logs/Axol/lateral-line.log</code> for the pull → forward → ack cycle.</p>
+  </section>
+
+  <section>
+    <h2>day-2 operations</h2>
+
+    <h3>Redeploying</h3>
+    <p>Same flow as any Railway project: <code>git push</code>. The connected branch triggers a build; the <b>Deployments</b> tab shows status per commit.</p>
+
+    <h3>Rotating secrets</h3>
+    <ol>
+      <li>Railway service → <b>Variables</b> → edit the secret → <b>Save</b>. Railway restarts the service automatically.</li>
+      <li>For <code>POLL_TOKEN</code>: re-run <code>lateral-line/install.sh</code> locally with the new value to regenerate the launchd plist.</li>
+      <li>For HMAC secrets: update the sender's webhook config to match.</li>
+    </ol>
+
+    <h3>Cost</h3>
+    <p>Railway's hobby plan bills by usage — a Node service + small Redis sitting idle with occasional webhook traffic runs a few dollars a month at most. Check the <b>Usage</b> page for a live estimate. If you'd rather cap spending hard, set a monthly credit limit in account settings.</p>
+  </section>
+
+  <section>
+    <h2>troubleshooting</h2>
+    <ul class="troubleshooting">
+      <li>
+        <b>Build fails with "Cannot find module" errors</b>
+        <p>If you forked the whole Axol repo, make sure <b>Root Directory</b> in the service's Settings is <code>neuromast</code>. Without it Railway tries to build from the repo root (no <code>package.json</code>) and bails.</p>
+      </li>
+      <li>
+        <b>Deploy logs show "STORAGE_KIND=cloudflare-kv but no QUEUE binding"</b>
+        <p><code>ADAPTER=node</code> isn't set, so Astro built the Cloudflare bundle, which expects a Workers runtime. Add <code>ADAPTER=node</code> in Variables and redeploy.</p>
+      </li>
+      <li>
+        <b>Deploy logs show "redis error: ECONNREFUSED"</b>
+        <p>The Redis plugin isn't attached to the service, or <code>REDIS_URL</code> isn't a reference variable. In Variables, check that <code>REDIS_URL</code> shows as <code>${{Redis.REDIS_URL}}</code> (Railway's template syntax), not a hardcoded value.</p>
+      </li>
+      <li>
+        <b><code>401</code> on every request</b>
+        <p>The service deployed but <code>POLL_TOKEN</code> or <code>SHARED_SECRET</code> isn't set, or they don't match what your forwarder sends. Dashboard → Variables → confirm the values match.</p>
+      </li>
+      <li>
+        <b>Service healthy but no public URL</b>
+        <p>Railway doesn't auto-expose domains. Settings → Networking → Generate Domain to get the <code>*.up.railway.app</code> URL.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+</body>
+</html>

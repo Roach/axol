@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — changelog</title>
+<meta name="description" content="Release notes for Axol, the tiny desktop axolotl. Field notes from each molt." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — changelog" />
+<meta property="og:description" content="Release notes for Axol, the tiny desktop axolotl." />
+<meta property="og:url" content="https://roach.github.io/axol/changelog.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA; --pink-2: #FFE5F0; --pink-3: #FFC9E2; --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533; --ink-soft: #6E5F6B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none; z-index: 1; opacity: 0.9;
+  }
+
+  .wrap { position: relative; z-index: 10; max-width: 760px; margin: 0 auto; padding: 24px 32px 80px; }
+  .backlink {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #1F3A56; text-decoration: none;
+    font-size: 14px; font-weight: 500; opacity: 0.75; margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero { padding: 10px 0 8px; text-align: center; }
+  .hero-stage {
+    position: relative; display: inline-block;
+    width: 130px; height: 130px; margin: 2px 0 4px;
+  }
+  .hero-axol {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 110px; height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+
+  /* Confetti drifting down — a little celebration for v1. */
+  .hero-confetti {
+    position: absolute; left: 50%; top: 0;
+    width: 130px; height: 110px; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .confetti {
+    position: absolute; top: 0; width: 8px; height: 10px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: confetti-fall 4.2s ease-in infinite;
+  }
+  .confetti-1 { left: 12%; background: #FFA6CF; animation-delay: 0s;    transform: rotate(12deg); }
+  .confetti-2 { left: 32%; background: #7FC6ED; animation-delay: 0.6s;  transform: rotate(-18deg); }
+  .confetti-3 { left: 54%; background: #FFD166; animation-delay: 1.2s;  transform: rotate(28deg); }
+  .confetti-4 { left: 74%; background: #B8E0B4; animation-delay: 1.8s;  transform: rotate(-6deg); }
+  .confetti-5 { left: 88%; background: #D6457A; animation-delay: 2.6s;  transform: rotate(22deg); }
+  @keyframes confetti-fall {
+    0%   { opacity: 0;    transform: translateY(-6px)  rotate(0deg); }
+    12%  { opacity: 1; }
+    85%  { opacity: 0.85; transform: translateY(98px)  rotate(220deg); }
+    100% { opacity: 0;    transform: translateY(110px) rotate(260deg); }
+  }
+
+  h1 { font-size: 48px; margin: 10px 0 10px; letter-spacing: -0.01em; color: #1F3A56; line-height: 1.05; }
+  .tagline { font-size: 17px; color: rgba(31, 58, 86, 0.78); margin: 0 auto 12px; max-width: 560px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .confetti { animation: none !important; }
+    .confetti { opacity: 0.75; }
+  }
+
+  .pill {
+    display: inline-block; background: var(--pink-2); color: var(--pink-accent);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+  }
+
+  /* Each release is a "card" with a sticker version tag in the corner. */
+  .release {
+    position: relative;
+    background: white; border-radius: 20px;
+    padding: 28px 32px 30px; margin-top: 26px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  .release-tag {
+    position: absolute; top: -14px; left: 24px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--pink-accent); color: white;
+    font-weight: 700; font-size: 14px; letter-spacing: 0.02em;
+    padding: 6px 14px; border-radius: 999px;
+    box-shadow: 0 4px 12px -4px rgba(214, 69, 122, 0.6);
+  }
+  .release-tag .spark { font-size: 12px; }
+  .release-date {
+    display: inline-block; margin-top: 2px;
+    font-size: 12px; color: var(--ink-soft); letter-spacing: 0.04em;
+  }
+  .release h2 {
+    font-size: 24px; margin: 6px 0 4px; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .release-lede {
+    font-size: 15.5px; color: var(--ink-soft);
+    margin: 0 0 18px; font-style: italic;
+  }
+
+  .feature-group { margin: 18px 0 6px; }
+  .feature-group h3 {
+    font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--pink-accent); margin: 0 0 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .feature-group h3 .bullet {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    flex: 0 0 auto;
+  }
+  .feature-group h3 .bullet svg {
+    width: 13px; height: 13px; display: block;
+  }
+  .feature-group ul {
+    margin: 0 0 4px; padding: 0 0 0 4px;
+    list-style: none;
+  }
+  .feature-group li {
+    padding: 6px 0 6px 22px; position: relative;
+    font-size: 14.5px; color: var(--ink);
+  }
+  .feature-group li::before {
+    content: ''; position: absolute; left: 4px; top: 15px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--pink-3);
+  }
+  .feature-group li b { color: var(--ink); }
+  .feature-group li code {
+    background: #FAF2F7; border-radius: 5px;
+    padding: 1px 6px; font-size: 0.92em;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  /* Quote tacked onto the bottom of each release. Mini Axol on the
+     left, speech-bubble-styled quote on the right. Meant to feel like
+     she's chiming in with her take on the release. */
+  .quip {
+    margin: 22px 0 2px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .quip-axol {
+    flex: 0 0 auto; width: 56px; height: 56px;
+    display: block;
+  }
+  .quip-bubble {
+    position: relative; flex: 1 1 auto;
+    background: #FFF9FB; border: 1px solid #F3DDE9; border-radius: 14px;
+    padding: 12px 16px; font-size: 14px; color: var(--ink);
+    font-style: italic;
+  }
+  /* Tail pointing left into the axolotl's cheek. */
+  .quip-bubble::before,
+  .quip-bubble::after {
+    content: ''; position: absolute; top: 50%; right: 100%;
+    border-style: solid; border-color: transparent;
+  }
+  .quip-bubble::before {
+    margin-top: -8px;
+    border-width: 8px 10px 8px 0;
+    border-right-color: #F3DDE9;
+  }
+  .quip-bubble::after {
+    margin-top: -6px; margin-right: -1px;
+    border-width: 6px 9px 6px 0;
+    border-right-color: #FFF9FB;
+  }
+
+  /* Site link color — keep inline links in the pink-accent family so
+     they stop rendering as default browser blue. Applied broadly across
+     release content (except the brand chips and footer, which set
+     their own colors). */
+  .release a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  .release a:hover { text-decoration-color: var(--pink-accent); }
+
+  /* Deploy-target chips — each service's brand mark + name, linked to its
+     guide. Mirrors the brand-chip pattern from the individual deploy
+     pages but simpler: no "↗" arrow, no external-doc link. */
+  .deploy-chips {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin: 4px 0 2px;
+  }
+  .dep-chip {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 5px 14px 5px 5px;
+    background: #FFFFFF;
+    border: 1px solid #F3DDE9; border-radius: 999px;
+    text-decoration: none;
+    font-size: 13.5px; font-weight: 600; color: var(--ink);
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .dep-chip:hover {
+    border-color: var(--pink-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(214, 69, 122, 0.35);
+  }
+  .dep-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 7px; overflow: hidden;
+  }
+  .dep-mark svg { width: 78%; height: 78%; display: block; }
+  /* Webflow's mark is a full-bleed tile; let it fill. */
+  .dep-chip:nth-child(1) .dep-mark svg { width: 100%; height: 100%; }
+  /* Railway's bold mark reads better slightly smaller. */
+  .dep-chip:nth-child(2) .dep-mark svg { width: 66%; height: 66%; }
+
+  /* Small illustrations tucked inside a feature-group. Kept sparse and
+     explicitly captioned so they read as diagrams, not decoration. */
+  .illo {
+    margin: 12px 0 6px;
+    padding: 18px 14px 14px;
+    background: #FFF9FB;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  /* Bare variant — no card background, just the mode previews breathing
+     on the section's own white. Used for the three size modes. */
+  .illo-modes {
+    background: none;
+    border: none;
+    padding: 14px 0 6px;
+    gap: 36px;
+  }
+  .illo-item { text-align: center; }
+  .illo-item svg { display: block; margin: 0 auto; }
+  .illo-label {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pink-accent);
+  }
+  .illo-dims {
+    margin-top: 1px;
+    font-size: 10.5px; color: var(--ink-soft);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+
+  /* Placeholder card for "future releases" — lets the page breathe even
+     when there's only one release in the list, and gives Axol a place
+     to wave from the end of the timeline. */
+  .future {
+    margin-top: 26px; padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px dashed rgba(214, 69, 122, 0.35);
+    border-radius: 18px;
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 14px;
+  }
+  .future b { color: var(--pink-accent); }
+
+  footer {
+    text-align: center; color: rgba(31, 58, 86, 0.75);
+    font-size: 13px; padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 34px; }
+    .release { padding: 24px 20px 24px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Concept glyphs + feature bullets. Concept glyphs mirror the ones in
+     index.html so the remote-alerts flow reads with the same icons the
+     homepage already uses. Bullet icons are Bootstrap Icons (MIT) chosen
+     to match each feature-group's intent (replaces the earlier emoji). -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="glyph-neuromast" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+    <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.25" opacity="0.55"/>
+    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1" opacity="0.28"/>
+  </symbol>
+  <symbol id="glyph-lateral-line" viewBox="0 0 24 24">
+    <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.25" opacity="0.45"/>
+    <circle cx="4"  cy="12" r="1.6" fill="currentColor" opacity="0.3"/>
+    <circle cx="10" cy="12" r="2.2" fill="currentColor" opacity="0.6"/>
+    <circle cx="16" cy="12" r="2.8" fill="currentColor"/>
+    <circle cx="22" cy="12" r="1.3" fill="currentColor" opacity="0.35"/>
+  </symbol>
+
+  <!-- Bullet icons (Bootstrap Icons, MIT) — all in 16×16 currentColor. -->
+  <symbol id="cl-icon-remote" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707m2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708m5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708m2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0"/>
+  </symbol>
+  <symbol id="cl-icon-modes" viewBox="0 0 16 16" fill="currentColor">
+    <rect x="1"  y="2"  width="5.5" height="12" rx="1.2"/>
+    <rect x="8"  y="6"  width="4"   height="8"  rx="1"/>
+    <rect x="13" y="10" width="2.5" height="4"  rx="0.8"/>
+  </symbol>
+  <symbol id="cl-icon-deploy" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M6.5 10.995V14.5a.5.5 0 0 0 1 0v-3.505a6 6 0 0 1-.5.026 6 6 0 0 1-.5-.026M8 11c.5 0 3.042-.007 4.667-2.583a.5.5 0 0 0 .036-.454c-.223-.585-.7-1.27-1.463-1.916A11 11 0 0 0 8 4.505a11 11 0 0 0-3.24 1.542c-.763.646-1.24 1.331-1.463 1.916a.5.5 0 0 0 .036.454C4.958 10.993 7.5 11 8 11m0-1c-.49 0-1.944-.007-3.33-1.98C5.3 7.41 5.988 6.84 6.719 6.267A10 10 0 0 1 8 5.51a10 10 0 0 1 1.281.757c.73.573 1.42 1.144 2.049 1.753C9.944 9.993 8.49 10 8 10"/>
+    <path d="M3.5 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2m0 1a2 2 0 1 0 0-4 2 2 0 0 0 0 4m9-1a1 1 0 1 1 0-2 1 1 0 0 1 0 2m0 1a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
+  </symbol>
+  <symbol id="cl-icon-pages" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/>
+    <path d="M5 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5A.5.5 0 0 1 5 8m0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5"/>
+  </symbol>
+  <symbol id="cl-icon-repo" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/>
+  </symbol>
+  <symbol id="cl-icon-hi" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14m0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"/>
+    <path d="M4.285 9.567a.5.5 0 0 1 .683.183A3.5 3.5 0 0 0 8 11.5a3.5 3.5 0 0 0 3.032-1.75.5.5 0 1 1 .866.5A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1-3.898-2.25.5.5 0 0 1 .183-.683M7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5m4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5"/>
+  </symbol>
+  <symbol id="cl-icon-inbox" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.981 3h6.038a1.5 1.5 0 0 1 1.172.563l3.7 4.625a.5.5 0 0 1 .105.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/>
+  </symbol>
+  <symbol id="cl-icon-plug" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M6 0a.5.5 0 0 1 .5.5V3h3V.5a.5.5 0 0 1 1 0V3h1a.5.5 0 0 1 .5.5v3A3.5 3.5 0 0 1 8.5 10c-.002.434-.01.845-.04 1.22-.041.514-.126.997-.304 1.423-.18.434-.471.847-.929 1.105C6.772 14.002 6.206 14 5.5 14a.5.5 0 0 1 0-1c.706 0 1.057-.002 1.228-.12.164-.112.31-.275.45-.621.13-.322.202-.72.244-1.262.03-.35.037-.724.038-1.117A3.5 3.5 0 0 1 4 6.5v-3a.5.5 0 0 1 .5-.5h1V.5A.5.5 0 0 1 6 0"/>
+  </symbol>
+  <symbol id="cl-icon-mood" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0M1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1-.175-.613C.792 13.688.727 12.93.805 12c.078-.921.32-2.008.782-3.043.227-.508.5-1 .82-1.45A5 5 0 0 1 9.06 12.5c-.455.321-.948.593-1.456.82-1.035.462-2.122.704-3.043.782-.93.078-1.688.013-2.271-.152a3 3 0 0 1-.612-.174.7.7 0 0 1-.114-.06z"/>
+    <path d="M13.5 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m0 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M9 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
+  </symbol>
+  <symbol id="cl-icon-home" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-confetti">
+        <span class="confetti confetti-1"></span>
+        <span class="confetti confetti-2"></span>
+        <span class="confetti confetti-3"></span>
+        <span class="confetti confetti-4"></span>
+        <span class="confetti confetti-5"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div><span class="pill">changelog</span></div>
+    <h1>field notes</h1>
+    <p class="tagline">Axol molts every so often. Here's what changed, and when.</p>
+  </header>
+
+  <article class="release">
+    <span class="release-tag"><span class="spark" aria-hidden="true">✨</span>v2.0</span>
+    <div style="height:6px"></div>
+    <span class="release-date">April 18, 2026</span>
+    <h2>she grew up</h2>
+    <p class="release-lede">Axol made friends with the wider internet, learned to shrink when she's not needed, and found homes on five different hosting platforms. The corner of the screen has never been this well-connected.</p>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-remote"/></svg></span>remote alerts</h3>
+
+      <div class="illo illo-flow" role="img" aria-label="Webhook flow: sender → neuromast → lateral-line → Axol.">
+        <svg viewBox="0 0 520 100" width="100%" style="max-width:520px; display:block;" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="clArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+            </marker>
+          </defs>
+
+          <!-- Node 1: webhook source (GitHub mark) — center x=52, r=22 -->
+          <g transform="translate(52,45)">
+            <circle r="22" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5"/>
+            <svg x="-10" y="-10" width="20" height="20" viewBox="0 0 16 16" fill="#2D2533">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+            </svg>
+            <text y="42" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#2D2533">webhook</text>
+          </g>
+
+          <!-- Arrow 1: circle edge 74 + 2 gap → rect left 152 − 4 gap -->
+          <path d="M 76 45 L 148 45" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#clArrow)"/>
+
+          <!-- Node 2: neuromast — left=152, w=70 -->
+          <g transform="translate(152,23)" color="#D6457A">
+            <rect width="70" height="44" rx="10" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5"/>
+            <svg x="23" y="10" width="24" height="24"><use href="#glyph-neuromast"/></svg>
+            <text x="35" y="62" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#2D2533">neuromast</text>
+          </g>
+
+          <!-- Arrow 2: rect right 222 + 4 → rect left 298 − 4 -->
+          <path d="M 226 45 L 298 45" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#clArrow)"/>
+
+          <!-- Node 3: lateral-line — left=302, w=70 -->
+          <g transform="translate(302,23)" color="#D6457A">
+            <rect width="70" height="44" rx="10" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5"/>
+            <svg x="23" y="10" width="24" height="24"><use href="#glyph-lateral-line"/></svg>
+            <text x="35" y="62" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#2D2533">lateral-line</text>
+          </g>
+
+          <!-- Arrow 3: rect right 372 + 4 → circle edge 450 − 2 -->
+          <path d="M 376 45 L 448 45" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#clArrow)"/>
+
+          <!-- Node 4: Axol — center x=472, r=22 -->
+          <g transform="translate(472,45)">
+            <circle r="22" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5"/>
+            <g transform="translate(-18,-18) scale(0.45)">
+              <use href="#cl-mode-axol" x="0" y="0" width="80" height="80"/>
+            </g>
+            <text y="42" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="600" fill="#2D2533">axol</text>
+          </g>
+        </svg>
+      </div>
+
+      <ul>
+        <li><b>neuromast</b> — a tiny serverless webhook intake that parks inbound payloads in a queue behind tiered auth (per-source HMAC for GitHub / Stripe / generic, with a shared-key fallback).</li>
+        <li><b>lateral-line</b> — a 60-line bash forwarder on <code>launchd</code> that drains the queue into Axol's loopback port. At-least-once delivery; items stay queued while she's offline.</li>
+        <li><b>Runtime-agnostic storage</b> — neuromast runs on Cloudflare KV <i>or</i> Redis. A factory sniffs the env and picks the right backend.</li>
+        <li><b>One-command installer</b> at <code>lateral-line/install.sh</code> writes the launchd plist, wires env vars, and starts polling.</li>
+        <li>Axol didn't change — remote alerts feed her existing adapter system, so a new webhook source is still just a JSON file.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-modes"/></svg></span>three size modes</h3>
+
+      <!-- Reusable miniature axolotl for the three previews below.
+           Mirrors the palette in axol/themes/pink.json. -->
+      <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+        <symbol id="cl-mode-axol" viewBox="0 0 80 80">
+          <ellipse cx="19" cy="25" rx="6"   ry="3.5" fill="#E066A0" transform="rotate(-35 19 25)"/>
+          <ellipse cx="15" cy="34" rx="6.5" ry="3.8" fill="#E066A0" transform="rotate(-8 15 34)"/>
+          <ellipse cx="18" cy="44" rx="7.5" ry="4.2" fill="#BF4F85" transform="rotate(22 18 44)"/>
+          <ellipse cx="61" cy="25" rx="6"   ry="3.5" fill="#E066A0" transform="rotate(35 61 25)"/>
+          <ellipse cx="65" cy="34" rx="6.5" ry="3.8" fill="#E066A0" transform="rotate(8 65 34)"/>
+          <ellipse cx="62" cy="44" rx="7.5" ry="4.2" fill="#BF4F85" transform="rotate(-22 62 44)"/>
+          <ellipse cx="40" cy="40" rx="27"  ry="23"  fill="#F29BC5"/>
+          <ellipse cx="40" cy="45" rx="18"  ry="14"  fill="#F0B5D3"/>
+          <ellipse cx="21" cy="57" rx="3.7" ry="5.1" fill="#F29BC5" transform="rotate(-20 21 57)"/>
+          <ellipse cx="59" cy="57" rx="3.7" ry="5.1" fill="#F29BC5" transform="rotate(20 59 57)"/>
+          <circle  cx="32" cy="38" r="2.5" fill="#2D2533"/>
+          <circle  cx="48" cy="38" r="2.5" fill="#2D2533"/>
+          <circle  cx="32.8" cy="36.9" r="0.9" fill="#FFFFFF"/>
+          <circle  cx="48.8" cy="36.9" r="0.9" fill="#FFFFFF"/>
+          <circle  cx="28" cy="45" r="2.5" fill="#FF7AA3" opacity="0.45"/>
+          <circle  cx="52" cy="45" r="2.5" fill="#FF7AA3" opacity="0.45"/>
+          <path    d="M 36 47 Q 40 50 44 47" stroke="#7A2D4D" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        </symbol>
+      </svg>
+
+      <div class="illo illo-modes" role="img" aria-label="Three size modes on a common scale: full, mini, and micro.">
+        <div class="illo-item">
+          <svg width="80" height="96" viewBox="0 0 300 360">
+            <path d="M 55 80 H 245 A 12 12 0 0 1 257 92 V 122 A 12 12 0 0 1 245 134 H 162 L 150 152 L 138 134 H 55 A 12 12 0 0 1 43 122 V 92 A 12 12 0 0 1 55 80 Z"
+                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="3"/>
+            <text x="150" y="110" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="22" font-weight="700" fill="#2D2533">main</text>
+            <text x="150" y="128" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="18" fill="#6E5F6B">CI passed</text>
+            <use href="#cl-mode-axol" x="36" y="160" width="228" height="228"/>
+          </svg>
+          <div class="illo-label">full</div>
+          <div class="illo-dims">~300×360</div>
+        </div>
+        <div class="illo-item">
+          <svg width="96" height="27" viewBox="0 0 290 80">
+            <path d="M 16 16 H 180 A 10 10 0 0 1 190 26 V 37 L 202 40 L 190 43 V 54 A 10 10 0 0 1 180 64 H 16 A 10 10 0 0 1 6 54 V 26 A 10 10 0 0 1 16 16 Z"
+                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="2"/>
+            <text x="98" y="37" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#2D2533">main</text>
+            <text x="98" y="54" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#6E5F6B">CI passed</text>
+            <use href="#cl-mode-axol" x="210" y="-8" width="92" height="92"/>
+            <circle cx="270" cy="18" r="9" fill="#4A90E2"/>
+            <text x="270" y="21.5" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#FFFFFF">2</text>
+          </svg>
+          <div class="illo-label">mini</div>
+          <div class="illo-dims">62×56 · 290×80</div>
+        </div>
+        <div class="illo-item">
+          <svg width="16" height="16" viewBox="0 0 48 48">
+            <use href="#cl-mode-axol" x="-4" y="-2" width="56" height="56"/>
+            <rect x="1" y="4" width="16" height="11" rx="5.5" fill="#D6457A"/>
+            <text x="9" y="12.5" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" font-weight="700" fill="#FFFFFF">3</text>
+          </svg>
+          <div class="illo-label">micro</div>
+          <div class="illo-dims">48×48</div>
+        </div>
+      </div>
+
+      <ul>
+        <li><b>Mini</b> is new — a smaller character with a side bubble and a count badge on her gill.</li>
+        <li><b>Micro</b> (formerly compact) — a static character with a count badge. Out of the way when you need the screen real estate.</li>
+        <li><b>⌘-click</b> cycles <b>full → mini → micro → full</b>. The current mode persists across launches.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-deploy"/></svg></span>five deploy guides</h3>
+      <p style="margin:6px 0 14px; color:var(--ink-soft); font-size:14.5px;">Neuromast runs on whichever platform you already pay for (or don't). Each guide is a one-command bootstrap.</p>
+      <div class="deploy-chips">
+        <a class="dep-chip" href="deploy-webflow.html">
+          <span class="dep-mark" style="background:#146EF5;">
+            <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1080" fill="#146EF5"/><path fill-rule="evenodd" clip-rule="evenodd" d="M898.312 337.5L683.467 757.5H481.667L571.579 583.434H567.545C493.368 679.726 382.694 743.115 225 757.5V585.843C225 585.843 325.88 579.884 385.185 517.534H225V337.503H405.031V485.576L409.072 485.559L482.639 337.503H618.791V484.637L622.832 484.631L699.159 337.5H898.312Z" fill="white"/></svg>
+          </span>
+          <span class="dep-name">Webflow Cloud</span>
+        </a>
+        <a class="dep-chip" href="deploy-railway.html">
+          <span class="dep-mark" style="background:#13111C;">
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M4.756 438.175A520.713 520.713 0 0 0 0 489.735h777.799c-2.716-5.306-6.365-10.09-10.045-14.772-132.97-171.791-204.498-156.896-306.819-161.26-34.114-1.403-57.249-1.967-193.037-1.967-72.677 0-151.688.185-228.628.39-9.96 26.884-19.566 52.942-24.243 74.14h398.571v51.909H4.756ZM783.93 541.696H.399c.82 13.851 2.112 27.517 3.978 40.999h723.39c32.248 0 50.299-18.297 56.162-40.999ZM45.017 724.306S164.941 1018.77 511.46 1024c207.112 0 385.071-123.006 465.907-299.694H45.017Z" fill="#fff"/><path d="M511.454 0C319.953 0 153.311 105.16 65.31 260.612c68.771-.144 202.704-.226 202.704-.226h.031v-.051c158.309 0 164.193.707 195.118 1.998l19.149.706c66.7 2.224 148.683 9.384 213.19 58.19 35.015 26.471 85.571 84.896 115.708 126.52 27.861 38.499 35.876 82.756 16.933 125.158-17.436 38.97-54.952 62.215-100.383 62.215H16.69s4.233 17.944 10.58 37.751h970.632A510.385 510.385 0 0 0 1024 512.218C1024.01 229.355 794.532 0 511.454 0Z" fill="#fff"/></svg>
+          </span>
+          <span class="dep-name">Railway</span>
+        </a>
+        <a class="dep-chip" href="deploy-cloudflare.html">
+          <span class="dep-mark" style="background:#F38020;">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M16.5 11.5c-.2 0-.4 0-.6.05-.5-1.9-2.2-3.3-4.3-3.3-1.6 0-3 .9-3.8 2.2a3 3 0 00-.8-.1C5.3 10.35 4 11.6 4 13.2s1.3 2.85 3 2.85h9.5c1.4 0 2.5-1.1 2.5-2.5 0-1.4-1.1-2.05-2.5-2.05z"/></svg>
+          </span>
+          <span class="dep-name">Cloudflare</span>
+        </a>
+        <a class="dep-chip" href="deploy-fly.html">
+          <span class="dep-mark" style="background:#6B3EFA;">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M12 2c-3.5 0-6 2.8-6 6.2 0 2.5 1.4 4.7 3.4 5.9L9 17l1.5.5L11 15h2l.5 2.5L15 17l-.4-2.9c2-1.2 3.4-3.4 3.4-5.9C18 4.8 15.5 2 12 2zm0 10c-2 0-3.5-1.6-3.5-3.8S10 4.5 12 4.5s3.5 1.6 3.5 3.7S14 12 12 12zm-1 6.5v2c0 .3.2.5.5.5h1c.3 0 .5-.2.5-.5v-2h-2z"/></svg>
+          </span>
+          <span class="dep-name">Fly.io</span>
+        </a>
+        <a class="dep-chip" href="deploy-render.html">
+          <span class="dep-mark" style="background:#0B1728;">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#46E3B7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6"  cy="18" r="2.2" fill="#46E3B7"/>
+              <circle cx="18" cy="18" r="2.2" fill="#46E3B7"/>
+              <circle cx="12" cy="6"  r="2.2" fill="#46E3B7"/>
+              <line x1="6"  y1="18" x2="12" y2="6"/>
+              <line x1="18" y1="18" x2="12" y2="6"/>
+              <line x1="6"  y1="18" x2="18" y2="18"/>
+            </svg>
+          </span>
+          <span class="dep-name">Render</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-pages"/></svg></span>new site content</h3>
+      <ul>
+        <li><b><a href="remote-alerts.html">Remote alerts</a></b> — an overview of the lateral-line architecture, with links out to each deploy guide.</li>
+        <li><b><a href="plugins.html">Plugin reference</a></b> — a walkthrough of adapters, a catalog of the five <a href="plugins.html#built-ins">built-ins</a> (Claude Code, GitHub Actions, Sentry, Stripe, and the generic fallback), and a <a href="plugins.html#share">PR flow</a> for contributing your own.</li>
+        <li><b>This changelog.</b> Hi.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-repo"/></svg></span>repo reorg</h3>
+      <ul>
+        <li>The Mac app lives in <code>axol/</code> now — symmetric with <code>neuromast/</code> and <code>lateral-line/</code>. Three deployable components side-by-side.</li>
+        <li>Swift sources split out of the mega-file into <code>Adapters.swift</code>, <code>AlertStore.swift</code>, <code>Envelope.swift</code>, <code>Server.swift</code>, plus a <code>tests/</code> suite.</li>
+      </ul>
+    </div>
+
+    <div class="quip" aria-label="Axol's take">
+      <svg class="quip-axol" viewBox="0 0 80 80" aria-hidden="true"><use href="#cl-mode-axol"/></svg>
+      <div class="quip-bubble">"I can hear GitHub now. And Stripe. The gills are getting busy."</div>
+    </div>
+  </article>
+
+  <article class="release">
+    <span class="release-tag"><span class="spark" aria-hidden="true">🥚</span>v1.0</span>
+    <div style="height:6px"></div>
+    <span class="release-date">April 17, 2026 · first sighting</span>
+    <h2>she hatched!</h2>
+    <p class="release-lede">A tiny pink axolotl wriggled free of her egg and wandered up onto the desktop. She has opinions about notifications.</p>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-hi"/></svg></span>meet Axol</h3>
+      <ul>
+        <li>A cheerful pink axolotl lives in the corner of your screen. Drag her anywhere; she stays put across launches.</li>
+        <li><b>Ambient life:</b> bobbing, blinking, swaying gills, and subtle idle moves (peek, stretch, tilt, wiggle).</li>
+        <li><b>Naps:</b> she nods off every few minutes and wakes on a click, drag, or inbound alert. A <code>z z z</code> rises from her head while she dreams.</li>
+        <li><b>Right-click menu</b> for animation toggles, about, quit. <b>Left-click</b> for a cheerful quip. She hydrates.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-inbox"/></svg></span>loopback alerts</h3>
+      <ul>
+        <li>POST JSON to <code>127.0.0.1:47329</code> and she pops a speech bubble. Remote connections are rejected at the socket.</li>
+        <li><b>Envelope format:</b> <code>title</code>, <code>body</code>, <code>priority</code>, <code>icon</code>, <code>actions</code>, <code>context</code>. Only <code>title</code> is required.</li>
+        <li><b>Priorities:</b> <code>low</code> / <code>normal</code> / <code>high</code> (worry bubbles rise) / <code>urgent</code> (bubble pins open until handled).</li>
+        <li><b>Click-through actions:</b> <code>focus-pid</code>, <code>open-url</code>, <code>reveal-file</code>, <code>noop</code>. Closed set — the validator quietly drops anything else.</li>
+        <li><b>17 named icons</b> (SF Symbols plus the Claude and GitHub marks), or pass any emoji as a literal prefix.</li>
+        <li><b>History panel:</b> double-click for the recent list; click a row to re-run its action.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-plug"/></svg></span>adapter framework</h3>
+      <ul>
+        <li>Drop a JSON file into <code>~/Library/Application Support/Axol/adapters/</code> to translate any webhook shape into an envelope.</li>
+        <li><b>Tiny template language:</b> <code>{{field}}</code>, dot-paths, <code>{{x | default 'y'}}</code>, plus <code>basename</code> and <code>trim</code> filters.</li>
+        <li><b>Predicate matching</b> with <code>match</code> and <code>skip_if</code>; <code>switch</code> + <code>cases</code> for per-branch templates.</li>
+        <li>Bundled <b>Claude Code adapter</b> out of the box — <code>SessionStart</code>, <code>Notification</code> (pins open for permission prompts), and <code>Stop</code>. Include <code>X-Claude-PID</code> to focus the right terminal.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-mood"/></svg></span>mood</h3>
+      <ul>
+        <li>A single quiet scalar reacts to alert volume and decays slowly.</li>
+        <li>When she's wound up, she refuses to nap, picks agitated idles ("peek", "wiggle"), and swaps to a frazzled quip pool ("<i>That's a lot.</i>", "<i>Gills are flaring.</i>").</li>
+        <li>Calm mood → gentle idles, hydration quips. You never see the number. It just shows up.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-home"/></svg></span>landing page</h3>
+      <ul>
+        <li>A live hero demo on the homepage runs Axol through a hello → alerts → history script so you can see her in motion before downloading.</li>
+        <li>Compact mode (⌘-click) introduced as a minimal footprint option. (Grew into the three-mode system in v2.)</li>
+      </ul>
+    </div>
+
+    <div class="quip" aria-label="Axol's take">
+      <svg class="quip-axol" viewBox="0 0 80 80" aria-hidden="true"><use href="#cl-mode-axol"/></svg>
+      <div class="quip-bubble">"Hi! I live here now. If you need me, I'll be in the corner. Please hydrate."</div>
+    </div>
+  </article>
+
+  <div class="future">
+    <p style="margin:0"><b>more molts soon.</b> If you want to see what's cooking, the <a href="https://github.com/Roach/axol/commits/main" style="color:#1F3A56">commit log</a> is the freshest view.</p>
+  </div>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — plugins (adapter reference)</title>
+<meta name="description" content="Axol adapters are JSON files that translate any third-party payload into the envelope shape. Template language, default icon set, and worked examples." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — plugins (adapter reference)" />
+<meta property="og:description" content="Adapter spec, template language, and default icon set for Axol." />
+<meta property="og:url" content="https://roach.github.io/axol/plugins.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA;
+    --pink-2: #FFE5F0;
+    --pink-3: #FFC9E2;
+    --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533;
+    --ink-soft: #6E5F6B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+
+  .backlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1F3A56;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero {
+    padding: 28px 0 18px;
+    text-align: center;
+  }
+  .hero-stage {
+    position: relative;
+    display: inline-block;
+    width: 130px;
+    height: 160px;
+    margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 110px;
+    height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Converging payload shapes — three distinct glyphs drift in from
+     above, representing the polymorphic inputs an adapter normalizes. */
+  .hero-shapes {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 96px;
+    height: 100px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .hero-shape {
+    position: absolute;
+    top: 0;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    opacity: 0;
+    animation: hero-shape-drop 3.8s ease-in infinite;
+  }
+  .hero-shape-1 { left: 18%; background: #7FC6ED; animation-delay: 0s; }
+  .hero-shape-2 { left: 70%; background: #F5B443; animation-delay: 1.0s; border-radius: 50%; }
+  .hero-shape-3 { left: 45%; background: #A67FD4; animation-delay: 2.0s; transform: rotate(45deg); }
+  @keyframes hero-shape-drop {
+    0%   { opacity: 0; transform: translateY(-12px) scale(0.6); }
+    15%  { opacity: 1; transform: translateY(0)     scale(1); }
+    68%  { opacity: 0.9; transform: translateY(70px) scale(0.9); }
+    82%  { opacity: 0; transform: translateY(94px)  scale(0.3); }
+    100% { opacity: 0; transform: translateY(94px)  scale(0.3); }
+  }
+  .hero-shape-3 {
+    animation-name: hero-shape-drop-diamond;
+  }
+  @keyframes hero-shape-drop-diamond {
+    0%   { opacity: 0; transform: translateY(-12px) rotate(45deg) scale(0.6); }
+    15%  { opacity: 1; transform: translateY(0)     rotate(45deg) scale(1); }
+    68%  { opacity: 0.9; transform: translateY(70px) rotate(45deg) scale(0.9); }
+    82%  { opacity: 0; transform: translateY(94px)  rotate(45deg) scale(0.3); }
+    100% { opacity: 0; transform: translateY(94px)  rotate(45deg) scale(0.3); }
+  }
+
+  .hero .pill {
+    display: inline-block;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  h1 {
+    font-size: 48px;
+    margin: 10px 0 10px;
+    letter-spacing: -0.01em;
+    color: #1F3A56;
+    line-height: 1.05;
+  }
+  .tagline {
+    font-size: 17px;
+    color: rgba(31, 58, 86, 0.78);
+    margin: 0 auto 8px;
+    max-width: 640px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    /* Kill all animations globally; provide safe static defaults below for
+       the few decorative pieces that would otherwise freeze mid-cycle. */
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-shape { animation: none !important; }
+    .hero-shape { opacity: 0.7; }
+  }
+
+  section {
+    background: white;
+    border-radius: 20px;
+    padding: 26px 30px 28px;
+    margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 {
+    font-size: 21px;
+    margin: 0 0 10px;
+    color: var(--pink-accent);
+  }
+  section h3 {
+    font-size: 15px;
+    margin: 18px 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 10px 0 18px;
+    color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+  .tok-key     { color: #B33A7A; }
+  .tok-string  { color: #3A6E4A; }
+  .tok-number  { color: #7A5A1F; }
+  .tok-bool    { color: #7A5A1F; font-weight: 600; }
+  .tok-punct   { color: #9A8E95; }
+  .tok-tmpl    { color: var(--pink-accent); font-weight: 600; }
+  .tok-flag    { color: #B33A7A; }
+  .tok-cmd     { color: #3A4A7A; font-weight: 600; }
+  .tok-str     { color: #3A6E4A; }
+
+  /* Adapter flow diagram — same 4-step layout as the homepage preview,
+     deepened here with richer copy and the full template reference. */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 14px 0 22px;
+  }
+  .flow-step {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px 14px;
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .flow-step b {
+    color: var(--pink-accent);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding-top: 10px;
+  }
+  .flow-step .desc {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin: 0 0 8px;
+  }
+  .flow-step pre {
+    margin: 0;
+    padding: 10px 12px;
+    background: white;
+    border: 1px solid #F3DDE9;
+    border-radius: 8px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .flow-arrow {
+    align-self: center;
+    color: var(--pink-accent);
+    font-size: 20px;
+    line-height: 1;
+    opacity: 0.55;
+    padding: 4px 0;
+    margin-left: 48px;
+  }
+  @media (max-width: 520px) {
+    .flow-step { grid-template-columns: 1fr; gap: 6px; }
+    .flow-step b { padding-top: 0; }
+    .flow-arrow { margin-left: 12px; }
+  }
+
+  /* Static bubble clone used inside the final "bubble" flow step. */
+  .bubble-static {
+    position: relative;
+    display: inline-block;
+    max-width: 260px;
+    min-width: 120px;
+    padding: 10px 14px 12px;
+    margin: 10px 0 0;
+    background: white;
+    border: 1.5px solid var(--pink-accent);
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--ink);
+    word-wrap: break-word;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+  .bubble-static::after {
+    content: "";
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    width: 11px;
+    height: 11px;
+    background: white;
+    border-right: 1.5px solid var(--pink-accent);
+    border-bottom: 1.5px solid var(--pink-accent);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .bubble-static .btitle { display: block; font-weight: 600; color: var(--ink); }
+  .bubble-static .bicon {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 5px;
+  }
+  .bubble-static .bicon svg { width: 13px; height: 13px; display: block; }
+  .bubble-static.kind-github .bicon { color: var(--ink); }
+  .bubble-static .bbody {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.35;
+  }
+
+  /* Template-language chips */
+  .tmpl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    margin: 10px 0 0;
+    font-size: 13.5px;
+    align-items: baseline;
+  }
+  .tmpl code { color: var(--pink-accent); }
+  .tmpl span { color: var(--ink-soft); }
+
+  /* Default icon-set grid (populated via JS at the bottom of the page). */
+  .iconset {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin: 14px 0 6px;
+  }
+  .icon-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .icon-chip svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .icon-chip code { color: var(--pink-accent); background: none; padding: 0; }
+  .icon-chip.k-success  svg { color: #2E8B57; }
+  .icon-chip.k-error    svg { color: #C0392B; }
+  .icon-chip.k-warn     svg { color: #B8860B; }
+  .icon-chip.k-info     svg { color: #3A6EA5; }
+  .icon-chip.k-ship     svg { color: var(--pink-accent); }
+  .icon-chip.k-review   svg { color: #7A5A9F; }
+  .icon-chip.k-sparkle  svg { color: #D4A017; }
+  .icon-chip.k-bell     svg { color: var(--pink-accent); }
+  .icon-chip.k-bug      svg { color: #C0392B; }
+  .icon-chip.k-metric   svg { color: #3A6EA5; }
+  .icon-chip.k-pending  svg { color: #6E5F6B; }
+  .icon-chip.k-security svg { color: #2E8B57; }
+  .icon-chip.k-message  svg { color: #3A6EA5; }
+  .icon-chip.k-approved svg { color: #2E8B57; }
+  .icon-chip.k-git      svg { color: var(--ink); }
+  .icon-chip.k-github   svg { color: var(--ink); }
+  .icon-chip.k-claude   svg { color: #D97757; }
+
+  .callout {
+    background: #FFF9FB;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .callout b { color: var(--ink); }
+
+  /* Inline brand/source mark next to a section h2. Inherits pink-accent
+     like other section headings (override color when the mark is a
+     brand that needs its own hue — GitHub is drawn in ink). */
+  .heading-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 9px;
+    vertical-align: -4px;
+    color: var(--ink);
+  }
+  .heading-mark svg { width: 100%; height: 100%; display: block; }
+
+  /* Built-in adapter catalog — a grid of cards, each naming the source,
+     the filename, what triggers it, and which field it keys on. */
+  .builtin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin: 14px 0 4px;
+  }
+  .builtin {
+    display: flex;
+    flex-direction: column;
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 14px;
+    padding: 14px 16px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .builtin header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .builtin-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 9px;
+    flex: 0 0 auto;
+  }
+  .builtin-mark svg { width: 60%; height: 60%; display: block; }
+  .builtin-mark.claude-mark    { background: #D97757; }
+  .builtin-mark.github-mark    { background: #2D2533; }
+  .builtin-mark.sentry-mark    { background: #362D59; }
+  .builtin-mark.stripe-mark    { background: #635BFF; }
+  .builtin-mark.generic-mark   { background: var(--pink-accent); }
+  .builtin header h3 {
+    margin: 0; font-size: 14.5px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.005em;
+  }
+  .builtin header code {
+    display: block; margin-top: 1px;
+    font-size: 11.5px; color: var(--ink-soft);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .builtin p { margin: 0 0 10px; color: var(--ink-soft); }
+  .builtin-meta {
+    margin-top: auto;
+    font-size: 11px; color: var(--ink-soft);
+    padding-top: 8px; border-top: 1px dashed #F3DDE9;
+  }
+  .builtin-meta code {
+    background: rgba(214, 69, 122, 0.08); color: var(--pink-accent);
+    padding: 1px 5px; border-radius: 4px; font-size: 11px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  /* Share-your-adapter PR flow — a short numbered list with a slightly
+     heavier visual weight than the body text. */
+  .share-steps {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 4px;
+    display: grid; gap: 12px;
+  }
+  .share-steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 2px 0 2px 36px;
+    font-size: 14px; line-height: 1.55;
+  }
+  .share-steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--pink-2); color: var(--pink-accent);
+    border-radius: 50%; font-size: 12px; font-weight: 700;
+  }
+
+  /* Envelope-flow illustration — same compact diagram used on the
+     homepage plugins teaser, for visual continuity. */
+  .envelope-flow-mini {
+    margin: 18px 0 4px;
+  }
+  .envelope-flow-mini svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Schema tables — consistent visual for every field reference. */
+  table.schema {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 6px;
+    font-size: 13.5px;
+  }
+  table.schema th, table.schema td {
+    border-bottom: 1px solid #F3DDE9;
+    padding: 9px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.schema th {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pink-accent);
+    font-weight: 700;
+  }
+  table.schema tr:last-child td { border-bottom: none; }
+  table.schema td code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+    white-space: nowrap;
+  }
+  table.schema td:nth-child(2) { color: var(--ink-soft); white-space: nowrap; }
+  table.schema td:nth-child(3) { color: var(--pink-accent); text-align: center; font-weight: 700; }
+
+  /* Convergence diagram — local + remote paths meeting at the adapter. */
+  .converge {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 14px 0 4px;
+  }
+  .converge-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .converge-node {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+  .converge-node b {
+    display: block;
+    color: var(--pink-accent);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .converge-node a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .converge-merge {
+    display: flex;
+    justify-content: center;
+    gap: 42%;
+    font-size: 22px;
+    color: var(--pink-accent);
+    opacity: 0.55;
+    margin: -2px 0 -4px;
+  }
+  .converge-trunk {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .converge-trunk .converge-node {
+    min-width: 240px;
+    max-width: 420px;
+    background: #FFF4FA;
+    border-color: var(--pink-accent);
+    box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.1);
+  }
+  .converge-trunk-arrow {
+    font-size: 13px;
+    color: var(--pink-accent);
+    opacity: 0.5;
+    line-height: 1;
+    padding: 4px 0 0;
+  }
+  @media (max-width: 520px) {
+    .converge-inputs { grid-template-columns: 1fr; }
+    .converge-merge { gap: 0; }
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--pink-accent);
+    color: white;
+    padding: 11px 22px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 14px -4px rgba(214, 69, 122, 0.45);
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta:hover {
+    background: #B8355F;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px -4px rgba(214, 69, 122, 0.55);
+  }
+
+  footer {
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 13px;
+    padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 36px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-shapes">
+        <span class="hero-shape hero-shape-1"></span>
+        <span class="hero-shape hero-shape-2"></span>
+        <span class="hero-shape hero-shape-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBodyPlug" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <radialGradient id="heroBellyPlug" cx="50%" cy="60%" r="50%">
+            <stop offset="0%" stop-color="#FFE5F0" />
+            <stop offset="100%" stop-color="#FFCCE2" />
+          </radialGradient>
+        </defs>
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div>
+      <span class="pill">reference</span>
+    </div>
+    <h1>Plugins</h1>
+    <p class="tagline">Adapters translate whatever shape a tool emits into Axol's envelope. This is the canonical spec — match rules, template language, and the closed action vocabulary.</p>
+  </header>
+
+  <section class="envelope-flow-section">
+    <h2>the flow</h2>
+    <p>Raw payloads arrive with whatever shape their source happened to use. An adapter picks the one it recognizes, renders it into Axol's envelope, and hands it off to the bubble.</p>
+    <div class="envelope-flow-mini" role="img" aria-label="Multiple payload shapes converge through an adapter, become an envelope, and render as a speech bubble above Axol.">
+      <svg viewBox="0 0 760 170" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="efmBg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0"   stop-color="#FFF7FB" />
+            <stop offset="0.5" stop-color="#FFEAF3" />
+            <stop offset="1"   stop-color="#FFF7FB" />
+          </linearGradient>
+          <linearGradient id="efmEnv" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFFFFF" />
+            <stop offset="1" stop-color="#FFE5F0" />
+          </linearGradient>
+          <marker id="efmArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+          </marker>
+          <filter id="efmShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#D6457A" flood-opacity="0.15" />
+          </filter>
+        </defs>
+
+        <rect x="0" y="0" width="760" height="170" rx="18" fill="url(#efmBg)" />
+
+        <!-- 2 raw payload shapes on the left — no labels, just icons -->
+        <g transform="translate(70,55)" filter="url(#efmShadow)">
+          <polygon points="0,-18 15.6,-9 15.6,9 0,18 -15.6,9 -15.6,-9" fill="#2D2533" />
+          <svg x="-8" y="-8" width="16" height="16" viewBox="0 0 16 16" fill="#FFFFFF">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+          </svg>
+        </g>
+        <g transform="translate(70,115)" filter="url(#efmShadow)">
+          <circle r="18" fill="#D97757" />
+          <svg x="-9" y="-9" width="18" height="18" viewBox="0 0 257 257" fill="#FFFFFF">
+            <path d="M50.2162 170.973L100.762 142.62L101.608 140.148L100.762 138.78H98.2906L89.8332 138.26L61.0578 137.48L36.1158 136.44L11.9538 135.14L5.8722 133.84L0.1818 126.374L0.7618 122.637L5.8722 119.213L13.1854 119.854L29.3182 120.954L53.4802 122.637L70.994 123.677L96.9906 126.374H101.088L101.672 124.717L100.242 123.677L99.1364 122.637L73.8974 105.622L46.544 87.5083L32.2024 77.0963L24.4578 71.8419L20.567 66.9015L18.889 56.1663L25.8746 48.4795L35.2394 49.1255L37.6302 49.7715L47.142 57.072L67.4492 72.741L94.0382 92.3407L97.9302 95.5827L99.4824 94.4767L99.6742 93.6947L97.9302 90.7715L83.542 64.7415L68.182 38.2175L61.3498 27.2791L59.5486 20.7235C58.8962 18.0395 58.4302 15.8111 58.4302 13.0639L66.342 2.2715L70.7258 0.859497L81.298 2.2715L85.7518 6.1275L92.3238 21.1695L102.988 44.8263L119.531 77.0963L124.368 86.6755L126.95 95.5363L127.914 98.2203H129.592V96.6815L130.943 78.5563L133.449 56.2915L135.888 27.6691L136.723 19.6027L140.683 9.9903L148.542 4.8179L154.699 7.7527L159.754 14.9615L159.052 19.6027L156.046 39.1551L150.158 69.7355L146.312 90.1963H148.567L151.149 87.6143L161.57 73.7843L179.058 51.879L186.776 43.1965L195.781 33.5843L201.566 29.0103H212.478L220.507 40.9555L216.925 53.284L205.736 67.4723L196.463 79.4911L183.156 97.4083L174.845 111.74L175.614 112.885L177.617 112.687L207.817 106.284L224.128 103.339L243.6 100.002L252.401 104.105L253.367 108.286L249.921 116.826L229.275 121.93L205.071 126.78L168.999 135.323L168.556 135.632L169.066 136.267L185.323 137.797L192.275 138.172H209.301L241.013 140.529L249.312 146.024L254.297 152.755L253.464 157.855L240.712 164.361L223.507 160.283L183.327 150.734L169.548 147.287H167.647V148.434L179.128 159.661L200.184 178.66L226.535 203.159L227.878 209.213L224.507 213.987L220.946 213.474L197.898 196.139L188.995 188.319L168.833 171.355H167.49V173.141L172.135 179.958L196.664 216.772L197.932 228.065L196.15 231.729L189.787 233.961L182.797 212.504L168.405 212.504L153.56 189.74L141.572 169.359L140.109 170.195L133.044 246.241L129.739 250.133L122.099 253L115.741 248.159L112.365 240.341L115.741 224.878L119.824 205.047L123.143 189.258L126.152 169.621L127.942 163.089L127.819 162.649L126.346 162.842L111.203 183.627L88.163 214.745L69.9344 234.223L65.5696 235.951L58.0192 232.026L58.7222 225.056L62.9416 218.864L88.1196 186.935L103.302 167.077L113.087 155.627L113.022 153.963H112.442L45.5858 197.369L33.6802 198.893L28.5556 194.082L29.185 186.169L31.6198 183.6L51.8958 169.672z" />
+          </svg>
+        </g>
+
+        <!-- Converging dashed arrows — tips separated so arrowheads don't overlap -->
+        <g fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)">
+          <path d="M 90 55  C 150 55, 180 65, 210 75" />
+          <path d="M 90 115 C 150 115, 180 105, 210 95" />
+        </g>
+
+        <!-- Adapter: compact, just template syntax -->
+        <g transform="translate(215,55)" filter="url(#efmShadow)">
+          <rect width="88" height="60" rx="14" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5" />
+          <text x="44" y="39" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" font-weight="700" fill="#D6457A">{{ }}</text>
+        </g>
+
+        <!-- Arrow: adapter → envelope -->
+        <path d="M 312 85 L 362 85" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+
+        <!-- Envelope (compact) -->
+        <g transform="translate(370,58)" filter="url(#efmShadow)">
+          <rect width="78" height="54" rx="5" fill="url(#efmEnv)" stroke="#D6457A" stroke-width="1.5" />
+          <path d="M 0 0 L 39 28 L 78 0" fill="none" stroke="#D6457A" stroke-width="1.2" opacity="0.55" />
+          <circle cx="39" cy="38" r="8" fill="#D6457A" />
+          <text x="39" y="42" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" font-weight="800" fill="#FFFFFF">A</text>
+        </g>
+
+        <!-- Arrow: envelope → bubble (arched curve) -->
+        <path d="M 456 85 C 500 85, 525 50, 568 60" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+
+        <!-- Axolotl (anchor for bubble) -->
+        <g transform="translate(640,118) scale(0.7)" filter="url(#efmShadow)">
+          <g>
+            <ellipse cx="-38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(-35 -38 -19)" />
+            <ellipse cx="-45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(-8 -45 0)" />
+            <ellipse cx="38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(35 38 -19)" />
+            <ellipse cx="45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(8 45 0)" />
+          </g>
+          <ellipse cx="0" cy="8" rx="50" ry="42" fill="#F29BC5" />
+          <ellipse cx="0" cy="18" rx="34" ry="26" fill="#F0B5D3" />
+          <circle cx="-15" cy="2" r="5" fill="#2D2533" />
+          <circle cx="15"  cy="2" r="5" fill="#2D2533" />
+          <circle cx="-14" cy="0" r="1.5" fill="white" />
+          <circle cx="16"  cy="0" r="1.5" fill="white" />
+          <circle cx="-22" cy="20" r="5" fill="#FF7AA3" opacity="0.45" />
+          <circle cx="22"  cy="20" r="5" fill="#FF7AA3" opacity="0.45" />
+          <path d="M -10 23 Q 0 30 10 23" stroke="#7A2D4D" stroke-width="2" fill="none" stroke-linecap="round" />
+        </g>
+
+        <!-- Bubble — anchored just above axolotl's head, drawn last so it sits on top -->
+        <g transform="translate(575,40)" filter="url(#efmShadow)">
+          <rect width="130" height="40" rx="10" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
+          <text x="65" y="17" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#2D2533">main</text>
+          <text x="65" y="31" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" fill="#6E5F6B">CI passed</text>
+          <path d="M 58 40 L 65 54 L 72 40 Z" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <section id="built-ins">
+    <h2>built-in adapters</h2>
+    <p>Five adapters ship with Axol. Load order is alphabetical by filename, so <code>claude-code</code> is checked first and <code>zz-generic</code> last. Each card below links to the adapter JSON on GitHub.</p>
+
+    <div class="builtin-grid">
+      <article class="builtin">
+        <header>
+          <span class="builtin-mark claude-mark" aria-hidden="true">
+            <svg viewBox="0 0 257 257" fill="#FFFFFF"><path d="M50.2162 170.973L100.762 142.62L101.608 140.148L100.762 138.78H98.2906L89.8332 138.26L61.0578 137.48L36.1158 136.44L11.9538 135.14L5.8722 133.84L0.1818 126.374L0.7618 122.637L5.8722 119.213L13.1854 119.854L29.3182 120.954L53.4802 122.637L70.994 123.677L96.9906 126.374H101.088L101.672 124.717L100.242 123.677L99.1364 122.637L73.8974 105.622L46.544 87.5083L32.2024 77.0963L24.4578 71.8419L20.567 66.9015L18.889 56.1663L25.8746 48.4795L35.2394 49.1255L37.6302 49.7715L47.142 57.072L67.4492 72.741L94.0382 92.3407L97.9302 95.5827L99.4824 94.4767L99.6742 93.6947L97.9302 90.7715L83.542 64.7415L68.182 38.2175L61.3498 27.2791L59.5486 20.7235C58.8962 18.0395 58.4302 15.8111 58.4302 13.0639L66.342 2.2715L70.7258 0.859497L81.298 2.2715L85.7518 6.1275L92.3238 21.1695L102.988 44.8263L119.531 77.0963L124.368 86.6755L126.95 95.5363L127.914 98.2203H129.592V96.6815L130.943 78.5563L133.449 56.2915L135.888 27.6691L136.723 19.6027L140.683 9.9903L148.542 4.8179L154.699 7.7527L159.754 14.9615L159.052 19.6027L156.046 39.1551L150.158 69.7355L146.312 90.1963H148.567L151.149 87.6143L161.57 73.7843L179.058 51.879L186.776 43.1965L195.781 33.5843L201.566 29.0103H212.478L220.507 40.9555L216.925 53.284L205.736 67.4723L196.463 79.4911L183.156 97.4083L174.845 111.74L175.614 112.885L177.617 112.687L207.817 106.284L224.128 103.339L243.6 100.002L252.401 104.105L253.367 108.286L249.921 116.826L229.275 121.93L205.071 126.78L168.999 135.323L168.556 135.632L169.066 136.267L185.323 137.797L192.275 138.172H209.301L241.013 140.529L249.312 146.024L254.297 152.755L253.464 157.855L240.712 164.361L223.507 160.283L183.327 150.734L169.548 147.287H167.647V148.434L179.128 159.661L200.184 178.66L226.535 203.159L227.878 209.213L224.507 213.987L220.946 213.474L197.898 196.139L188.995 188.319L168.833 171.355H167.49V173.141L172.135 179.958L196.664 216.772L197.932 228.065L196.15 231.729L189.787 233.961L182.797 212.504L168.405 212.504L153.56 189.74L141.572 169.359L140.109 170.195L133.044 246.241L129.739 250.133L122.099 253L115.741 248.159L112.365 240.341L115.741 224.878L119.824 205.047L123.143 189.258L126.152 169.621L127.942 163.089L127.819 162.649L126.346 162.842L111.203 183.627L88.163 214.745L69.9344 234.223L65.5696 235.951L58.0192 232.026L58.7222 225.056L62.9416 218.864L88.1196 186.935L103.302 167.077L113.087 155.627L113.022 153.963H112.442L45.5858 197.369L33.6802 198.893L28.5556 194.082L29.185 186.169L31.6198 183.6L51.8958 169.672z"/></svg>
+          </span>
+          <div>
+            <h3><a href="https://github.com/Roach/axol/blob/main/axol/adapters/claude-code.json">claude-code</a></h3>
+            <code>claude-code.json</code>
+          </div>
+        </header>
+        <p>Claude Code hooks. Pins open for permission prompts (<code>Notification</code>), announces session start/stop, and lets the bubble focus the right terminal via <code>X-Claude-PID</code>.</p>
+        <div class="builtin-meta">matches on <code>hook_event_name</code></div>
+      </article>
+
+      <article class="builtin">
+        <header>
+          <span class="builtin-mark github-mark" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="#FFFFFF"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+          </span>
+          <div>
+            <h3><a href="https://github.com/Roach/axol/blob/main/axol/adapters/github-actions.json">github-actions</a></h3>
+            <code>github-actions.json</code>
+          </div>
+        </header>
+        <p>GitHub Actions workflow runs. Success is a normal bubble, failure is urgent. The bubble links straight to the run.</p>
+        <div class="builtin-meta">matches on <code>workflow_run</code> · switches on <code>workflow_run.conclusion</code></div>
+      </article>
+
+      <article class="builtin">
+        <header>
+          <span class="builtin-mark sentry-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12.8 2.2a1.5 1.5 0 0 0-1.6 0c-.3.2-.6.5-.8.9L8 7.5l1.5.9 2.5-4.6 9 15.2h-3.5a9 9 0 0 0-7.2-8l-.6 1.6a7 7 0 0 1 5.9 6.4h-3a4 4 0 0 0-3.1-3.6l-.6 1.5A2.5 2.5 0 0 1 10 19H3L6 14l1.5.9-1.7 2.6h4.7a7 7 0 0 1-1.5-4.2l-1.5.9a8.4 8.4 0 0 0 1.6 4.8H2.3l5.6-9.5 1.5.9-4.7 8L4 18h16l-6.4-10.9-.8-1.4-.2-.4L12.8 2.2z"/></svg>
+          </span>
+          <div>
+            <h3><a href="https://github.com/Roach/axol/blob/main/axol/adapters/sentry.json">sentry</a></h3>
+            <code>sentry.json</code>
+          </div>
+        </header>
+        <p>Sentry issue alerts. <code>fatal</code> and <code>error</code> pin open as urgent; <code>warning</code> floats worry bubbles. Click-through lands on the issue in Sentry.</p>
+        <div class="builtin-meta">matches on <code>data.issue.id</code> · switches on <code>data.issue.level</code></div>
+      </article>
+
+      <article class="builtin">
+        <header>
+          <span class="builtin-mark stripe-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="#FFFFFF"><text x="12" y="17" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="16" font-weight="800">S</text></svg>
+          </span>
+          <div>
+            <h3><a href="https://github.com/Roach/axol/blob/main/axol/adapters/stripe.json">stripe</a></h3>
+            <code>stripe.json</code>
+          </div>
+        </header>
+        <p>Stripe webhook events — scoped to the ones you actually want to hear about. Failed invoices, failed charges, and new disputes are urgent; refunds are normal. Everything else falls through.</p>
+        <div class="builtin-meta">matches on <code>object=event</code> · switches on <code>type</code></div>
+      </article>
+
+      <article class="builtin">
+        <header>
+          <span class="builtin-mark generic-mark" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="#FFFFFF"><path d="M8 0a1 1 0 0 1 .98.804l.61 3.035 2.95-1.2a1 1 0 0 1 .96 1.71l-2.305 2.09 2.305 2.091a1 1 0 0 1-.96 1.71l-2.95-1.2-.61 3.036A1 1 0 0 1 8 13a1 1 0 0 1-.98-.804l-.61-3.035-2.95 1.2a1 1 0 0 1-.96-1.71l2.305-2.091L2.5 4.47a1 1 0 0 1 .96-1.71l2.95 1.2.61-3.035A1 1 0 0 1 8 0"/></svg>
+          </span>
+          <div>
+            <h3><a href="https://github.com/Roach/axol/blob/main/axol/adapters/zz-generic.json">zz-generic</a></h3>
+            <code>zz-generic.json</code>
+          </div>
+        </header>
+        <p>The catch-all. Sorts last (<code>zz-</code> prefix) and fires for any payload that has a <code>title</code> field — so a minimal envelope-shaped POST works without a dedicated adapter.</p>
+        <div class="builtin-meta">matches on <code>title</code> exists</div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>where they live</h2>
+    <p>Adapters are plain <code>.json</code> files loaded on startup from two directories, in order:</p>
+    <ol>
+      <li><code>adapters/</code> next to the <code>axol</code> binary — the five bundled adapters above live here.</li>
+      <li><code>~/Library/Application Support/Axol/adapters/</code> — your own. Drop a file in, restart Axol, done.</li>
+    </ol>
+    <p>Load order is alphabetical by filename within each directory, and the first adapter whose <code>match</code> predicate fires wins. To build a wildcard fallback, name it something like <code>zz-generic.json</code> so it sorts last.</p>
+  </section>
+
+  <section>
+    <h2>two paths in, one adapter</h2>
+    <p>Axol has two ways to hear about an alert — a local process <code>curl</code>-ing the loopback port, or a webhook riding the <a href="remote-alerts.html">remote-alerts bridge</a>. Both paths end at the same place: the adapter registry, which matches on the payload shape and renders the envelope. Plugins are where the two paths converge.</p>
+    <div class="converge">
+      <div class="converge-inputs">
+        <div class="converge-node">
+          <b>local</b>
+          A tool on your Mac POSTs JSON directly to <code>127.0.0.1:47329</code>. Makefiles, CI steps, Claude Code hooks, hand-rolled scripts.
+        </div>
+        <div class="converge-node">
+          <b>remote</b>
+          A third-party webhook travels through a <a href="remote-alerts.html">neuromast + lateral line</a> and lands at the same loopback port, body unchanged.
+        </div>
+      </div>
+      <div class="converge-merge" aria-hidden="true">↘<span>↙</span></div>
+      <div class="converge-trunk">
+        <div class="converge-node">
+          <b>adapter</b>
+          matches the payload shape, renders an envelope via the <code>{{…}}</code> template language, and hands it to the validator → bubble.
+        </div>
+        <div class="converge-trunk-arrow" aria-hidden="true">↓</div>
+        <div style="font-size: 12.5px; color: var(--ink-soft);">envelope · validator · bubble — see the four stages below</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>the four stages</h2>
+    <p>Every alert — whether it's a direct envelope POST or a third-party payload routed through an adapter — travels through the same four-stage pipeline on Axol's side:</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <b>incoming</b>
+        <div>
+          <p class="desc">Whatever JSON your tool already emits. GitHub sends this payload to a webhook on every workflow run.</p>
+<pre><code class="lang-json">{
+  "workflow_run": {
+    "conclusion":  "failure",
+    "head_branch": "main",
+    "html_url":    "https://github.com/.../runs/42"
+  }
+}</code></pre>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <b>adapter</b>
+        <div>
+          <p class="desc"><code>match</code> picks the adapter. <code>switch</code> + <code>cases</code> choose a template by field value. <code>{{…}}</code> placeholders pull from the payload.</p>
+<pre><code class="lang-json">{
+  "match":  { "field": "workflow_run", "exists": true },
+  "switch": "workflow_run.conclusion",
+  "cases": {
+    "failure": {
+      "title":    "{{workflow_run.head_branch}}",
+      "body":     "CI failed",
+      "priority": "urgent",
+      "icon":     "github",
+      "actions":  [{ "type": "open-url",
+                     "url":  "{{workflow_run.html_url}}" }]
+    }
+  }
+}</code></pre>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <b>envelope</b>
+        <div>
+          <p class="desc">Axol's common shape. Everything that reaches the bubble goes through this validator: priority clamped, actions from a closed set, URLs <code>http(s)://</code> only, file reveals restricted to <code>$HOME</code>. Adapters can't smuggle in shell execution.</p>
+<pre><code class="lang-json">{
+  "title":    "main",
+  "body":     "CI failed",
+  "priority": "urgent",
+  "icon":     "github",
+  "actions":  [{ "type": "open-url",
+                 "url":  "https://github.com/.../runs/42" }]
+}</code></pre>
+        </div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <b>bubble</b>
+        <div>
+          <p class="desc">Urgent bubbles pin open until clicked; clicking runs the first action in the envelope — here, opening the workflow run in the browser.</p>
+          <div class="bubble-static kind-github">
+            <span class="btitle"><span class="bicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg></span>main</span>
+            <span class="bbody">CI failed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>adapter fields</h2>
+    <p>Each adapter file is a JSON object with these top-level keys:</p>
+    <table class="schema">
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td>string</td><td>✓</td><td>Free-form identifier, shown in <code>NSLog</code> output when the adapter fires. No functional role — purely for debugging.</td></tr>
+        <tr><td><code>match</code></td><td>object</td><td>✓</td><td>Predicate that decides whether this adapter claims the incoming payload. See <a href="#match-predicate">match predicate</a>.</td></tr>
+        <tr><td><code>switch</code></td><td>string</td><td>—</td><td>Dot-path to a field whose value selects a template from <code>cases</code>. Omit for a flat adapter.</td></tr>
+        <tr><td><code>cases</code></td><td>object</td><td>with <code>switch</code></td><td>Map of switch-value → envelope template. The matching case renders; if no case matches the value, nothing renders.</td></tr>
+        <tr><td><code>template</code></td><td>object</td><td>alt to <code>cases</code></td><td>A single envelope template, used when there's no branching. Mutually exclusive with <code>switch</code>/<code>cases</code>.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top: 14px;">
+      <b>Either / or</b>: every adapter has exactly one of <code>template</code> or <code>switch</code> + <code>cases</code>. A file missing both silently does nothing when matched.
+    </div>
+  </section>
+
+  <section id="match-predicate">
+    <h2>the <code>match</code> predicate</h2>
+    <p>Every adapter needs a <code>match</code> block that picks whether the incoming payload belongs to it. Supported forms:</p>
+<pre><code class="lang-json">{ "field": "workflow_run",         "exists": true }
+{ "field": "workflow_run.conclusion", "equals": "failure" }
+{ "field": "message",              "matches": "waiting for" }</code></pre>
+    <p>Dotted paths drill into nested objects. <code>exists</code> fires on any non-null value; <code>equals</code> is exact; <code>matches</code> is a case-insensitive substring. When more than one check is set on the same predicate, all populated conditions must hold (AND). First adapter to match wins.</p>
+
+    <h3>Skipping specific cases</h3>
+    <p>Any case (or a flat template) can include a <code>skip_if</code> predicate with the same three forms. When it fires, the event is dropped silently instead of rendering — useful for filtering out chatty built-in events (the bundled <code>claude-code.json</code> uses this to swallow the "waiting for your input" notification).</p>
+    <p>A skipped event is different from a no-match event: it records as "intentionally swallowed" in <code>NSLog</code>, so you can tell "my filter fired" apart from "no adapter claimed this payload."</p>
+
+    <h3>Loud validation at load time</h3>
+    <p>Adapter files are validated when Axol starts. Unknown top-level keys (typo'd <code>swtich</code> or stray <code>temlate</code>), unknown predicate keys (e.g. <code>match_es</code>, <code>eqals</code>), and wrong-typed values all cause the adapter to be rejected with a <code>NSLog</code> line naming the offending key. You'll see this in Console.app — silent "my adapter just doesn't work" was the old behaviour and has been retired.</p>
+  </section>
+
+  <section>
+    <h2><code>switch</code> + <code>cases</code> vs flat template</h2>
+    <p>Two ways to ship an envelope from an adapter, depending on whether one incoming payload shape maps to one alert or to several:</p>
+
+    <h3>Flat template</h3>
+    <p>Use when the match fires and you always want the same envelope shape. Single <code>template</code> object at the top level:</p>
+<pre><code class="lang-json">{
+  "name":     "generic",
+  "match":    { "field": "title", "exists": true },
+  "template": {
+    "title":  "{{title}}",
+    "body":   "{{body | default ''}}",
+    "icon":   "{{icon | default 'bell'}}"
+  }
+}</code></pre>
+
+    <h3>Switch + cases</h3>
+    <p>Use when one source's payload can mean different things — e.g. GitHub's workflow_run emits <code>success</code> / <code>failure</code> / <code>cancelled</code> conclusions that deserve different priorities and copy. The <code>switch</code> value picks the case by exact string match:</p>
+<pre><code class="lang-json">{
+  "match":  { "field": "workflow_run", "exists": true },
+  "switch": "workflow_run.conclusion",
+  "cases": {
+    "success":  { "title": "{{workflow_run.head_branch}}", "body": "CI passed", "priority": "normal", "icon": "github" },
+    "failure":  { "title": "{{workflow_run.head_branch}}", "body": "CI failed", "priority": "urgent", "icon": "github" },
+    "cancelled":{ "title": "{{workflow_run.head_branch}}", "body": "CI cancelled", "priority": "low",    "icon": "github" }
+  }
+}</code></pre>
+    <p>If the <code>switch</code> field resolves to a value that doesn't appear as a case key, nothing renders for that event — silently dropped like a missed match. Add a wildcard by naming a case whatever string your field will commonly produce, or pair with a fallback adapter sorted later in the directory.</p>
+  </section>
+
+  <section>
+    <h2>template language</h2>
+    <p>Every string value in a template runs through a tiny substitution engine. Whole strings that are just <code>{{…}}</code> preserve their native type (so <code>"pid": "{{claude_pid}}"</code> yields <code>"pid": 12345</code>, not <code>"12345"</code>).</p>
+    <div class="tmpl">
+      <code>{{field}}</code>            <span>top-level substitution</span>
+      <code>{{nested.field}}</code>     <span>dot-path into objects</span>
+      <code>{{field | default 'x'}}</code> <span>fallback when missing or empty</span>
+      <code>{{basename path}}</code>    <span>last path component</span>
+      <code>{{trim field}}</code>       <span>strip surrounding whitespace</span>
+    </div>
+
+    <div class="callout" style="margin-top: 18px;">
+      <b>That's it.</b> The language is deliberately small — no conditionals, no loops, no user-defined helpers. If an adapter needs more, it's a sign the transformation should happen in the sending tool instead.
+    </div>
+  </section>
+
+  <section>
+    <h2>default icon set</h2>
+    <p>Set <code>icon</code> on the envelope to one of these names and Axol renders the matching glyph in the speech bubble. Most names resolve to SF Symbols; <code>claude</code> and <code>github</code> are bundled Bootstrap Icons SVGs. Unknown strings fall through as a literal prefix, so <code>"icon": "🚢"</code> still works for quick one-offs.</p>
+    <div class="iconset" id="iconset"></div>
+  </section>
+
+  <section>
+    <h2>action vocabulary</h2>
+    <p>Actions are a closed set. Unknown action types are silently dropped by the envelope validator — adapters can't invent new ones.</p>
+<pre><code class="lang-json">{ "type": "focus-pid",    "pid": 12345,               "label": "Open terminal" }
+{ "type": "open-url",     "url": "https://…",         "label": "View run" }
+{ "type": "reveal-file",  "path": "/Users/me/…",      "label": "Open in Finder" }
+{ "type": "noop",                                     "label": "Dismiss" }</code></pre>
+    <p><code>open-url</code> is restricted to <code>http://</code> and <code>https://</code>; <code>reveal-file</code> paths must exist and live inside <code>$HOME</code>. The first action in the envelope is what fires when the bubble is clicked.</p>
+  </section>
+
+  <section>
+    <h2><span class="heading-mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg></span>end-to-end example: GitHub Actions</h2>
+    <p>Wiring GitHub Actions to Axol end-to-end, using the remote-alerts bridge:</p>
+
+    <h3>1. Create the adapter</h3>
+    <p>Save as <code>~/Library/Application Support/Axol/adapters/github.json</code>:</p>
+<pre><code class="lang-json">{
+  "name":   "github-ci",
+  "match":  { "field": "workflow_run", "exists": true },
+  "switch": "workflow_run.conclusion",
+  "cases": {
+    "success": {
+      "title":    "{{workflow_run.head_branch}}",
+      "body":     "CI passed",
+      "priority": "normal",
+      "icon":     "github",
+      "source":   "github-ci",
+      "actions":  [{ "type": "open-url", "url": "{{workflow_run.html_url}}", "label": "View run" }]
+    },
+    "failure": {
+      "title":    "{{workflow_run.head_branch}}",
+      "body":     "CI failed",
+      "priority": "urgent",
+      "icon":     "github",
+      "source":   "github-ci",
+      "actions":  [{ "type": "open-url", "url": "{{workflow_run.html_url}}", "label": "View run" }]
+    }
+  }
+}</code></pre>
+
+    <h3>2. Point GitHub at your neuromast</h3>
+    <p>In the GitHub repo's <b>Settings → Webhooks</b>, add your Webflow Cloud URL — e.g. <code>https://&lt;site&gt;.webflow.io/app/api/hooks/github</code>. Set the content type to <code>application/json</code> and copy the secret into <code>HOOK_SECRET_GITHUB</code> on the neuromast environment (see the <a href="deploy-webflow.html">deploy guide</a>).</p>
+
+    <h3>3. Push something</h3>
+    <p>Next failed workflow run pops an urgent pink bubble on your desktop with the GitHub mark and a "View run" action. No code written, one file added.</p>
+  </section>
+
+  <section id="share">
+    <h2>share your adapter</h2>
+    <p>If you wrote an adapter for a service other people use, open a PR — we'll bundle it. Adapters are declarative JSON with a closed action vocabulary, so review is shallow and turnaround is fast.</p>
+
+    <ol class="share-steps">
+      <li>
+        <b>Write it against a real payload.</b> Capture a live sample (from the service's webhook logs, or <code>request.body</code> in a local dev tunnel), save it to <code>fixture.json</code>, and run your template against it with <code>jq</code> or by POSTing to Axol's loopback port. If the bubble says what you want, ship it.
+      </li>
+      <li>
+        <b>Name it after the source.</b> <code>linear.json</code>, <code>datadog.json</code>, <code>vercel.json</code>. Use a <code>zz-</code> prefix only for catch-alls that should sort last.
+      </li>
+      <li>
+        <b>Open a PR on <a href="https://github.com/Roach/axol">GitHub</a>.</b> Drop the file in <code>axol/adapters/</code>. Include a sanitized sample payload in the PR description (strip emails, IDs, tokens) and a one-liner on which webhook event you captured it from.
+      </li>
+      <li>
+        <b>Review checklist</b> — the four things we look at, in order:
+        <ul style="margin: 6px 0 0 0; padding-left: 18px; color: var(--ink-soft); font-size: 13.5px;">
+          <li>Does <code>match</code> fire <i>only</i> for that source? No overlap with existing built-ins.</li>
+          <li>Is <code>urgent</code> reserved for genuinely actionable events? Chatty events should be <code>normal</code> or <code>low</code>.</li>
+          <li>Do all templated fields have a <code>| default</code> fallback where the source field is optional?</li>
+          <li>Any <code>open-url</code> action — does the URL resolve to a useful page for the alert?</li>
+        </ul>
+      </li>
+    </ol>
+
+    <div class="callout" style="margin-top: 18px;">
+      <b>No plugin registry yet.</b> For now "bundled" means the file lives in the repo at <code>axol/adapters/</code> and ships with the binary. If the collection grows we'll carve out a proper contributors' directory — for now, PRs are the directory.
+    </div>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+
+<script>
+  // Bootstrap Icons (MIT) — https://icons.getbootstrap.com
+  const ICONS = {
+    success:  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>',
+    error:    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>',
+    warn:     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>',
+    info:     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/></svg>',
+    ship:     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M12.17 9.53c2.307-2.592 3.278-4.684 3.641-6.218.21-.887.214-1.58.16-2.065a3.6 3.6 0 0 0-.108-.563 2 2 0 0 0-.078-.23V.453c-.073-.164-.168-.234-.352-.295a2 2 0 0 0-.16-.045 4 4 0 0 0-.57-.093c-.49-.044-1.19-.03-2.08.188-1.536.374-3.618 1.343-6.161 3.604l-2.4.238h-.006a2.55 2.55 0 0 0-1.524.734L.15 7.17a.512.512 0 0 0 .433.868l1.896-.271c.28-.04.592.013.955.132.232.076.437.16.655.248l.203.083c.196.816.66 1.58 1.275 2.195.613.614 1.376 1.08 2.191 1.277l.082.202c.089.218.173.424.249.657.118.363.172.676.132.956l-.271 1.9a.512.512 0 0 0 .867.433l2.382-2.386c.41-.41.668-.949.732-1.526zm.11-3.699c-.797.8-1.93.961-2.528.362-.598-.6-.436-1.733.361-2.532.798-.799 1.93-.96 2.528-.361s.437 1.732-.36 2.531Z"/><path d="M5.205 10.787a7.6 7.6 0 0 0 1.804 1.352c-1.118 1.007-4.929 2.028-5.054 1.903-.126-.127.737-4.189 1.839-5.18.346.69.837 1.35 1.411 1.925"/></svg>',
+    review:   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/></svg>',
+    sparkle:  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg>',
+    bell:     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/></svg>',
+    bug:      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M4.978.855a.5.5 0 1 0-.956.29l.41 1.352A5 5 0 0 0 3 6h10a5 5 0 0 0-1.432-3.503l.41-1.352a.5.5 0 1 0-.956-.29l-.291.956A5 5 0 0 0 8 1a5 5 0 0 0-2.731.811l-.29-.956z"/><path d="M13 6v1H8.5v8.975A5 5 0 0 0 13 11h.5a.5.5 0 0 1 .5.5v.5a.5.5 0 1 0 1 0v-.5a1.5 1.5 0 0 0-1.5-1.5H13V9h1.5a.5.5 0 0 0 0-1H13V7h.5A1.5 1.5 0 0 0 15 5.5V5a.5.5 0 0 0-1 0v.5a.5.5 0 0 1-.5.5zm-5.5 9.975V7H3V6h-.5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 0-1 0v.5A1.5 1.5 0 0 0 2.5 7H3v1H1.5a.5.5 0 0 0 0 1H3v1h-.5A1.5 1.5 0 0 0 1 11.5v.5a.5.5 0 1 0 1 0v-.5a.5.5 0 0 1 .5-.5H3a5 5 0 0 0 4.5 4.975"/></svg>',
+    metric:   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/></svg>',
+    pending:  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>',
+    security: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.19.088.33.132zm-2.54-.1c3.05-.9 6.456-.9 9.505 0a2 2 0 0 1 1.395 1.838 14.66 14.66 0 0 1-2.505 10.066c-.6.893-1.279 1.626-1.982 2.182-.7.553-1.455.977-2.206 1.183C5.12 16.018 0 12.323 0 6c0-3.097 2.16-4.505 3.34-4.51zM10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0"/></svg>',
+    message:  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/></svg>',
+    approved: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg>',
+    git:      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2a2 2 0 1 1-.5 3.937V6a2 2 0 0 1-2 2H6a1 1 0 0 0-.707.293A2 2 0 0 1 6 14a2 2 0 1 1-1.707-2.121A1 1 0 0 0 4 11.586V4.414a2 2 0 1 1 1.707.707A1 1 0 0 0 6 7h2.5a1 1 0 0 0 1-1v-.063A2 2 0 0 1 11 2m1 2a1 1 0 1 0 0-2 1 1 0 0 0 0 2M4 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>',
+    github:   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>',
+    claude:   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 257 257" fill="currentColor"><path d="M50.2162 170.973L100.762 142.62L101.608 140.148L100.762 138.78H98.2906L89.8332 138.26L61.0578 137.48L36.1158 136.44L11.9538 135.14L5.8722 133.84L0.1818 126.374L0.7618 122.637L5.8722 119.213L13.1854 119.854L29.3182 120.954L53.4802 122.637L70.994 123.677L96.9906 126.374H101.088L101.672 124.717L100.242 123.677L99.1364 122.637L73.8974 105.622L46.544 87.5083L32.2024 77.0963L24.4578 71.8419L20.567 66.9015L18.889 56.1663L25.8746 48.4795L35.2394 49.1255L37.6302 49.7715L47.142 57.072L67.4492 72.741L94.0382 92.3407L97.9302 95.5827L99.4824 94.4767L99.6742 93.6947L97.9302 90.7715L83.542 64.7415L68.182 38.2175L61.3498 27.2791L59.5486 20.7235C58.8962 18.0395 58.4302 15.8111 58.4302 13.0639L66.342 2.2715L70.7258 0.859497L81.298 2.2715L85.7518 6.1275L92.3238 21.1695L102.988 44.8263L119.531 77.0963L124.368 86.6755L126.95 95.5363L127.914 98.2203H129.592V96.6815L130.943 78.5563L133.449 56.2915L135.888 27.6691L136.723 19.6027L140.683 9.9903L148.542 4.8179L154.699 7.7527L159.754 14.9615L159.052 19.6027L156.046 39.1551L150.158 69.7355L146.312 90.1963H148.567L151.149 87.6143L161.57 73.7843L179.058 51.879L186.776 43.1965L195.781 33.5843L201.566 29.0103H212.478L220.507 40.9555L216.925 53.284L205.736 67.4723L196.463 79.4911L183.156 97.4083L174.845 111.74L175.614 112.885L177.617 112.687L207.817 106.284L224.128 103.339L243.6 100.002L252.401 104.105L253.367 108.286L249.921 116.826L229.275 121.93L205.071 126.78L168.999 135.323L168.556 135.632L169.066 136.267L185.323 137.797L192.275 138.172H209.301L241.013 140.529L249.312 146.024L254.297 152.755L253.464 157.855L240.712 164.361L223.507 160.283L183.327 150.734L169.548 147.287H167.647V148.434L179.128 159.661L200.184 178.66L226.535 203.159L227.878 209.213L224.507 213.987L220.946 213.474L197.898 196.139L188.995 188.319L168.833 171.355H167.49V173.141L172.135 179.958L196.664 216.772L197.932 228.065L196.15 231.729L189.787 233.961L182.797 232.683L168.405 212.504L153.56 189.74L141.572 169.359L140.109 170.195L133.044 246.241L129.739 250.133L122.099 253L115.741 248.159L112.365 240.341L115.741 224.878L119.824 205.047L123.143 189.258L126.152 169.621L127.942 163.089L127.819 162.649L126.346 162.842L111.203 183.627L88.163 214.745L69.9344 234.223L65.5696 235.951L58.0192 232.026L58.7222 225.056L62.9416 218.864L88.1196 186.935L103.302 167.077L113.087 155.627L113.022 153.963H112.442L45.5858 197.369L33.6802 198.893L28.5556 194.082L29.185 186.169L31.6198 183.6L51.8958 169.672z"/></svg>',
+  };
+
+  const iconsetEl = document.getElementById('iconset');
+  if (iconsetEl) {
+    const keys = [
+      'success', 'error', 'warn', 'info', 'ship', 'review', 'sparkle',
+      'bell', 'bug', 'metric', 'pending', 'security', 'message',
+      'approved', 'git', 'github', 'claude',
+    ];
+    iconsetEl.innerHTML = keys.map((key) => {
+      return `<div class="icon-chip k-${key}"><span>${ICONS[key]}</span><code>${key}</code></div>`;
+    }).join('');
+  }
+</script>
+</body>
+</html>

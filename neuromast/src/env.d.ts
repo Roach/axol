@@ -8,7 +8,10 @@ declare namespace App {
 }
 
 interface Env {
-  QUEUE: KVNamespace;
+  // Structurally typed key-value store; Cloudflare's KVNamespace satisfies
+  // this, as would any other runtime's KV binding. Inline-import keeps this
+  // .d.ts file ambient (no top-level import statements).
+  QUEUE: import('./lib/queue').KVStore;
   POLL_TOKEN: string;
   SHARED_SECRET?: string;
   // Per-source signing config, looked up dynamically as HOOK_SCHEME_<SOURCE>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — deploying neuromast to Render</title>
+<meta name="description" content="Deploy Axol's webhook intake (neuromast) to Render: connect a GitHub repo, add Render Redis, git push." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — deploying neuromast to Render" />
+<meta property="og:description" content="Deploy Axol's webhook intake to Render (Node + Render Redis)." />
+<meta property="og:url" content="https://roach.github.io/axol/deploy-render.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA; --pink-2: #FFE5F0; --pink-3: #FFC9E2; --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533; --ink-soft: #6E5F6B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap { position: relative; z-index: 10; max-width: 860px; margin: 0 auto; padding: 24px 32px 80px; }
+  .backlink {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #1F3A56; text-decoration: none;
+    font-size: 14px; font-weight: 500; opacity: 0.75; margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero { padding: 10px 0 8px; text-align: center; }
+  .hero-stage {
+    position: relative; display: inline-block;
+    width: 120px; height: 120px; margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 110px; height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Render's teal — interconnected-node sparks drifting down. */
+  .hero-sparks {
+    position: absolute; left: 50%; top: 0;
+    width: 80px; height: 96px; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .hero-spark {
+    position: absolute; top: 0;
+    width: 10px; height: 10px;
+    border-radius: 2px; transform: rotate(45deg);
+    background: #46E3B7;
+    box-shadow: 0 0 0 3px rgba(70, 227, 183, 0.2);
+    opacity: 0;
+    animation: hero-spark-drop 3.8s ease-in infinite;
+  }
+  .hero-spark-1 { left: 26%; animation-delay: 0s; }
+  .hero-spark-2 { left: 66%; animation-delay: 1.25s; }
+  .hero-spark-3 { left: 48%; animation-delay: 2.5s; }
+  @keyframes hero-spark-drop {
+    0%   { opacity: 0;    transform: translateY(-10px) rotate(45deg) scale(0.6); }
+    15%  { opacity: 1;    transform: translateY(0)     rotate(45deg) scale(1); }
+    70%  { opacity: 0.85; transform: translateY(78px)  rotate(45deg) scale(0.95); }
+    88%  { opacity: 0;    transform: translateY(96px)  rotate(45deg) scale(0.4); }
+    100% { opacity: 0;    transform: translateY(96px)  rotate(45deg) scale(0.4); }
+  }
+
+  h1 { font-size: 48px; margin: 10px 0 10px; letter-spacing: -0.01em; color: #1F3A56; line-height: 1.05; }
+  .tagline { font-size: 17px; color: rgba(31, 58, 86, 0.78); margin: 0 auto 12px; max-width: 620px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-spark { animation: none !important; }
+    .hero-spark { opacity: 0.7; }
+  }
+
+  .pill {
+    display: inline-block; background: var(--pink-2); color: var(--pink-accent);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .brand-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 8px 0 0; padding: 6px 14px 6px 6px;
+    background: white; border: 1px solid #E5ECF5;
+    border-radius: 999px; text-decoration: none;
+    font-size: 13px; font-weight: 600; color: #080808;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .brand-chip:hover {
+    border-color: #46E3B7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(70, 227, 183, 0.45);
+  }
+  .brand-chip-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px; overflow: hidden;
+    background: #0B1728;
+  }
+  .brand-chip-mark svg { width: 62%; height: 62%; display: block; }
+  .brand-chip-arrow { font-size: 14px; color: #0B1728; opacity: 0.7; transition: opacity 0.15s ease, transform 0.15s ease; }
+  .brand-chip:hover .brand-chip-arrow { opacity: 1; transform: translateX(2px); }
+
+  section {
+    background: white; border-radius: 20px;
+    padding: 26px 30px 28px; margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 { font-size: 21px; margin: 0 0 10px; color: var(--pink-accent); }
+  section h3 { font-size: 15px; margin: 18px 0 6px; color: var(--ink); letter-spacing: -0.005em; }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7; border: 1px solid #F3DDE9; border-radius: 12px;
+    padding: 14px 16px; font-size: 13px; overflow-x: auto;
+    margin: 8px 0 16px; color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7; border-radius: 5px; padding: 1px 6px; font-size: 0.92em;
+  }
+  .tok-flag  { color: #B33A7A; }
+  .tok-cmd   { color: #3A4A7A; font-weight: 600; }
+  .tok-str   { color: #3A6E4A; }
+
+  .setup-steps { counter-reset: step; padding: 0; margin: 8px 0 4px; list-style: none; }
+  .setup-steps > li {
+    counter-increment: step; position: relative;
+    padding: 0 0 2px 36px; margin-bottom: 22px;
+  }
+  .setup-steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: -1px;
+    width: 26px; height: 26px; display: inline-flex;
+    align-items: center; justify-content: center;
+    background: var(--pink-2); color: var(--pink-accent);
+    border-radius: 50%; font-size: 13px; font-weight: 700;
+  }
+  .setup-steps > li h3 { margin-top: 0; }
+
+  .callout {
+    background: #FFF9FB; border: 1px solid #F3DDE9; border-radius: 12px;
+    padding: 12px 16px; font-size: 13.5px; color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .callout b { color: var(--ink); }
+
+  .troubleshooting { margin: 0; padding: 0; list-style: none; }
+  .troubleshooting > li {
+    margin-bottom: 16px; padding-bottom: 14px;
+    border-bottom: 1px solid #F3DDE9;
+  }
+  .troubleshooting > li:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .troubleshooting b { color: var(--ink); }
+
+  footer {
+    text-align: center; color: rgba(31, 58, 86, 0.75);
+    font-size: 13px; padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 34px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-sparks">
+        <span class="hero-spark hero-spark-1"></span>
+        <span class="hero-spark hero-spark-2"></span>
+        <span class="hero-spark hero-spark-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBodyRdr" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#FFC9E2"/><stop offset="100%" stop-color="#FFA6CF"/></radialGradient>
+          <radialGradient id="heroBellyRdr" cx="50%" cy="60%" r="50%"><stop offset="0%" stop-color="#FFE5F0"/><stop offset="100%" stop-color="#FFCCE2"/></radialGradient>
+        </defs>
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div><span class="pill">deploy guide</span></div>
+    <h1>Deploy to Render</h1>
+    <p class="tagline">Connect a GitHub repo, add Render's managed Redis, set a couple env vars — every <code>git push</code> deploys. Free tier covers a sleepy personal webhook service comfortably.</p>
+    <a class="brand-chip" href="https://render.com/docs" target="_blank" rel="noopener">
+      <span class="brand-chip-mark" aria-hidden="true">
+        <!-- Render's mark: three interconnected nodes forming a triangle. -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#46E3B7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="6"  cy="18" r="2.2" fill="#46E3B7" />
+          <circle cx="18" cy="18" r="2.2" fill="#46E3B7" />
+          <circle cx="12" cy="6"  r="2.2" fill="#46E3B7" />
+          <line x1="6"  y1="18" x2="12" y2="6" />
+          <line x1="18" y1="18" x2="12" y2="6" />
+          <line x1="6"  y1="18" x2="18" y2="18" />
+        </svg>
+      </span>
+      <span>Render docs</span>
+      <span class="brand-chip-arrow" aria-hidden="true">↗</span>
+    </a>
+  </header>
+
+  <section>
+    <h2>why pick Render</h2>
+    <ul>
+      <li><b>GitHub-native deploys</b> — connect once, every push to the tracked branch triggers a build. No CLI required.</li>
+      <li><b>Managed Redis</b> — Render's own Key Value (Redis-compatible) plugin; provisions in a click and auto-sets the connection URL on your web service.</li>
+      <li><b>Free tier for hobby</b> — the free web service spins down after 15 min idle (cold start ~30 s on first request after), free Redis has a 25 MB cap. Good enough for a personal alert forwarder.</li>
+      <li><b>Simple pricing beyond that</b> — $7/mo for an always-on web service, $10/mo for a small Redis. Easier mental math than Railway's usage-based bill if you just want a flat monthly number.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>prerequisites</h2>
+    <ul>
+      <li><b>A Render account</b> — sign up with GitHub or email.</li>
+      <li><b>A GitHub repo you own</b> with the <code>neuromast/</code> code. Fork Axol, or push just <code>neuromast/</code> to a fresh repo.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>1 · push <code>neuromast/</code> to your own GitHub repo</h2>
+    <p>Skip if you forked Axol. Otherwise seed a fresh repo:</p>
+<pre><code><span class="tok-cmd">cp</span> <span class="tok-flag">-r</span> neuromast /tmp/my-neuromast
+<span class="tok-cmd">cd</span> /tmp/my-neuromast
+<span class="tok-cmd">git</span> init <span class="tok-flag">-b</span> main
+<span class="tok-cmd">git</span> add <span class="tok-str">.</span>
+<span class="tok-cmd">git</span> commit <span class="tok-flag">-m</span> <span class="tok-str">"seed neuromast"</span>
+<span class="tok-cmd">gh</span> repo create my-neuromast <span class="tok-flag">--private</span> <span class="tok-flag">--source=.</span> <span class="tok-flag">--push</span></code></pre>
+  </section>
+
+  <section>
+    <h2>2 · create the Render services</h2>
+    <ol class="setup-steps">
+      <li>
+        <h3>New Web Service from your repo</h3>
+        <p>Dashboard → <b>New → Web Service</b> → connect the GitHub repo → pick your neuromast repo.</p>
+        <p>Settings: <b>Runtime</b> <code>Node</code>, <b>Build Command</b> <code>npm install &amp;&amp; npm run build:node</code>, <b>Start Command</b> <code>npm start</code>. If you forked the whole Axol repo, set <b>Root Directory</b> to <code>neuromast</code>.</p>
+      </li>
+      <li>
+        <h3>Add a Key Value (Redis) instance</h3>
+        <p>Dashboard → <b>New → Key Value</b>. Pick a region matching your web service's. Render assigns an internal hostname like <code>red-abc123</code>.</p>
+      </li>
+      <li>
+        <h3>Wire Redis into the web service</h3>
+        <p>Web service → <b>Environment → Add Environment Variable</b> → <b>Add from Database</b> → pick the Key Value instance → select <b>Internal Redis URL</b>. Render names it <code>REDIS_URL</code> by default, which is exactly what neuromast's storage factory auto-detects.</p>
+      </li>
+      <li>
+        <h3>Set the remaining env vars</h3>
+        <p>Still in Environment, mark each as a secret:</p>
+        <ul>
+          <li><code>ADAPTER=node</code> — tells Astro to build for Node, not Cloudflare.</li>
+          <li><code>POLL_TOKEN</code> — bearer for <code>/pull</code> + <code>/ack</code>. <code>openssl rand -hex 32</code>.</li>
+          <li><code>SHARED_SECRET</code> <em>(optional)</em> — <code>?key=</code> fallback.</li>
+          <li><code>HOOK_SCHEME_&lt;SOURCE&gt;</code> + <code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source.</li>
+        </ul>
+      </li>
+      <li>
+        <h3>Manual Deploy once to trigger the build</h3>
+        <p>Web service → <b>Manual Deploy → Deploy latest commit</b>. First build takes ~2–3 min (installs deps, runs <code>build:node</code>, starts the Node server).</p>
+      </li>
+      <li>
+        <h3>Probe the endpoints</h3>
+<pre><code><span class="tok-cmd">export</span> AXOL_CLOUD_URL=https://&lt;your-service&gt;.onrender.com
+<span class="tok-cmd">export</span> POLL_TOKEN=<span class="tok-str">'the-bearer-you-set'</span>
+<span class="tok-cmd">export</span> SHARED_SECRET=<span class="tok-str">'the-shared-key-you-set'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-X</span> POST <span class="tok-str">"$AXOL_CLOUD_URL/app/api/hooks/smoke?key=$SHARED_SECRET"</span> \
+  <span class="tok-flag">-H</span> <span class="tok-str">'content-type: application/json'</span> \
+  <span class="tok-flag">-d</span> <span class="tok-str">'{"title":"hello","body":"from render"}'</span></code></pre>
+        <p>If you're on the free tier and the service has been idle, the first request may hang for 20–30 s while Render wakes the dyno. Subsequent requests are instant until the next idle window.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3 · connect the local forwarder</h2>
+<pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
+<span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
+./lateral-line/install.sh</code></pre>
+  </section>
+
+  <section>
+    <h2>day-2 operations</h2>
+
+    <h3>Redeploying</h3>
+    <p><code>git push</code>. Render watches the branch and deploys automatically.</p>
+
+    <h3>Rotating secrets</h3>
+    <p>Dashboard → service → Environment → edit → Save. Render restarts the service on save.</p>
+
+    <h3>Keeping free-tier warm</h3>
+    <p>Render's free web services spin down after 15 min idle. The local forwarder's 15 s polling keeps the service warm during your work day — free-tier idle windows only happen overnight. If you want zero cold starts, upgrade the web service to the $7/mo plan.</p>
+  </section>
+
+  <section>
+    <h2>troubleshooting</h2>
+    <ul class="troubleshooting">
+      <li>
+        <b>Build fails with "Cannot find module"</b>
+        <p>If you forked the whole Axol repo, set <b>Root Directory</b> to <code>neuromast</code>. Without it, Render tries to build from the repo root (no <code>package.json</code>) and fails.</p>
+      </li>
+      <li>
+        <b>Build succeeds but service crashes on start with "Cannot find module '@astrojs/node'"</b>
+        <p>The build ran Cloudflare's adapter by default. Confirm <code>ADAPTER=node</code> is set in Environment, then trigger a new deploy.</p>
+      </li>
+      <li>
+        <b>Service logs show "ECONNREFUSED" to Redis</b>
+        <p>Double-check <code>REDIS_URL</code> is linked to your Key Value instance, and pick the <b>Internal</b> URL (not External) — the external URL has auth requirements the internal one skips.</p>
+      </li>
+      <li>
+        <b><code>401</code> on every request</b>
+        <p><code>POLL_TOKEN</code> or <code>SHARED_SECRET</code> mismatch. Confirm exact values in Environment match the forwarder plist (<code>~/Library/LaunchAgents/com.axol.lateral-line.plist</code>).</p>
+      </li>
+      <li>
+        <b>First request after idle takes 30 s</b>
+        <p>Free-tier cold start. Expected. Upgrade the plan or accept the lag.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+</body>
+</html>

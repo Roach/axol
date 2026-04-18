@@ -16,16 +16,38 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 FORWARDER="$SCRIPT_DIR/lateral-line.sh"
-if [[ ! -x "$FORWARDER" ]]; then
-    echo "error: $FORWARDER not found or not executable" >&2
+if [[ ! -f "$FORWARDER" ]]; then
+    echo "error: $FORWARDER not found" >&2
     exit 1
 fi
+# Ensure the script is executable — zip extraction or re-clones can strip
+# the +x bit on some systems.
+chmod +x "$FORWARDER"
 
 LABEL="com.axol.lateral-line"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LOG="/tmp/axol-lateral-line.log"
+LOG_DIR="$HOME/Library/Logs/Axol"
+LOG="$LOG_DIR/lateral-line.log"
 
-mkdir -p "$(dirname "$PLIST")"
+mkdir -p "$(dirname "$PLIST")" "$LOG_DIR"
+
+# XML-escape values before interpolating into the plist body. Without this,
+# a token containing `]]>`, `<`, `&`, or `"` produces a corrupt plist that
+# launchctl refuses to load — or worse, silently truncates.
+xmlescape() {
+    local s="$1"
+    s="${s//&/&amp;}"
+    s="${s//</&lt;}"
+    s="${s//>/&gt;}"
+    s="${s//\"/&quot;}"
+    s="${s//\'/&apos;}"
+    printf '%s' "$s"
+}
+ESC_LABEL=$(xmlescape "$LABEL")
+ESC_FORWARDER=$(xmlescape "$FORWARDER")
+ESC_CLOUD_URL=$(xmlescape "$AXOL_CLOUD_URL")
+ESC_POLL_TOKEN=$(xmlescape "$AXOL_POLL_TOKEN")
+ESC_LOG=$(xmlescape "$LOG")
 
 # Unload any prior copy so the rewrite takes effect. `launchctl unload`
 # returns non-zero when nothing is loaded — tolerate that.
@@ -39,31 +61,35 @@ cat >"$PLIST" <<PLIST_EOF
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>$LABEL</string>
+    <string>$ESC_LABEL</string>
     <key>Program</key>
-    <string>$FORWARDER</string>
+    <string>$ESC_FORWARDER</string>
     <key>RunAtLoad</key>
     <true/>
     <key>StartInterval</key>
-    <integer>30</integer>
+    <integer>15</integer>
     <key>EnvironmentVariables</key>
     <dict>
       <key>AXOL_CLOUD_URL</key>
-      <string>$AXOL_CLOUD_URL</string>
+      <string>$ESC_CLOUD_URL</string>
       <key>AXOL_POLL_TOKEN</key>
-      <string>$AXOL_POLL_TOKEN</string>
+      <string>$ESC_POLL_TOKEN</string>
       <key>PATH</key>
       <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>$LOG</string>
+    <string>$ESC_LOG</string>
     <key>StandardErrorPath</key>
-    <string>$LOG</string>
+    <string>$ESC_LOG</string>
     <key>ProcessType</key>
     <string>Background</string>
   </dict>
 </plist>
 PLIST_EOF
+
+# The plist contains the bearer token in plaintext — restrict to owner-only
+# read/write so other accounts on the same machine can't exfiltrate it.
+chmod 600 "$PLIST"
 
 launchctl load "$PLIST"
 echo "loaded $LABEL"

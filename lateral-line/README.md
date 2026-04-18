@@ -1,6 +1,6 @@
 # lateral-line — local forwarder
 
-A ~50-line bash script that pulls queued webhooks from `neuromast/` and POSTs each one into Axol's loopback receiver (`127.0.0.1:47329`). Runs every 30 seconds via `launchd`.
+A ~50-line bash script that pulls queued webhooks from `neuromast/` and POSTs each one into Axol's loopback receiver (`127.0.0.1:47329`). Runs every 15 seconds via `launchd`.
 
 Named after the lateral line nerve — the pathway that carries signals from a fish's neuromasts back to the brain.
 
@@ -28,13 +28,13 @@ AXOL_POLL_TOKEN=your-bearer-token \
 ./install.sh
 ```
 
-That renders the plist with absolute paths + your env, drops it into `~/Library/LaunchAgents/com.axol.lateral-line.plist`, and loads it. Re-running replaces the existing install.
+That renders the plist with absolute paths + your env, drops it into `~/Library/LaunchAgents/com.axol.lateral-line.plist` (owner-only `chmod 600` so the bearer token isn't world-readable), runs `chmod +x` on the forwarder script, and loads it. Re-running replaces the existing install.
 
 Verify it's running:
 
 ```sh
 launchctl list | grep lateral-line
-tail -f /tmp/axol-lateral-line.log
+tail -f ~/Library/Logs/Axol/lateral-line.log
 ```
 
 To uninstall:
@@ -45,6 +45,12 @@ rm ~/Library/LaunchAgents/com.axol.lateral-line.plist
 ```
 
 (`com.axol.lateral-line.plist.example` is still in the repo for reference if you'd rather hand-edit.)
+
+## Robustness notes
+
+- **Concurrent-run guard.** The script takes a `flock` (`lateral-line.lock` in the state dir) so overlapping launchd fires don't race on the cursor. macOS doesn't ship `flock(1)` by default — falls back to a noclobber symlink with a 10-minute stale-lock reaper.
+- **Liveness probe.** Before hitting the cloud each tick, the script does a bare TCP connect to `127.0.0.1:47329`; if Axol isn't listening it bails cleanly, leaving items queued for the next run.
+- **Atomic cursor write.** The cursor file is written via a `.tmp` + `mv` so a crash mid-write can't leave it truncated or corrupt. A malformed `nextCursor` from the cloud holds the previous cursor instead of advancing.
 
 ## Manual test
 

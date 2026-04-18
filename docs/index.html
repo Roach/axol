@@ -44,6 +44,27 @@
     padding: 0;
     min-height: 100%;
   }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    /* Near-zero-duration fallback for anything not explicitly handled
+       below. Keeps one cycle so animations that animate TO the final
+       visible state still land there; just does it instantly. Specific
+       rules further down override with explicit safe static defaults for
+       decorative pieces that would otherwise snap to an ugly mid-frame. */
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    /* Ambient character animations have no "final state" — they loop.
+       Kill them entirely so the axolotl is still, not frozen mid-blink. */
+    .stage, .gills, .gills-right, .eyes,
+    .worry-bubbles .bubble,
+    .zs .z {
+      animation: none !important;
+    }
+  }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
@@ -90,7 +111,7 @@
 
   .hero {
     text-align: center;
-    padding: 225px 0 24px;
+    padding: 225px 0 12px;
   }
 
   .stage-wrap {
@@ -105,7 +126,10 @@
     left: 50%;
     bottom: 0;
     transform: translateX(-50%);
-    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+    /* Neutral subtle drop — mirrors the OS window shadow the real app gets
+       for free from its NSWindow, rather than the warm pink glow we had
+       before (which tinted her silhouette). */
+    filter: drop-shadow(0 8px 14px rgba(40, 30, 50, 0.14));
   }
 
   .stage svg {
@@ -209,7 +233,7 @@
   .demo-history .d-row.kind-sparkle .d-icon { color: #D4A017; }
   .demo-history-tail {
     position: absolute;
-    bottom: -6px;
+    bottom: -10px;
     left: 50%;
     width: 10px;
     height: 10px;
@@ -274,7 +298,7 @@
     border: 1.5px solid var(--pink-accent);
   }
   .bubble.urgent::after {
-    bottom: -6px;
+    bottom: -10px;
     width: 11px;
     height: 11px;
     background: #FFEEF5;
@@ -378,7 +402,7 @@
     0%   { opacity: 0;    transform: translate(0, 0)        scale(0.4); }
     15%  { opacity: 0.85; }
     50%  { opacity: 0.85; transform: translate(-2px, -18px) scale(0.95); }
-    85%  { opacity: 0.7;  transform: translate(-6px, -32px) scale(1.05); }
+    85%  { opacity: 0.7;  transform: translate(-10px, -32px) scale(1.05); }
     100% { opacity: 0;    transform: translate(-8px, -40px) scale(1.1); }
   }
   @keyframes worry-rise-c {
@@ -392,7 +416,7 @@
 
   @keyframes bob {
     0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-6px); }
+    50%      { transform: translateY(-10px); }
   }
 
   .stage.hopping svg { animation: hop 0.55s ease-out 2; }
@@ -490,12 +514,117 @@
     margin-top: 24px;
     box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
     border: 1px solid #FBEAF2;
+    scroll-margin-top: 24px;
   }
+
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 32px;
+    /* Hero now has 12px bottom padding; pair it with 20px nav top margin
+       for ≈ 32px above. Nav bottom wins the collapse with the next
+       section's 24px top margin for ≈ 32px below. */
+    margin: 20px auto 32px;
+  }
+  .section-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 4px 2px;
+    text-decoration: none;
+    color: var(--pink-accent);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .section-nav a svg {
+    width: 19px;
+    height: 19px;
+    color: var(--pink-accent);
+    transition: transform 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  .section-nav a:hover svg { transform: translateY(-1px); }
+
+  /* Small anchor glyph next to each <h2> — pairs visually with the nav. */
+  .heading-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin-right: 9px;
+    vertical-align: -4px;
+    color: var(--pink-accent);
+  }
+  .heading-icon svg { width: 100%; height: 100%; display: block; }
 
   section h2 {
     font-size: 22px;
     margin: 0 0 14px;
     color: var(--pink-accent);
+  }
+  section a {
+    color: var(--pink-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: rgba(214, 69, 122, 0.35);
+  }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  /* Size-mode cards in the #modes section */
+  .modes-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 14px 0 4px;
+  }
+  .mode-card {
+    border: 1px solid #F3DDE9;
+    border-radius: 14px;
+    padding: 16px 16px 14px;
+    background: linear-gradient(180deg, #FFF7FB 0%, #FFFFFF 85%);
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+  /* Fixed-height preview slot so the three SVGs — sized at 0.5× of each
+     mode's real pixel dimensions — can sit on a common vertical baseline.
+     Width/height on the <svg> elements themselves determine the actual
+     rendered size; the box just centers them. */
+  .mode-preview {
+    height: 190px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mode-preview svg { display: block; }
+  .mode-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 2px;
+    color: var(--ink);
+    letter-spacing: 0.2px;
+  }
+  .mode-card .dims {
+    font-size: 12px;
+    color: #A89CA3;
+    margin: 0 0 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .mode-card p {
+    font-size: 13px;
+    color: #6E5F6B;
+    line-height: 1.5;
+    margin: 0;
+  }
+  @media (max-width: 760px) {
+    .modes-row { grid-template-columns: 1fr; }
+    .mode-preview { height: 200px; }
   }
 
   /* Hero pitch cards */
@@ -504,7 +633,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     max-width: 880px;
-    margin: 48px auto 0;
+    margin: 32px auto 0;
     text-align: left;
   }
   .pitch-card {
@@ -837,6 +966,434 @@
     .flow-arrow { transform: rotate(90deg); }
   }
 
+  /* Concept glyphs — neuromast (dot + ripples) vs lateral line (row of
+     dots along a nerve). Shared via SVG symbols at the top of <body>. */
+  .gloss-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin: 22px 0 8px;
+  }
+  .gloss-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 4px 4px;
+  }
+  .gloss-icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pink-accent);
+  }
+  .gloss-icon svg { width: 100%; height: 100%; display: block; }
+  .gloss-body b {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .gloss-body span {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin-top: 2px;
+  }
+
+  /* Lateral-line mini flow — compact horizontal summary that previews
+     the full animated diagram on the dedicated page. Three stages pulse
+     in sequence, arrows flash between them, and a bubble pops at Axol. */
+  .ll-flow {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 10px;
+    margin: 32px 0 6px;
+    flex-wrap: wrap;
+    /* Own stacking context so .ll-arrow's negative z-index stays local. */
+    isolation: isolate;
+  }
+  .ll-node {
+    flex: 1 1 0;
+    min-width: 120px;
+    max-width: 180px;
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 12px 12px;
+    text-align: center;
+    color: var(--ink);
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+    animation: ll-node-pulse 10s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+  /* 10s cycle with a two-notification narrative:
+     webhook sends 2 → both ride arrow-1 → neuromast queues them (2-dot
+     indicator) → lateral fetches → neuromast returns 2 → lateral forwards
+     each to axol in sequence, with a brief pause and two bubbles. */
+  .ll-flow.remote-flow .ll-node:nth-child(1) { animation-name: ll-webhook-pulse; }
+  .ll-flow.remote-flow .ll-node:nth-child(3) { animation-name: ll-neuromast-pulse; }
+  .ll-flow.remote-flow .ll-node:nth-child(5) { animation-name: ll-lateral-pulse; }
+  .ll-flow.remote-flow .ll-node:nth-child(7) { animation-name: ll-axol-pulse; }
+
+  @keyframes ll-webhook-pulse {
+    0%, 3.5%, 7.5%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* pulse once representing a burst of two notifications at t=0.5s */
+    5%, 6% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+
+  @keyframes ll-neuromast-pulse {
+    0%, 21%, 27%, 41%, 47%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* both notifications received + queued (t≈2.3s) */
+    23%, 25% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    /* serving response (t≈4.3s) */
+    43%, 45% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+
+  @keyframes ll-lateral-pulse {
+    0%, 31%, 37%, 54%, 60%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* fetch send (t≈3.3s) */
+    33%, 35% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    /* response (2 items) received (t≈5.6s) */
+    56%, 58% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+
+  @keyframes ll-axol-pulse {
+    0%, 65%, 71%, 85%, 91%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* first delivery (t≈6.7s) */
+    67%, 69% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    /* second delivery (t≈8.7s) */
+    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+
+  .ll-node .ll-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    margin-bottom: 8px;
+  }
+  .ll-node .ll-icon svg { width: 26px; height: 26px; }
+  .ll-node .ll-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--pink-accent);
+  }
+  .ll-node .ll-sub {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+
+  @keyframes ll-node-pulse {
+    0%, 15%, 100% {
+      border-color: #F3DDE9;
+      background: #FAF2F7;
+      box-shadow: none;
+    }
+    4%, 11% {
+      border-color: var(--pink-accent);
+      background: #FFF4FA;
+      box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12);
+    }
+  }
+
+  .ll-arrow {
+    position: relative;
+    z-index: 0;
+    align-self: center;
+    width: 48px;
+    height: 22px;
+    flex: 0 0 auto;
+    /* overflow: visible — lets the dots visually extend across the flex
+       gap and land on the adjacent node's edge, not the arrow's edge.
+       z-index: 0 keeps the dots behind the nodes when they extend into
+       a node's territory (dots absorbed into the box visual). */
+  }
+  .ll-arrow .arrow-dot {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 9px;
+    height: 9px;
+    margin-top: -4.5px;
+    border-radius: 50%;
+    background: var(--pink-accent);
+    opacity: 0;
+  }
+
+  /* All arrow-dot animations share the 10s master cycle and use absolute
+     keyframe percentages (no animation-delay), so they lock to the node
+     pulses and queue indicators. */
+  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-1     { animation: arrow1a-fwd 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-2     { animation: arrow1b-fwd 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-2 .arrow-dot.fetch     { animation: arrow2-fetch-rev 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-1 { animation: arrow2a-response-fwd 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-2 { animation: arrow2b-response-fwd 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-1     { animation: arrow3a-fwd 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-2     { animation: arrow3b-fwd 10s linear infinite; }
+
+  /* Dot 1 (first notification): webhook → neuromast, visible 8–14% */
+  @keyframes arrow1a-fwd {
+    0%, 7%   { left: -80px;             opacity: 0; }
+    9%       { left: -60px;             opacity: 1; }
+    13%      { left: calc(100% + 60px); opacity: 1; }
+    14%      { left: calc(100% + 80px); opacity: 0; }
+    100%     { left: calc(100% + 80px); opacity: 0; }
+  }
+  /* Dot 2 (second notification): staggered, visible 13–19% */
+  @keyframes arrow1b-fwd {
+    0%, 12%  { left: -80px;             opacity: 0; }
+    14%      { left: -60px;             opacity: 1; }
+    18%      { left: calc(100% + 60px); opacity: 1; }
+    19%      { left: calc(100% + 80px); opacity: 0; }
+    100%     { left: calc(100% + 80px); opacity: 0; }
+  }
+  /* Fetch (faint): lateral-line → neuromast, visible 33–39% */
+  @keyframes arrow2-fetch-rev {
+    0%, 32%  { left: calc(100% + 80px); opacity: 0; }
+    34%      { left: calc(100% + 60px); opacity: 0.3; }
+    38%      { left: -60px;             opacity: 0.3; }
+    40%      { left: -80px;             opacity: 0; }
+    100%     { left: -80px;             opacity: 0; }
+  }
+  /* Response 1: neuromast → lateral-line, full opacity, visible 45–51% */
+  @keyframes arrow2a-response-fwd {
+    0%, 44%  { left: -80px;             opacity: 0; }
+    46%      { left: -60px;             opacity: 1; }
+    50%      { left: calc(100% + 60px); opacity: 1; }
+    51%      { left: calc(100% + 80px); opacity: 0; }
+    100%     { left: calc(100% + 80px); opacity: 0; }
+  }
+  /* Response 2: visible 49–55%, staggered behind response 1 */
+  @keyframes arrow2b-response-fwd {
+    0%, 48%  { left: -80px;             opacity: 0; }
+    50%      { left: -60px;             opacity: 1; }
+    54%      { left: calc(100% + 60px); opacity: 1; }
+    55%      { left: calc(100% + 80px); opacity: 0; }
+    100%     { left: calc(100% + 80px); opacity: 0; }
+  }
+  /* Delivery 1: lateral → axol, visible 61–67%, splashes at axol center */
+  @keyframes arrow3a-fwd {
+    0%, 60%  { left: -80px;             opacity: 0;   transform: scale(1); }
+    62%      { left: -60px;             opacity: 1;   transform: scale(1); }
+    66%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
+    67%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
+    69%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+  }
+  /* Delivery 2: visible 81–87%, splashes at axol center */
+  @keyframes arrow3b-fwd {
+    0%, 80%  { left: -80px;             opacity: 0;   transform: scale(1); }
+    82%      { left: -60px;             opacity: 1;   transform: scale(1); }
+    86%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
+    87%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
+    89%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+  }
+
+  /* Queue indicator — two small dots in neuromast's top-right corner,
+     each fading in as its notification arrives and fading out once the
+     response carries it back down. */
+  .ll-queue {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    display: flex;
+    gap: 4px;
+    pointer-events: none;
+  }
+  .ll-queue-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--pink-accent);
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  /* Neuromast queue — fills as each notification lands, empties as each
+     response dot carries it back down. */
+  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-neu-1 10s ease-in-out infinite; }
+  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-neu-2 10s ease-in-out infinite; }
+  @keyframes ll-queue-neu-1 {
+    0%, 13%   { opacity: 0; transform: scale(0.4); }
+    15%       { opacity: 1; transform: scale(1); }
+    49%       { opacity: 1; transform: scale(1); }
+    51%       { opacity: 0; transform: scale(0.4); }
+    100%      { opacity: 0; transform: scale(0.4); }
+  }
+  @keyframes ll-queue-neu-2 {
+    0%, 18%   { opacity: 0; transform: scale(0.4); }
+    20%       { opacity: 1; transform: scale(1); }
+    53%       { opacity: 1; transform: scale(1); }
+    55%       { opacity: 0; transform: scale(0.4); }
+    100%      { opacity: 0; transform: scale(0.4); }
+  }
+
+  /* Lateral-line queue — fills as each response arrives, empties as each
+     delivery dot heads out to Axol. Mirrors the real at-least-once buffer
+     that Axol's own throttling then paces out into bubbles. */
+  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(1) { animation: ll-queue-lat-1 10s ease-in-out infinite; }
+  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(2) { animation: ll-queue-lat-2 10s ease-in-out infinite; }
+  @keyframes ll-queue-lat-1 {
+    /* response 1 arrives at 51%; delivery 1 departs at 62% */
+    0%, 51%   { opacity: 0; transform: scale(0.4); }
+    53%       { opacity: 1; transform: scale(1); }
+    61%       { opacity: 1; transform: scale(1); }
+    63%       { opacity: 0; transform: scale(0.4); }
+    100%      { opacity: 0; transform: scale(0.4); }
+  }
+  @keyframes ll-queue-lat-2 {
+    /* response 2 arrives at 55%; delivery 2 departs at 82% (held through
+       bubble 1 window to show axol-side throttling) */
+    0%, 55%   { opacity: 0; transform: scale(0.4); }
+    57%       { opacity: 1; transform: scale(1); }
+    81%       { opacity: 1; transform: scale(1); }
+    83%       { opacity: 0; transform: scale(0.4); }
+    100%      { opacity: 0; transform: scale(0.4); }
+  }
+
+  /* Mini bubble — pops INSIDE the last node, above the axolotl icon,
+     mirroring how the real bubble sits above her head in her own
+     container. The node gets extra top padding so the bubble has room
+     without spilling out of the stage. */
+  .ll-node.ll-axol {
+    padding-top: 44px;
+  }
+  .ll-bubble {
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    transform: translate(-50%, 4px) scale(0.94);
+    transform-origin: center bottom;
+    opacity: 0;
+    background: white;
+    border: 1.5px solid var(--pink-3);
+    border-radius: 10px;
+    padding: 5px 10px 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    animation-duration: 10s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-delay: 0s;
+    pointer-events: none;
+  }
+  .ll-bubble::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -10px;
+    width: 9px;
+    height: 9px;
+    background: white;
+    border-right: 1.5px solid var(--pink-3);
+    border-bottom: 1.5px solid var(--pink-3);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  /* Bubble 1 — the first delivery. Visible 68–76% of cycle (page
+     t≈6.8–7.6s), dismisses before bubble 2 appears. */
+  .remote-flow .ll-bubble.bubble-1 { animation-name: ll-bubble-pop-1; }
+  @keyframes ll-bubble-pop-1 {
+    0%, 66%   { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+    68%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    76%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    78%       { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
+    100%      { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+  }
+  /* Bubble 2 — the second delivery. Visible 88–96% of cycle after a
+     short gap, then dismisses before the cycle restarts. */
+  .remote-flow .ll-bubble.bubble-2 { animation-name: ll-bubble-pop-2; }
+  @keyframes ll-bubble-pop-2 {
+    0%, 86%   { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+    88%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    96%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    98%       { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
+    100%      { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+  }
+
+  /* Local flow — a simpler 5s cycle showing a single local POST to the
+     loopback port. Two nodes, one dot, one bubble; no fetch/queue. */
+  .local-flow {
+    /* Override the shared .ll-flow margin so the demo breathes between
+       the paragraph above and the <pre> below it. */
+    margin: 26px 0 28px;
+  }
+  .local-flow .ll-node { animation-duration: 5s; }
+  .local-flow .ll-node:nth-child(1) { animation-name: ll-local-source-pulse; }
+  .local-flow .ll-node:nth-child(3) { animation-name: ll-local-axol-pulse; }
+  .local-flow .ll-arrow .arrow-dot { animation: arrow-loc-fwd 5s linear infinite; }
+  .local-flow .ll-bubble.bubble-loc {
+    animation-name: ll-bubble-pop-loc;
+    animation-duration: 5s;
+  }
+
+  @keyframes ll-local-source-pulse {
+    0%, 8%, 16%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    10%, 14% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  @keyframes ll-local-axol-pulse {
+    0%, 30%, 38%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    32%, 36% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  /* One dot — emerges from the local tool's center, crosses the gap to
+     axol, splashes at axol's center (visible 18–30%). */
+  @keyframes arrow-loc-fwd {
+    0%, 17%  { left: -80px;             opacity: 0;   transform: scale(1); }
+    19%      { left: -60px;             opacity: 1;   transform: scale(1); }
+    28%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
+    30%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
+    32%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+  }
+  /* Bubble — appears just after axol pulses, held long (local flow has
+     no throttling to stage, so the demo just lingers), dismisses before
+     the cycle restarts. */
+  @keyframes ll-bubble-pop-loc {
+    0%, 38%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+    40%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    90%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    94%      { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
+    100%     { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+  }
+
+  @media (max-width: 520px) {
+    .ll-flow { flex-direction: column; gap: 6px; }
+    .ll-node { max-width: none; }
+    .ll-arrow { transform: rotate(90deg); align-self: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ll-node, .ll-arrow, .ll-bubble, .arrow-dot, .ll-queue-dot { animation: none; }
+    .ll-bubble.bubble-1 { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .ll-bubble.bubble-2 { opacity: 0; }
+    .ll-bubble.bubble-loc { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .arrow-dot { opacity: 0.55; left: 50%; margin-left: -4.5px; transform: none; }
+    .ll-queue-dot { opacity: 0.8; transform: scale(1); }
+  }
+
   footer {
     text-align: center;
     color: rgba(31, 58, 86, 0.75);
@@ -845,6 +1402,22 @@
   }
   footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
   footer a:hover { opacity: 0.7; }
+  .gh-mark {
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+    margin-right: 3px;
+  }
+
+  /* Compact envelope-flow SVG used on the homepage plugins teaser. */
+  .envelope-flow-mini {
+    margin: 22px 0 4px;
+  }
+  .envelope-flow-mini svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
 
   @media (max-width: 520px) {
     h1 { font-size: 40px; }
@@ -855,6 +1428,52 @@
 </style>
 </head>
 <body>
+
+<!-- Concept glyphs: neuromast (single sensor + ripples) and lateral line
+     (row of sensors along a nerve). Referenced from the mini-flow and
+     the remote-alerts glossary. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="glyph-neuromast" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+    <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.25" opacity="0.55"/>
+    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1" opacity="0.28"/>
+  </symbol>
+  <symbol id="glyph-lateral-line" viewBox="0 0 24 24">
+    <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.25" opacity="0.45"/>
+    <circle cx="4"  cy="12" r="1.6" fill="currentColor" opacity="0.3"/>
+    <circle cx="10" cy="12" r="2.2" fill="currentColor" opacity="0.6"/>
+    <circle cx="16" cy="12" r="2.8" fill="currentColor"/>
+    <circle cx="22" cy="12" r="1.3" fill="currentColor" opacity="0.35"/>
+  </symbol>
+  <!-- Section glyphs (nav + h2 anchors) — Bootstrap Icons (MIT). -->
+  <symbol id="icon-install" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+  </symbol>
+  <symbol id="icon-alerts" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/>
+  </symbol>
+  <symbol id="icon-remote" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707m2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708m5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708m2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0"/>
+  </symbol>
+  <symbol id="icon-plugins" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M6 0a.5.5 0 0 1 .5.5V3h3V.5a.5.5 0 0 1 1 0V3h1a.5.5 0 0 1 .5.5v3A3.5 3.5 0 0 1 8.5 10c-.002 0 .002 2.486 0 2.5V15.5a.5.5 0 0 1-1 0V13h-.002L7.5 15.5a.5.5 0 0 1-1 0v-3h-.002L6.5 10A3.5 3.5 0 0 1 3 6.5v-3a.5.5 0 0 1 .5-.5h1V.5A.5.5 0 0 1 5 0zM4 4v2.5A2.5 2.5 0 0 0 6.5 9h3A2.5 2.5 0 0 0 12 6.5V4z"/>
+  </symbol>
+  <symbol id="icon-modes" viewBox="0 0 16 16" fill="currentColor">
+    <!-- Three rectangles, baseline-aligned and decreasing in size, to
+         telegraph "three window sizes". Matches full → mini → micro. -->
+    <rect x="1"  y="2"  width="5.5" height="12" rx="1.2"/>
+    <rect x="8"  y="6"  width="4"   height="8"  rx="1"/>
+    <rect x="13" y="10" width="2.5" height="4"  rx="0.8"/>
+  </symbol>
+  <symbol id="icon-changelog" viewBox="0 0 16 16" fill="currentColor">
+    <!-- Bootstrap Icons "journal-text" (MIT) — a notebook with lines. -->
+    <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>
+    <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2"/>
+    <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/>
+  </symbol>
+</svg>
+
 <div class="wrap">
 
   <header class="hero">
@@ -887,13 +1506,13 @@
           <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
           <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
         </g>
-        <ellipse cx="110" cy="110" rx="72" ry="62" fill="url(#bodyGrad)" />
-        <ellipse cx="110" cy="125" rx="50" ry="38" fill="url(#bellyGrad)" />
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
         <g class="arm arm-left">
-          <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(-20 58 155)" />
+          <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
         </g>
         <g class="arm arm-right">
-          <ellipse cx="162" cy="155" rx="10" ry="14" fill="#FFA6CF" transform="rotate(20 162 155)" />
+          <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
         </g>
         <g class="eyes">
           <circle cx="88"  cy="105" r="7" fill="#2D2533" />
@@ -958,18 +1577,162 @@
     </div>
   </header>
 
-  <section>
-    <h2>install</h2>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#install"><svg aria-hidden="true"><use href="#icon-install"/></svg>install</a>
+    <a href="#modes"><svg aria-hidden="true"><use href="#icon-modes"/></svg>modes</a>
+    <a href="#alerts"><svg aria-hidden="true"><use href="#icon-alerts"/></svg>alerts</a>
+    <a href="#remote"><svg aria-hidden="true"><use href="#icon-remote"/></svg>remote</a>
+    <a href="#plugins"><svg aria-hidden="true"><use href="#icon-plugins"/></svg>plugins</a>
+    <a href="changelog.html"><svg aria-hidden="true"><use href="#icon-changelog"/></svg>changelog</a>
+  </nav>
+
+  <section id="install">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>install</h2>
     <p>On macOS with the Xcode command line tools:</p>
 <pre><code class="lang-sh">git clone https://github.com/Roach/axol.git
-cd axol
+cd axol/axol
 ./build.sh
 ./axol</code></pre>
   </section>
 
-  <section>
-    <h2>send her alerts</h2>
+  <!-- Reusable miniature axolotl for the size-mode previews. Shapes + colors
+       mirror AxolCharacterView.buildCharacter() in the Swift source —
+       3 gill tufts on each side, pink body with belly, dark eyes with
+       white highlights, blush cheeks at 45% opacity, curved smile. Drawn
+       in an 80×80 space so the previews can drop her in at any scale via
+       <use href="#mode-axol" transform="..."/>. -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="mode-axol" viewBox="0 0 80 80">
+      <!-- left gills -->
+      <ellipse cx="19" cy="25" rx="6"  ry="3.5" fill="#E066A0" transform="rotate(-35 19 25)"/>
+      <ellipse cx="15" cy="34" rx="6.5" ry="3.8" fill="#E066A0" transform="rotate(-8 15 34)"/>
+      <ellipse cx="18" cy="44" rx="7.5" ry="4.2" fill="#BF4F85" transform="rotate(22 18 44)"/>
+      <!-- right gills -->
+      <ellipse cx="61" cy="25" rx="6"  ry="3.5" fill="#E066A0" transform="rotate(35 61 25)"/>
+      <ellipse cx="65" cy="34" rx="6.5" ry="3.8" fill="#E066A0" transform="rotate(8 65 34)"/>
+      <ellipse cx="62" cy="44" rx="7.5" ry="4.2" fill="#BF4F85" transform="rotate(-22 62 44)"/>
+      <!-- body + belly -->
+      <ellipse cx="40" cy="40" rx="27" ry="23" fill="#F29BC5"/>
+      <ellipse cx="40" cy="45" rx="18" ry="14" fill="#F0B5D3"/>
+      <!-- arms -->
+      <ellipse cx="21" cy="57" rx="3.7" ry="5.1" fill="#F29BC5" transform="rotate(-20 21 57)"/>
+      <ellipse cx="59" cy="57" rx="3.7" ry="5.1" fill="#F29BC5" transform="rotate(20 59 57)"/>
+      <!-- eyes with highlights -->
+      <circle cx="32" cy="38" r="2.5" fill="#2D2533"/>
+      <circle cx="48" cy="38" r="2.5" fill="#2D2533"/>
+      <circle cx="32.8" cy="36.9" r="0.9" fill="#FFFFFF"/>
+      <circle cx="48.8" cy="36.9" r="0.9" fill="#FFFFFF"/>
+      <!-- cheeks -->
+      <circle cx="28" cy="45" r="2.5" fill="#FF7AA3" opacity="0.45"/>
+      <circle cx="52" cy="45" r="2.5" fill="#FF7AA3" opacity="0.45"/>
+      <!-- smile -->
+      <path d="M 36 47 Q 40 50 44 47" stroke="#7A2D4D" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
+  <section id="modes">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-modes"/></svg></span>size modes</h2>
+    <p>⌘-click her to cycle through three sizes: <b>full → mini → micro → full</b>. The current mode persists across launches.</p>
+    <div class="modes-row">
+      <!-- All three previews share the same scale (1 svg unit = 0.5 px of
+           the actual mode dimension) so their relative sizes read truthfully
+           at a glance. Only the mode's content is drawn — no outer "window"
+           outline, since the card's own border already frames each preview.
+           Bubbles + tails are single paths so the stroke flows around the
+           tail instead of running behind it. The axolotl <use> inside each
+           SVG is oversized slightly — real Axol clips her gills against the
+           window edges anyway, so cropping here mirrors what users see. -->
+
+      <!-- Full — 300×360 in real pixels, rendered at 150×180. -->
+      <div class="mode-card">
+        <div class="mode-preview" aria-hidden="true">
+          <svg width="150" height="180" viewBox="0 0 300 360">
+            <path d="M 55 80 H 245 A 12 12 0 0 1 257 92 V 122 A 12 12 0 0 1 245 134 H 162 L 150 152 L 138 134 H 55 A 12 12 0 0 1 43 122 V 92 A 12 12 0 0 1 55 80 Z"
+                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="2"/>
+            <text x="145" y="108" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="18" font-weight="700" fill="#2D2533">main</text>
+            <text x="145" y="128" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="16" fill="#6E5F6B">CI passed</text>
+            <use href="#mode-axol" x="36" y="115" width="228" height="228"/>
+          </svg>
+        </div>
+        <h3>full</h3>
+        <div class="dims">~300×360</div>
+        <p>Default. Bubble above her head; worry bubbles for unresolved alerts.</p>
+      </div>
+
+      <!-- Mini — 290×80 in real pixels, rendered at 145×40. -->
+      <div class="mode-card">
+        <div class="mode-preview" aria-hidden="true">
+          <svg width="145" height="40" viewBox="0 0 290 80">
+            <path d="M 16 16 H 180 A 10 10 0 0 1 190 26 V 37 L 202 40 L 190 43 V 54 A 10 10 0 0 1 180 64 H 16 A 10 10 0 0 1 6 54 V 26 A 10 10 0 0 1 16 16 Z"
+                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="2"/>
+            <text x="98" y="37" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" fill="#2D2533">main</text>
+            <text x="98" y="54" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#6E5F6B">CI passed</text>
+            <use href="#mode-axol" x="210" y="-8" width="92" height="92"/>
+            <circle cx="270" cy="18" r="9" fill="#4A90E2"/>
+            <text x="270" y="21.5" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#FFFFFF">2</text>
+          </svg>
+        </div>
+        <h3>mini</h3>
+        <div class="dims">62×56 → 290×80 with a bubble</div>
+        <p>Side bubble on her left; blue count badge on her gill.</p>
+      </div>
+
+      <!-- Micro — 48×48 in real pixels, rendered at 24×24. -->
+      <div class="mode-card">
+        <div class="mode-preview" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 48 48">
+            <use href="#mode-axol" x="-4" y="-2" width="56" height="56"/>
+            <rect x="1" y="4" width="16" height="11" rx="5.5" fill="#D6457A"/>
+            <text x="9" y="12.5" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" font-weight="700" fill="#FFFFFF">3</text>
+          </svg>
+        </div>
+        <h3>micro</h3>
+        <div class="dims">48×48</div>
+        <p>Static character + count badge.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="alerts">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>send her alerts</h2>
     <p>Axol listens on <code>127.0.0.1:47329</code>. Anything you can <code>curl</code> can talk to her — post an envelope from a script, a Makefile, a CI step:</p>
+
+    <div class="ll-flow local-flow" aria-label="Local alert flow">
+      <div class="ll-node">
+        <span class="ll-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1.5 1.5v7a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.5-.5H2a.5.5 0 0 0-.5.5m1.854 1.646a.5.5 0 1 0-.708.708L4.293 8.5l-1.647 1.646a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2zM7 10.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5"/></svg>
+        </span>
+        <span class="ll-label">local tool</span>
+        <span class="ll-sub">curl · POST</span>
+      </div>
+      <span class="ll-arrow arrow-loc" aria-hidden="true">
+        <span class="arrow-dot"></span>
+      </span>
+      <div class="ll-node ll-axol">
+        <div class="ll-bubble bubble-loc">ci-bot · build passed</div>
+        <span class="ll-icon" aria-hidden="true">
+          <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+            <defs>
+              <radialGradient id="llBodyLoc" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#FFC9E2" />
+                <stop offset="100%" stop-color="#FFA6CF" />
+              </radialGradient>
+            </defs>
+            <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+            <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+            <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+            <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+            <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+            <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+            <circle cx="132" cy="105" r="7" fill="#2D2533" />
+            <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="ll-label">axol</span>
+        <span class="ll-sub">loopback :47329</span>
+      </div>
+    </div>
+
 <pre><code class="lang-sh">curl -s -X POST http://127.0.0.1:47329/ \
   -H 'Content-Type: application/json' \
   -d '{
@@ -982,94 +1745,207 @@ cd axol
     <p>Required field: <code>title</code>. Priority <code>high</code> / <code>urgent</code> floats worry bubbles above her head; <code>urgent</code> also pins the speech bubble open until you handle it. Actions are a closed set — <code>focus-pid</code>, <code>open-url</code>, <code>reveal-file</code>, <code>noop</code> — so there's no shell execution path.</p>
   </section>
 
-  <section>
-    <h2>lightweight plugins</h2>
+  <section id="remote">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-remote"/></svg></span>remote alerts <span class="pill">optional</span></h2>
+    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she can also pick up alerts through a dangling antenna called the <b>lateral line</b>: a signed webhook endpoint in the cloud plus a 60-line bash forwarder that fetches queued alerts and posts them to the loopback port on a 15-second tick.</p>
+
+    <div class="ll-flow remote-flow" aria-label="Lateral-line data flow">
+      <div class="ll-node">
+        <span class="ll-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+        </span>
+        <span class="ll-label">webhook</span>
+        <span class="ll-sub">signed POST</span>
+      </div>
+      <span class="ll-arrow arrow-1" aria-hidden="true">
+        <span class="arrow-dot dot-1"></span>
+        <span class="arrow-dot dot-2"></span>
+      </span>
+      <div class="ll-node">
+        <span class="ll-queue" aria-hidden="true">
+          <span class="ll-queue-dot"></span>
+          <span class="ll-queue-dot"></span>
+        </span>
+        <span class="ll-icon" aria-hidden="true">
+          <svg><use href="#glyph-neuromast"/></svg>
+        </span>
+        <span class="ll-label">neuromast</span>
+        <span class="ll-sub">signed intake</span>
+      </div>
+      <span class="ll-arrow arrow-2" aria-hidden="true">
+        <span class="arrow-dot fetch"></span>
+        <span class="arrow-dot response response-1"></span>
+        <span class="arrow-dot response response-2"></span>
+      </span>
+      <div class="ll-node">
+        <span class="ll-queue" aria-hidden="true">
+          <span class="ll-queue-dot"></span>
+          <span class="ll-queue-dot"></span>
+        </span>
+        <span class="ll-icon" aria-hidden="true">
+          <svg><use href="#glyph-lateral-line"/></svg>
+        </span>
+        <span class="ll-label">lateral line</span>
+        <span class="ll-sub">local forwarder</span>
+      </div>
+      <span class="ll-arrow arrow-3" aria-hidden="true">
+        <span class="arrow-dot dot-1"></span>
+        <span class="arrow-dot dot-2"></span>
+      </span>
+      <div class="ll-node ll-axol">
+        <div class="ll-bubble bubble-1">main · CI passed</div>
+        <div class="ll-bubble bubble-2">feat/nav · review</div>
+        <span class="ll-icon" aria-hidden="true">
+          <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+            <defs>
+              <radialGradient id="llBody" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#FFC9E2" />
+                <stop offset="100%" stop-color="#FFA6CF" />
+              </radialGradient>
+            </defs>
+            <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+            <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+            <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+            <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+            <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+            <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+            <circle cx="132" cy="105" r="7" fill="#2D2533" />
+            <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="ll-label">axol</span>
+        <span class="ll-sub">speech bubble</span>
+      </div>
+    </div>
+
+    <div class="gloss-grid">
+      <div class="gloss-item">
+        <span class="gloss-icon" aria-hidden="true"><svg><use href="#glyph-neuromast"/></svg></span>
+        <div class="gloss-body">
+          <b>neuromast</b>
+          <span>one signed cloud endpoint that catches a webhook and parks it in a queue. Scales to many — one per source or mount path.</span>
+        </div>
+      </div>
+      <div class="gloss-item">
+        <span class="gloss-icon" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>
+        <div class="gloss-body">
+          <b>lateral line</b>
+          <span>the local forwarder on your Mac — polls every neuromast, hands each body to Axol's loopback port, acks on delivery.</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:32px; text-align:center;">
+      <a class="cta" href="remote-alerts.html">Set up remote alerts →</a>
+    </p>
+  </section>
+
+  <section id="plugins">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-plugins"/></svg></span>plugins <span class="pill">optional</span></h2>
     <p>Adapters are JSON files that translate a third-party payload into Axol's envelope. Drop one into <code>~/Library/Application Support/Axol/adapters/</code> and anything that POSTs JSON to <code>localhost:47329</code> can talk to her — no code required.</p>
 
-    <div class="flow">
-      <div class="flow-step">
-        <b>incoming</b>
-        <div>
-          <p class="desc">Whatever JSON your tool already emits. GitHub sends this to a webhook on every workflow run.</p>
-<pre><code class="lang-json">{
-  "workflow_run": {
-    "conclusion":  "failure",
-    "head_branch": "main",
-    "html_url":    "https://github.com/.../runs/42"
-  }
-}</code></pre>
-        </div>
-      </div>
-      <div class="flow-arrow">↓</div>
-      <div class="flow-step">
-        <b>adapter</b>
-        <div>
-          <p class="desc"><code>match</code> picks the adapter. <code>switch</code> + <code>cases</code> choose a template. <code>{{…}}</code> placeholders are filled from the payload.</p>
-<pre><code class="lang-json">{
-  "match":  { "field": "workflow_run", "exists": true },
-  "switch": "workflow_run.conclusion",
-  "cases": {
-    "failure": {
-      "title":    "{{workflow_run.head_branch}}",
-      "body":     "CI failed",
-      "priority": "urgent",
-      "icon":     "github",
-      "actions":  [{ "type": "open-url",
-                     "url":  "{{workflow_run.html_url}}" }]
-    }
-  }
-}</code></pre>
-        </div>
-      </div>
-      <div class="flow-arrow">↓</div>
-      <div class="flow-step">
-        <b>envelope</b>
-        <div>
-          <p class="desc">Axol's common shape. Any payload that reaches the bubble goes through this — adapters can't smuggle in unknown action types or shell commands.</p>
-<pre><code class="lang-json">{
-  "title":    "main",
-  "body":     "CI failed",
-  "priority": "urgent",
-  "icon":     "github",
-  "actions":  [{ "type": "open-url",
-                 "url":  "https://github.com/.../runs/42" }]
-}</code></pre>
-        </div>
-      </div>
-      <div class="flow-arrow">↓</div>
-      <div class="flow-step">
-        <b>bubble</b>
-        <div>
-          <p class="desc">Urgent bubbles pin open until clicked. Clicking runs the first action — here, opening the workflow run in the browser.</p>
-          <div class="bubble-static kind-github">
-            <span class="btitle"><span class="bicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg></span>main</span>
-            <span class="bbody">CI failed</span>
-          </div>
-        </div>
-      </div>
+    <div class="envelope-flow-mini" role="img" aria-label="Multiple payload shapes converge through an adapter, become an envelope, and render as a speech bubble above Axol.">
+      <svg viewBox="0 0 760 170" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="efmBg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0"   stop-color="#FFF7FB" />
+            <stop offset="0.5" stop-color="#FFEAF3" />
+            <stop offset="1"   stop-color="#FFF7FB" />
+          </linearGradient>
+          <linearGradient id="efmEnv" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFFFFF" />
+            <stop offset="1" stop-color="#FFE5F0" />
+          </linearGradient>
+          <radialGradient id="efmAxol" cx="50%" cy="40%" r="60%">
+            <stop offset="0%"   stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <marker id="efmArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+          </marker>
+          <filter id="efmShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#D6457A" flood-opacity="0.15" />
+          </filter>
+        </defs>
+
+        <rect x="0" y="0" width="760" height="170" rx="18" fill="url(#efmBg)" />
+
+        <!-- 2 raw payload shapes on the left — no labels, just icons -->
+        <g transform="translate(70,55)" filter="url(#efmShadow)">
+          <polygon points="0,-18 15.6,-9 15.6,9 0,18 -15.6,9 -15.6,-9" fill="#2D2533" />
+          <svg x="-8" y="-8" width="16" height="16" viewBox="0 0 16 16" fill="#FFFFFF">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+          </svg>
+        </g>
+        <g transform="translate(70,115)" filter="url(#efmShadow)">
+          <circle r="18" fill="#D97757" />
+          <svg x="-9" y="-9" width="18" height="18" viewBox="0 0 257 257" fill="#FFFFFF">
+            <path d="M50.2162 170.973L100.762 142.62L101.608 140.148L100.762 138.78H98.2906L89.8332 138.26L61.0578 137.48L36.1158 136.44L11.9538 135.14L5.8722 133.84L0.1818 126.374L0.7618 122.637L5.8722 119.213L13.1854 119.854L29.3182 120.954L53.4802 122.637L70.994 123.677L96.9906 126.374H101.088L101.672 124.717L100.242 123.677L99.1364 122.637L73.8974 105.622L46.544 87.5083L32.2024 77.0963L24.4578 71.8419L20.567 66.9015L18.889 56.1663L25.8746 48.4795L35.2394 49.1255L37.6302 49.7715L47.142 57.072L67.4492 72.741L94.0382 92.3407L97.9302 95.5827L99.4824 94.4767L99.6742 93.6947L97.9302 90.7715L83.542 64.7415L68.182 38.2175L61.3498 27.2791L59.5486 20.7235C58.8962 18.0395 58.4302 15.8111 58.4302 13.0639L66.342 2.2715L70.7258 0.859497L81.298 2.2715L85.7518 6.1275L92.3238 21.1695L102.988 44.8263L119.531 77.0963L124.368 86.6755L126.95 95.5363L127.914 98.2203H129.592V96.6815L130.943 78.5563L133.449 56.2915L135.888 27.6691L136.723 19.6027L140.683 9.9903L148.542 4.8179L154.699 7.7527L159.754 14.9615L159.052 19.6027L156.046 39.1551L150.158 69.7355L146.312 90.1963H148.567L151.149 87.6143L161.57 73.7843L179.058 51.879L186.776 43.1965L195.781 33.5843L201.566 29.0103H212.478L220.507 40.9555L216.925 53.284L205.736 67.4723L196.463 79.4911L183.156 97.4083L174.845 111.74L175.614 112.885L177.617 112.687L207.817 106.284L224.128 103.339L243.6 100.002L252.401 104.105L253.367 108.286L249.921 116.826L229.275 121.93L205.071 126.78L168.999 135.323L168.556 135.632L169.066 136.267L185.323 137.797L192.275 138.172H209.301L241.013 140.529L249.312 146.024L254.297 152.755L253.464 157.855L240.712 164.361L223.507 160.283L183.327 150.734L169.548 147.287H167.647V148.434L179.128 159.661L200.184 178.66L226.535 203.159L227.878 209.213L224.507 213.987L220.946 213.474L197.898 196.139L188.995 188.319L168.833 171.355H167.49V173.141L172.135 179.958L196.664 216.772L197.932 228.065L196.15 231.729L189.787 233.961L182.797 212.504L168.405 212.504L153.56 189.74L141.572 169.359L140.109 170.195L133.044 246.241L129.739 250.133L122.099 253L115.741 248.159L112.365 240.341L115.741 224.878L119.824 205.047L123.143 189.258L126.152 169.621L127.942 163.089L127.819 162.649L126.346 162.842L111.203 183.627L88.163 214.745L69.9344 234.223L65.5696 235.951L58.0192 232.026L58.7222 225.056L62.9416 218.864L88.1196 186.935L103.302 167.077L113.087 155.627L113.022 153.963H112.442L45.5858 197.369L33.6802 198.893L28.5556 194.082L29.185 186.169L31.6198 183.6L51.8958 169.672z" />
+          </svg>
+        </g>
+
+        <!-- Converging dashed arrows — tips separated so arrowheads don't overlap -->
+        <g fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)">
+          <path d="M 90 55  C 150 55, 180 65, 210 75" />
+          <path d="M 90 115 C 150 115, 180 105, 210 95" />
+        </g>
+
+        <!-- Adapter: compact, just template syntax -->
+        <g transform="translate(215,55)" filter="url(#efmShadow)">
+          <rect width="88" height="60" rx="14" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5" />
+          <text x="44" y="39" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" font-weight="700" fill="#D6457A">{{ }}</text>
+        </g>
+
+        <!-- Arrow: adapter → envelope -->
+        <path d="M 312 85 L 362 85" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+
+        <!-- Envelope (compact) -->
+        <g transform="translate(370,58)" filter="url(#efmShadow)">
+          <rect width="78" height="54" rx="5" fill="url(#efmEnv)" stroke="#D6457A" stroke-width="1.5" />
+          <path d="M 0 0 L 39 28 L 78 0" fill="none" stroke="#D6457A" stroke-width="1.2" opacity="0.55" />
+          <circle cx="39" cy="38" r="8" fill="#D6457A" />
+          <text x="39" y="42" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" font-weight="800" fill="#FFFFFF">A</text>
+        </g>
+
+        <!-- Arrow: envelope → bubble (arched curve) -->
+        <path d="M 456 85 C 500 85, 525 50, 568 60" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+
+        <!-- Axolotl (anchor for bubble) -->
+        <g transform="translate(640,118) scale(0.7)" filter="url(#efmShadow)">
+          <g>
+            <ellipse cx="-38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(-35 -38 -19)" />
+            <ellipse cx="-45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(-8 -45 0)" />
+            <ellipse cx="38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(35 38 -19)" />
+            <ellipse cx="45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(8 45 0)" />
+          </g>
+          <ellipse cx="0" cy="8" rx="50" ry="42" fill="#F29BC5" />
+          <ellipse cx="0" cy="18" rx="34" ry="26" fill="#F0B5D3" />
+          <circle cx="-15" cy="2" r="5" fill="#2D2533" />
+          <circle cx="15"  cy="2" r="5" fill="#2D2533" />
+          <circle cx="-14" cy="0" r="1.5" fill="white" />
+          <circle cx="16"  cy="0" r="1.5" fill="white" />
+          <circle cx="-22" cy="20" r="5" fill="#FF7AA3" opacity="0.45" />
+          <circle cx="22"  cy="20" r="5" fill="#FF7AA3" opacity="0.45" />
+          <path d="M -10 23 Q 0 30 10 23" stroke="#7A2D4D" stroke-width="2" fill="none" stroke-linecap="round" />
+        </g>
+
+        <!-- Bubble — anchored just above axolotl's head, drawn last so it sits on top -->
+        <g transform="translate(575,40)" filter="url(#efmShadow)">
+          <rect width="130" height="40" rx="10" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
+          <text x="65" y="17" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#2D2533">main</text>
+          <text x="65" y="31" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" fill="#6E5F6B">CI passed</text>
+          <path d="M 58 40 L 65 54 L 72 40 Z" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
+        </g>
+      </svg>
     </div>
 
-    <p style="margin-top:18px">One adapter ships with Axol (<code>adapters/claude-code.json</code>, for Claude Code hooks). Everything else you add lives in <code>~/Library/Application Support/Axol/adapters/</code>.</p>
-
-    <p style="margin-top:14px"><b>Template language</b> — deliberately tiny:</p>
-    <div class="tmpl">
-      <code>{{field}}</code>            <span>top-level substitution</span>
-      <code>{{nested.field}}</code>     <span>dot-path into objects</span>
-      <code>{{field | default 'x'}}</code> <span>fallback when missing</span>
-      <code>{{basename path}}</code>    <span>last path component</span>
-      <code>{{trim field}}</code>       <span>strip surrounding whitespace</span>
-    </div>
-
-    <p style="margin-top:20px"><b>Default icon set</b> — adapters can set <code>icon</code> on the envelope to one of these names. Axol renders the matching glyph in the speech bubble.</p>
-    <div class="iconset" id="iconset"></div>
-
-    <p style="margin-top:20px">
-      <a class="cta" href="https://github.com/Roach/axol#adapters">Full spec in the README →</a>
+    <p style="margin-top:32px; text-align:center;">
+      <a class="cta" href="plugins.html">Plugin reference →</a>
     </p>
   </section>
 
   <footer>
-    Made with 🌸 · MIT licensed · <a href="https://github.com/Roach/axol">source on GitHub</a>
+    Made with 🌸 · <a href="changelog.html">changelog</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
   </footer>
 
 </div>

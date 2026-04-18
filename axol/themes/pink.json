@@ -1,0 +1,13 @@
+{
+  "name": "pink",
+  "character": {
+    "gillBase":  "#E066A0",
+    "gillTip":   "#BF4F85",
+    "body":      "#F29BC5",
+    "belly":     "#F0B5D3",
+    "eye":       "#2D2533",
+    "highlight": "#FFFFFF",
+    "cheek":     "#FF7AA3",
+    "mouth":     "#7A2D4D"
+  }
+}

@@ -1,8 +1,9 @@
 # macOS
 .DS_Store
 
-# Compiled Swift binary
-/axol
+# Compiled Swift binary + test harness binary
+/axol/axol
+/axol/.axol-tests
 
 # Editor / IDE
 .vscode/

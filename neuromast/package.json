@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:cloudflare": "astro build",
+    "build:node": "ADAPTER=node astro build",
+    "start": "node ./dist/server/entry.mjs",
     "preview": "astro build && wrangler dev",
     "check": "astro check",
     "cf-typegen": "wrangler types",
@@ -14,12 +17,15 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.0.0",
+    "@astrojs/node": "^9.0.0",
     "@astrojs/react": "^4.4.2",
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.0",
     "@cloudflare/workers-types": "^4.20240924.0",
+    "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
     "wrangler": "^4.0.0"
   },

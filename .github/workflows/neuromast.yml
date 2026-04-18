@@ -1,0 +1,29 @@
+name: neuromast
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'neuromast/**'
+      - '.github/workflows/neuromast.yml'
+  pull_request:
+    paths:
+      - 'neuromast/**'
+      - '.github/workflows/neuromast.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: neuromast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: neuromast/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build

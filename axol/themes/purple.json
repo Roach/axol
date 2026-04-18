@@ -1,0 +1,13 @@
+{
+  "name": "purple",
+  "character": {
+    "gillBase":  "#B085D6",
+    "gillTip":   "#7A4FB0",
+    "body":      "#C9A8E6",
+    "belly":     "#DBC3ED",
+    "eye":       "#23162E",
+    "highlight": "#FFFFFF",
+    "cheek":     "#E89BC7",
+    "mouth":     "#4A2366"
+  }
+}

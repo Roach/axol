@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axol — deploying neuromast to Webflow Cloud</title>
+<meta name="description" content="Step-by-step deploy of Axol's webhook intake (neuromast) to Webflow Cloud: CLI install, first deploy, setting secrets in the dashboard, and republishing the site." />
+<link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Axol" />
+<meta property="og:title" content="Axol — deploying neuromast to Webflow Cloud" />
+<meta property="og:description" content="Step-by-step deploy of Axol's webhook intake to Webflow Cloud." />
+<meta property="og:url" content="https://roach.github.io/axol/deploy-webflow.html" />
+
+<style>
+  :root {
+    --pink-1: #FFF4FA;
+    --pink-2: #FFE5F0;
+    --pink-3: #FFC9E2;
+    --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533;
+    --ink-soft: #6E5F6B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+
+  .backlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1F3A56;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .backlink:hover { opacity: 1; }
+  .backlink svg { width: 14px; height: 14px; }
+
+  .hero {
+    padding: 28px 0 18px;
+    text-align: center;
+  }
+  .hero-stage {
+    position: relative;
+    display: inline-block;
+    width: 130px;
+    height: 160px;
+    margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 110px;
+    height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Webflow-blue squares drifting down toward the axolotl — mirrors
+     the other subpages' hero pattern (pink signals on remote-alerts,
+     multicolor shapes on plugins), themed to Webflow's brand color to
+     read as "deploys landing on Webflow Cloud." */
+  .hero-sparks {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 80px;
+    height: 96px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .hero-spark {
+    position: absolute;
+    top: 0;
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    background: #146EF5;
+    box-shadow: 0 0 0 3px rgba(20, 110, 245, 0.15);
+    opacity: 0;
+    animation: hero-spark-drop 3.8s ease-in infinite;
+  }
+  .hero-spark-1 { left: 26%; animation-delay: 0s; }
+  .hero-spark-2 { left: 66%; animation-delay: 1.25s; }
+  .hero-spark-3 { left: 48%; animation-delay: 2.5s; }
+  @keyframes hero-spark-drop {
+    0%   { opacity: 0;    transform: translateY(-10px) rotate(-6deg) scale(0.6); }
+    15%  { opacity: 1;    transform: translateY(0)     rotate(0)     scale(1); }
+    70%  { opacity: 0.85; transform: translateY(78px)  rotate(6deg)  scale(0.9); }
+    88%  { opacity: 0;    transform: translateY(96px)  rotate(10deg) scale(0.4); }
+    100% { opacity: 0;    transform: translateY(96px)  rotate(10deg) scale(0.4); }
+  }
+
+  h1 {
+    font-size: 48px;
+    margin: 10px 0 10px;
+    letter-spacing: -0.01em;
+    color: #1F3A56;
+    line-height: 1.05;
+  }
+  .tagline {
+    font-size: 17px;
+    color: rgba(31, 58, 86, 0.78);
+    margin: 0 auto 12px;
+    max-width: 620px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-spark { animation: none !important; }
+    .hero-spark { opacity: 0.7; }
+  }
+  .pill {
+    display: inline-block;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .glyph {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: -6px;
+    color: var(--pink-accent);
+    flex: 0 0 auto;
+  }
+  .glyph svg { width: 100%; height: 100%; display: block; }
+  .glyph-lg {
+    width: 42px;
+    height: 42px;
+    vertical-align: -11px;
+  }
+  .glyph-inline { margin-right: 8px; }
+
+  .brand-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 0;
+    padding: 6px 14px 6px 6px;
+    background: white;
+    border: 1px solid #E5ECF5;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: #080808;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .brand-chip:hover {
+    border-color: #146EF5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(20, 110, 245, 0.35);
+  }
+  .brand-chip-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .brand-chip-mark svg { width: 100%; height: 100%; display: block; }
+  .brand-chip-arrow {
+    font-size: 14px;
+    color: #146EF5;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .brand-chip:hover .brand-chip-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  section {
+    background: white;
+    border-radius: 20px;
+    padding: 26px 30px 28px;
+    margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 {
+    font-size: 21px;
+    margin: 0 0 10px;
+    color: var(--pink-accent);
+  }
+  section h3 {
+    font-size: 15px;
+    margin: 18px 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 8px 0 16px;
+    color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+  .tok-flag  { color: #B33A7A; }
+  .tok-cmd   { color: #3A4A7A; font-weight: 600; }
+  .tok-str   { color: #3A6E4A; }
+
+  .setup-steps {
+    counter-reset: step;
+    padding: 0;
+    margin: 8px 0 4px;
+    list-style: none;
+  }
+  .setup-steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 2px 36px;
+    margin-bottom: 22px;
+  }
+  .setup-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .setup-steps > li h3 { margin-top: 0; }
+
+  .callout {
+    background: #FFF9FB;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .callout b { color: var(--ink); }
+
+  .troubleshooting {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .troubleshooting > li {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #F3DDE9;
+  }
+  .troubleshooting > li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  .troubleshooting b { color: var(--ink); }
+
+  footer {
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 13px;
+    padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 34px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="glyph-neuromast" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+    <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.25" opacity="0.55"/>
+    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1" opacity="0.28"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+  <a class="backlink" href="index.html">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.854 3.146a.5.5 0 0 1 0 .708L6.707 9l5.147 5.146a.5.5 0 0 1-.708.708l-5.5-5.5a.5.5 0 0 1 0-.708l5.5-5.5a.5.5 0 0 1 .708 0"/></svg>
+    back to Axol
+  </a>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-sparks">
+        <span class="hero-spark hero-spark-1"></span>
+        <span class="hero-spark hero-spark-2"></span>
+        <span class="hero-spark hero-spark-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBodyDeploy" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <radialGradient id="heroBellyDeploy" cx="50%" cy="60%" r="50%">
+            <stop offset="0%" stop-color="#FFE5F0" />
+            <stop offset="100%" stop-color="#FFCCE2" />
+          </radialGradient>
+        </defs>
+        <g>
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div><span class="pill">deploy guide</span></div>
+    <h1>Deploy to Webflow Cloud</h1>
+    <p class="tagline">Push <code>neuromast/</code> to GitHub, connect it in the Webflow Cloud dashboard, and from then on <code>git push</code> deploys. No Cloudflare account in the mix.</p>
+    <a class="brand-chip" href="https://developers.webflow.com/webflow-cloud" target="_blank" rel="noopener">
+      <span class="brand-chip-mark" aria-hidden="true">
+        <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+          <rect width="1080" height="1080" fill="#146EF5"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M898.312 337.5L683.467 757.5H481.667L571.579 583.434H567.545C493.368 679.726 382.694 743.115 225 757.5V585.843C225 585.843 325.88 579.884 385.185 517.534H225V337.503H405.031V485.576L409.072 485.559L482.639 337.503H618.791V484.637L622.832 484.631L699.159 337.5H898.312Z" fill="white"/>
+        </svg>
+      </span>
+      <span>Webflow Cloud docs</span>
+      <span class="brand-chip-arrow" aria-hidden="true">↗</span>
+    </a>
+  </header>
+
+  <section>
+    <h2>prerequisites</h2>
+    <ul>
+      <li><b>A Webflow account</b> with at least one site you own. A throwaway blank site is fine — the worker mounts under a path on it (default <code>/app</code>).</li>
+      <li><b>A GitHub account and a repo you own</b> containing the <code>neuromast/</code> code. Webflow Cloud watches the branch you connect and redeploys on every push, so it needs write access to a repo you control — you can't point it at upstream <code>Roach/axol</code>. Easiest path is to fork Axol; alternative is to copy just the <code>neuromast/</code> directory into a fresh repo.</li>
+      <li><b>No Cloudflare account needed.</b> Webflow Cloud provisions the underlying Worker + KV namespaces under their own tenancy and exposes everything through the Webflow dashboard.</li>
+      <li><b>The CLI is optional.</b> Everything below happens in the Webflow dashboard + your git client. Install <code>@webflow/webflow-cli</code> only if you want local <code>npm run dev</code> / <code>webflow cloud deploy</code> for emergency manual pushes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>1 · push <code>neuromast/</code> to your own GitHub repo</h2>
+    <p>If you forked Axol, skip to step 2 — your fork is already on GitHub. Otherwise, seed a fresh repo with just the <code>neuromast/</code> tree:</p>
+<pre><code><span class="tok-cmd">cp</span> <span class="tok-flag">-r</span> neuromast /tmp/my-neuromast
+<span class="tok-cmd">cd</span> /tmp/my-neuromast
+<span class="tok-cmd">git</span> init <span class="tok-flag">-b</span> main
+<span class="tok-cmd">git</span> add <span class="tok-str">.</span>
+<span class="tok-cmd">git</span> commit <span class="tok-flag">-m</span> <span class="tok-str">"seed neuromast"</span>
+<span class="tok-cmd">gh</span> repo create my-neuromast <span class="tok-flag">--private</span> <span class="tok-flag">--source=.</span> <span class="tok-flag">--push</span></code></pre>
+    <p>Private is fine — Webflow Cloud's GitHub App reads private repos you grant it access to. The only env vars in the repo are placeholder shapes; real secrets never get committed.</p>
+  </section>
+
+  <section>
+    <h2>2 · create the Webflow Cloud project</h2>
+    <ol class="setup-steps">
+      <li>
+        <h3>Open the Webflow Cloud dashboard</h3>
+        <p>Your site's Designer → <b>Webflow Cloud</b> (left nav, near the bottom) → <b>New project</b>.</p>
+      </li>
+      <li>
+        <h3>Connect your GitHub repo</h3>
+        <p>Click <b>Connect GitHub</b> and authorize Webflow's GitHub App for the repo you just pushed. The dashboard will list the repo; select it and pick the branch to deploy (typically <code>main</code>).</p>
+        <p>If you seeded a fresh repo with just the <code>neuromast/</code> contents, leave <b>Root directory</b> blank. If you forked the whole Axol repo, set <b>Root directory</b> to <code>neuromast</code> so Webflow builds from there and ignores the macOS app code.</p>
+      </li>
+      <li>
+        <h3>Set the mount path</h3>
+        <p><b>Mount path: <code>/app</code></b> — must match <code>base: '/app'</code> in <code>astro.config.mjs</code>. All API routes live under <code>&lt;site&gt;.webflow.io/app/api/…</code> as a result.</p>
+      </li>
+      <li>
+        <h3>Set environment variables</h3>
+        <p>Before the first deploy runs, add these in <b>Environments → Variables</b> (mark each as secret):</p>
+        <ul>
+          <li><code>POLL_TOKEN</code> — bearer the local forwarder uses for <code>/pull</code> + <code>/ack</code>. Generate with <code>openssl rand -hex 32</code>.</li>
+          <li><code>SHARED_SECRET</code> <em>(optional)</em> — query-key fallback for senders that can't sign HMAC. Same command.</li>
+          <li><code>HOOK_SCHEME_&lt;SOURCE&gt;</code> + <code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source (e.g. <code>HOOK_SCHEME_GITHUB=github</code>, <code>HOOK_SECRET_GITHUB=&lt;your-repo-webhook-secret&gt;</code>).</li>
+        </ul>
+      </li>
+      <li>
+        <h3>Trigger the first deploy</h3>
+        <p>Webflow Cloud kicks off a deploy as soon as the repo is connected. Watch the <b>Deployments</b> tab — the first run builds the Astro bundle, auto-provisions the <code>QUEUE</code> KV namespace, and registers the <code>/app</code> mount.</p>
+        <p>When the dashboard shows <b>Environment URL: Needs deployment</b>, the worker built fine but the Webflow site hasn't been republished to expose the mount. Click <b>Publish</b> on the site (Designer → Publish) — the Environment URL flips to <code>https://&lt;your-site&gt;.webflow.io/app</code>.</p>
+      </li>
+      <li>
+        <h3>Probe the endpoints</h3>
+<pre><code><span class="tok-cmd">export</span> AXOL_CLOUD_URL=https://&lt;your-site&gt;.webflow.io
+<span class="tok-cmd">export</span> POLL_TOKEN=<span class="tok-str">'the-bearer-you-set'</span>
+<span class="tok-cmd">export</span> SHARED_SECRET=<span class="tok-str">'the-shared-key-you-set'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-X</span> POST <span class="tok-str">"$AXOL_CLOUD_URL/app/api/hooks/smoke?key=$SHARED_SECRET"</span> \
+  <span class="tok-flag">-H</span> <span class="tok-str">'content-type: application/json'</span> \
+  <span class="tok-flag">-d</span> <span class="tok-str">'{"title":"hello","body":"from the cloud"}'</span>
+
+<span class="tok-cmd">curl</span> <span class="tok-flag">-H</span> <span class="tok-str">"Authorization: Bearer $POLL_TOKEN"</span> <span class="tok-str">"$AXOL_CLOUD_URL/app/api/pull"</span></code></pre>
+        <p>Expect <code>204</code> on the POST and a JSON body with your item on the GET. <code>401</code> on either means a mismatched env var — fix in the dashboard, then re-push or wait for the variable change to pick up on the next deploy.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3 · connect the local forwarder</h2>
+    <ol class="setup-steps">
+      <li>
+        <h3>Install the forwarder</h3>
+        <p>With the cloud side live, wire up the bash + launchd forwarder on the machine running Axol. From the repo root:</p>
+<pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
+<span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
+./lateral-line/install.sh</code></pre>
+        <p>The installer renders a launchd plist with absolute paths and your env, drops it in <code>~/Library/LaunchAgents/</code>, and loads it. Idempotent — re-run any time a token rotates.</p>
+      </li>
+
+      <li>
+        <h3>End-to-end test</h3>
+        <p>With Axol running and the forwarder loaded:</p>
+<pre><code><span class="tok-cmd">curl</span> <span class="tok-flag">-X</span> POST <span class="tok-str">"$AXOL_CLOUD_URL/app/api/hooks/demo?key=$SHARED_SECRET"</span> \
+  <span class="tok-flag">-H</span> <span class="tok-str">'content-type: application/json'</span> \
+  <span class="tok-flag">-d</span> <span class="tok-str">'{"title":"remote alert","body":"delivered by the lateral line"}'</span></code></pre>
+        <p>Within 15 seconds a speech bubble pops on your screen. <code>tail -f ~/Library/Logs/Axol/lateral-line.log</code> shows the pull → forward → ack cycle.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>day-2 operations</h2>
+
+    <h3>Redeploying</h3>
+    <p>Every subsequent code change is just:</p>
+<pre><code><span class="tok-cmd">git</span> push</code></pre>
+    <p>Webflow Cloud watches the connected branch and kicks off a new deploy automatically. The <b>Deployments</b> tab shows the build log per commit; rollback is <code>git revert</code> and push again.</p>
+    <p>Env var changes take effect on the next deploy — edit in the dashboard, then either push an unrelated commit or click <b>Redeploy</b> on the latest deployment.</p>
+
+    <h3>Emergency manual deploy (CLI fallback)</h3>
+    <p>If GitHub is down or you need to test an unpushed branch:</p>
+<pre><code><span class="tok-cmd">npm</span> install <span class="tok-flag">-g</span> @webflow/webflow-cli
+<span class="tok-cmd">cd</span> neuromast
+webflow cloud deploy <span class="tok-flag">--mount</span> /app <span class="tok-flag">--auto-publish</span></code></pre>
+    <p>Requires running <code>webflow cloud init</code> once beforehand to authenticate and link to the site. Subsequent pushes to the connected GitHub branch will overwrite whatever the CLI deployed.</p>
+
+    <h3>Rotating secrets</h3>
+    <p>If <code>POLL_TOKEN</code>, <code>SHARED_SECRET</code>, or an HMAC secret leaks:</p>
+    <ol>
+      <li>Webflow dashboard → <b>Environments → Variables</b> → edit → click <b>Redeploy</b> on the latest deployment (or push an empty commit to trigger).</li>
+      <li>For <code>POLL_TOKEN</code>: re-run <code>lateral-line/install.sh</code> locally with the new value to regenerate the launchd plist.</li>
+      <li>For webhook HMAC secrets: update the sender's webhook config to match (rotation lives in each sender's own UI — GitHub repo settings, Stripe dashboard, etc.).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>troubleshooting</h2>
+    <ul class="troubleshooting">
+      <li>
+        <b>Webflow Cloud can't see the repo</b>
+        <p>GitHub App permissions are scoped per-repo. Go to <b>github.com → Settings → Applications → Webflow Cloud → Configure</b>, and grant access to the specific repo. The repo should then appear in the Webflow dashboard's picker.</p>
+      </li>
+      <li>
+        <b>Build fails with "Cannot find module" errors</b>
+        <p>If you forked the whole Axol repo, make sure the <b>Root directory</b> in the Webflow project settings is <code>neuromast</code> — otherwise Webflow tries to build from the repo root (which has no <code>package.json</code>) and the build dies immediately.</p>
+      </li>
+      <li>
+        <b><code>401</code> on every request</b>
+        <p>The worker deployed but env vars aren't set or the site wasn't republished after adding them. Dashboard → Environments → Variables, confirm the secret is present, then click <b>Redeploy</b>.</p>
+      </li>
+      <li>
+        <b>KV writes silently lost / <code>GET /pull</code> always empty</b>
+        <p>The <code>QUEUE</code> binding may not have been provisioned. Check dashboard → Cloud → KV namespaces for an entry named <code>QUEUE</code>. If missing, push a trivial commit to trigger a fresh deploy — Webflow Cloud creates missing bindings on first build that references them.</p>
+      </li>
+      <li>
+        <b>Environment URL says "Needs deployment" even after a successful build</b>
+        <p>The worker built but the Webflow site hasn't been republished to expose the mount path. Click <b>Publish</b> on the site in the Designer. The URL flips to <code>https://&lt;your-site&gt;.webflow.io/app</code> once the site publish completes.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "stripe",
+  "match": { "field": "object", "equals": "event" },
+  "switch": "type",
+  "cases": {
+    "invoice.payment_failed": {
+      "title":    "stripe",
+      "body":     "invoice payment failed",
+      "priority": "urgent",
+      "source":   "stripe",
+      "icon":     "error"
+    },
+    "charge.failed": {
+      "title":    "stripe",
+      "body":     "charge failed · {{data.object.failure_message | default 'no reason given'}}",
+      "priority": "urgent",
+      "source":   "stripe",
+      "icon":     "error"
+    },
+    "charge.dispute.created": {
+      "title":    "stripe",
+      "body":     "dispute opened · {{data.object.reason | default 'reason unknown'}}",
+      "priority": "urgent",
+      "source":   "stripe",
+      "icon":     "warn"
+    },
+    "charge.refunded": {
+      "title":    "stripe",
+      "body":     "charge refunded",
+      "priority": "normal",
+      "source":   "stripe",
+      "icon":     "warn"
+    }
+  }
+}
