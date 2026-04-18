@@ -1,8 +1,13 @@
 # neuromast — Axol's cloud webhook endpoint
 
-A minimal Astro + Cloudflare Workers app, deployed to Webflow Cloud, that accepts signed third-party webhooks and parks them in a KV queue for Axol's local forwarder (`lateral-line/`) to pull.
+A minimal serverless webhook intake that accepts signed third-party webhooks and parks them in a short-TTL queue for Axol's local forwarder (`lateral-line/`) to pull.
 
 Named after the sensory cell clusters along a fish's lateral line — each hook URL is one neuromast picking up signals from the outside world.
+
+**Deploy guides** (platform-specific setup):
+- Webflow Cloud — [`docs/deploy-webflow.html`](../docs/deploy-webflow.html)
+
+The implementation currently targets Astro + Cloudflare Workers (which is what Webflow Cloud provides under the hood), but the routes and queue helpers are small enough that porting to another edge runtime is mostly swapping the KV binding for another key-value store.
 
 ## Routes
 
@@ -24,11 +29,19 @@ Set two env vars per signed source, where `<SOURCE>` is the URL segment uppercas
 | `stripe`  | `Stripe-Signature`            | `<ts>.<body>`        | 300s replay window; tolerates key rotation (multiple `v1=` values) |
 | `generic` | `X-Signature-256`             | raw body             | `sha256=<hex>`; our own convention for ad-hoc senders |
 
+**Optional replay protection** for `github` and `generic`: if the sender also sends `X-Signature-Timestamp: <unix-seconds>`, the server verifies it's within a 300-second window and HMACs `<ts>.<body>` instead of `<body>` alone. Stripe already bakes the timestamp into `Stripe-Signature`, so this only applies to the other two schemes.
+
 If no per-source scheme is configured, the endpoint falls back to `?key=<SHARED_SECRET>`.
+
+## Limits
+
+- **Body size.** `POST /app/api/hooks/{source}` rejects payloads larger than 1 MB with `HTTP 413`. The check runs both on the `Content-Length` header and after reading, so a lying Content-Length won't slip through. Real-world webhooks (GitHub PR events, Stripe event objects) sit well under this.
+- **Queue depth.** The index is capped at the 100 most-recent items. Older unacked ids age out of the index; their stored bodies remain in KV until the backing store's own expiration kicks in.
+- **Pull page size.** `/pull` returns at most 25 items per call. Drain by paginating with the returned `nextCursor`.
 
 ## Env vars
 
-All env vars and secrets are set in the **Webflow Cloud dashboard** under your project's **Deployments → Environment Variables**. There is no CLI for this (as of CLI v1.14), and no Cloudflare account is involved — Webflow Cloud manages the underlying Worker and KV namespace.
+All env vars and secrets are set per-platform (in the Webflow Cloud dashboard for that target — see the deploy guide). The worker itself just reads them off the runtime `env` object.
 
 | Name                           | Required                           |
 | ------------------------------ | ---------------------------------- |
@@ -39,20 +52,9 @@ All env vars and secrets are set in the **Webflow Cloud dashboard** under your p
 
 ## Deploy
 
-```sh
-npm install
-npm install -g @webflow/webflow-cli
-webflow cloud init          # bind to a Webflow site (writes siteId into webflow.json)
-webflow cloud deploy        # first deploy auto-creates the KV namespace
-```
+See the platform-specific guide linked at the top of this README (currently: Webflow Cloud). All targets end at the same outcome — an HTTPS URL hosting the three routes under `/app/api/` and env vars set for `POLL_TOKEN`, `SHARED_SECRET`, and any `HOOK_SECRET_<SOURCE>` pairs you need.
 
-After the first deploy:
-
-1. In the Webflow Cloud dashboard, set the env vars listed above.
-2. Grab the real KV namespace id from the dashboard's KV section and paste it into **both** the `QUEUE` and `SESSION` entries in `wrangler.json` (we reuse one namespace; `SESSION` is a phantom binding the Astro Cloudflare adapter insists on).
-3. `webflow cloud deploy` again with the real id.
-
-The deploy output includes the URL where the worker is mounted (something like `https://<site>.webflow.io/app`). Feed that *without* the `/app` suffix to `AXOL_CLOUD_URL` in the forwarder's environment — routes below are relative to it.
+Feed the deployed base URL (without the `/app` suffix) to `AXOL_CLOUD_URL` in the forwarder's environment — routes below are relative to it.
 
 ## Smoke tests
 

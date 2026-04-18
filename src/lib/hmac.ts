@@ -1,11 +1,17 @@
 // Per-scheme HMAC verifiers for inbound webhook auth. All schemes run over
-// the raw request body bytes; Web Crypto's `subtle` is available natively
-// in Cloudflare Workers.
+// the raw request body bytes using Web Crypto's `subtle` API, which is
+// available in every modern edge runtime (Workers, Deno, Node 20+).
 //
 // Supported:
 //   github  — X-Hub-Signature-256: sha256=<hex> over body
 //   stripe  — Stripe-Signature: t=<ts>,v1=<hex> over `<ts>.<body>`, 300s replay window
 //   generic — X-Signature-256: sha256=<hex> over body (our own convention)
+//
+// Optional replay protection on github/generic: if the sender also includes
+// `X-Signature-Timestamp: <unix-seconds>`, the server verifies it's within the
+// 300s window AND HMACs `<ts>.<body>` instead of `<body>` alone — giving
+// Stripe-style replay resistance without breaking senders that don't sign a
+// timestamp.
 
 export type Scheme = 'github' | 'stripe' | 'generic';
 
@@ -15,6 +21,25 @@ export interface VerifyResult {
 }
 
 const REPLAY_WINDOW_SECONDS = 300;
+
+// Returns {payload, reason?} — payload is what should be HMAC'd. If the caller
+// supplied a timestamp header, we check it's fresh and fold it into the
+// payload; otherwise we fall back to the body alone. `reason` is only set
+// when we want to reject outright (stale timestamp, malformed timestamp).
+function payloadWithOptionalTimestamp(
+  req: Request,
+  body: string,
+): { payload: string; reason?: string } {
+  const ts = req.headers.get('x-signature-timestamp');
+  if (!ts) return { payload: body };
+  const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum)) return { payload: body, reason: 'malformed-timestamp' };
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - tsNum) > REPLAY_WINDOW_SECONDS) {
+    return { payload: body, reason: 'timestamp-out-of-window' };
+  }
+  return { payload: `${ts}.${body}` };
+}
 
 export async function verify(
   scheme: string,
@@ -35,7 +60,9 @@ async function verifyGithub(secret: string, req: Request, body: string): Promise
   const header = req.headers.get('x-hub-signature-256');
   if (!header || !header.startsWith('sha256=')) return { ok: false, reason: 'missing-signature' };
   const expected = header.slice('sha256='.length);
-  const actual = await hmacHex(secret, body);
+  const { payload, reason } = payloadWithOptionalTimestamp(req, body);
+  if (reason) return { ok: false, reason };
+  const actual = await hmacHex(secret, payload);
   return timingSafeEqualHex(expected, actual)
     ? { ok: true }
     : { ok: false, reason: 'bad-signature' };
@@ -71,7 +98,9 @@ async function verifyGeneric(secret: string, req: Request, body: string): Promis
   const header = req.headers.get('x-signature-256');
   if (!header || !header.startsWith('sha256=')) return { ok: false, reason: 'missing-signature' };
   const expected = header.slice('sha256='.length);
-  const actual = await hmacHex(secret, body);
+  const { payload, reason } = payloadWithOptionalTimestamp(req, body);
+  if (reason) return { ok: false, reason };
+  const actual = await hmacHex(secret, payload);
   return timingSafeEqualHex(expected, actual)
     ? { ok: true }
     : { ok: false, reason: 'bad-signature' };

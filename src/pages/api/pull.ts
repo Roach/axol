@@ -5,23 +5,27 @@
 
 import type { APIRoute } from 'astro';
 import { pullSince } from '../../lib/queue';
+import { getQueueStore, resolveEnv, type StorageEnv } from '../../lib/storage';
 import { timingSafeEqualString } from '../../lib/hmac';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = locals.runtime.env as unknown as {
-    QUEUE: KVNamespace;
+  const env = resolveEnv(locals) as unknown as StorageEnv & {
     POLL_TOKEN: string;
   };
 
   if (!checkBearer(request, env.POLL_TOKEN)) {
+    console.log('neuromast: pull rejected (bad bearer)');
     return new Response(null, { status: 401 });
   }
 
   const url = new URL(request.url);
   const since = url.searchParams.get('since');
-  const { items, nextCursor } = await pullSince(env, since && since.length > 0 ? since : null);
+  const { items, nextCursor } = await pullSince(
+    await getQueueStore(env),
+    since && since.length > 0 ? since : null,
+  );
 
   return new Response(JSON.stringify({ items, nextCursor }), {
     status: 200,
