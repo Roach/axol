@@ -1,7 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "neuromast",
-  "main": "./dist/_worker.js/index.js",
   "compatibility_date": "2025-04-15",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -15,7 +14,6 @@
       "id": "REPLACE_WITH_KV_ID"
     },
     {
-      "//": "@astrojs/cloudflare auto-enables sessions against a SESSION KV binding even if unused. Point it at the same namespace as QUEUE — sessions aren't read anywhere in this app.",
       "binding": "SESSION",
       "id": "REPLACE_WITH_KV_ID"
     }
