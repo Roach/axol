@@ -10,10 +10,17 @@ import Network
 final class AxolServer {
     private var listener: NWListener?
     private let onEvent: ([String: Any]) -> Void
+    /// Invoked for POST /permission. The connection is handed over held-open
+    /// — the handler is responsible for eventually resolving it via
+    /// PendingPermissions.resolve (or discard) so the request line doesn't
+    /// leak. Called on the server queue; the handler should hop to main.
+    private let onPermission: ((String, [String: Any], NWConnection) -> Void)?
     private let queue = DispatchQueue(label: "axol.server")
 
-    init(onEvent: @escaping ([String: Any]) -> Void) {
+    init(onEvent: @escaping ([String: Any]) -> Void,
+         onPermission: ((String, [String: Any], NWConnection) -> Void)? = nil) {
         self.onEvent = onEvent
+        self.onPermission = onPermission
     }
 
     func start(port: UInt16) {
@@ -75,6 +82,12 @@ final class AxolServer {
                         if let pidStr = parsed.headers["x-claude-pid"], let pid = Int(pidStr) {
                             json["claude_pid"] = pid
                         }
+                        if parsed.path == "/permission", let onPermission = self.onPermission {
+                            let requestId = (json["request_id"] as? String) ?? UUID().uuidString
+                            let reqJson = json
+                            DispatchQueue.main.async { onPermission(requestId, reqJson, conn) }
+                            return  // connection stays open until resolve/discard
+                        }
                         DispatchQueue.main.async { self.onEvent(json) }
                     }
                     let resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
@@ -91,14 +104,24 @@ final class AxolServer {
         readMore()
     }
 
-    private static func parseHTTP(_ data: Data) -> (headers: [String: String], body: Data)? {
+    private static func parseHTTP(_ data: Data) -> (headers: [String: String], body: Data, path: String)? {
         let sep = Data([0x0D, 0x0A, 0x0D, 0x0A])
         guard let r = data.range(of: sep) else { return nil }
         let headerData = data.subdata(in: 0..<r.lowerBound)
         guard let headerStr = String(data: headerData, encoding: .utf8) else { return nil }
         var headers: [String: String] = [:]
         var contentLength = 0
-        for line in headerStr.components(separatedBy: "\r\n") {
+        var path = ""
+        let lines = headerStr.components(separatedBy: "\r\n")
+        if let first = lines.first {
+            // Request line: METHOD SP PATH SP HTTP/1.x
+            let parts = first.split(separator: " ", maxSplits: 2).map(String.init)
+            if parts.count >= 2 {
+                path = parts[1]
+                if let q = path.firstIndex(of: "?") { path = String(path[..<q]) }
+            }
+        }
+        for line in lines.dropFirst() {
             let parts = line.split(separator: ":", maxSplits: 1)
             if parts.count == 2 {
                 let k = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
@@ -112,7 +135,7 @@ final class AxolServer {
         guard contentLength >= 0, contentLength <= maxRequestBytes else { return nil }
         let bodyStart = r.upperBound
         if data.count - bodyStart < contentLength { return nil }
-        return (headers, data.subdata(in: bodyStart..<(bodyStart + contentLength)))
+        return (headers, data.subdata(in: bodyStart..<(bodyStart + contentLength)), path)
     }
 }
 

@@ -22,14 +22,25 @@ struct Predicate {
     let field: String
     let exists: Bool?
     let equals: String?
-    let matches: String?
+    /// Substring patterns. Stored as an array so a single adapter rule can
+    /// silence several known-noise messages at once (e.g. both CC's
+    /// "waiting for your input" and "needs your permission" nags). JSON
+    /// accepts either a bare string or an array of strings — if any
+    /// pattern is a substring of the resolved field, the match succeeds.
+    let matches: [String]?
 
     init?(json: [String: Any]?) {
         guard let json = json, let field = json["field"] as? String else { return nil }
         self.field = field
         self.exists = json["exists"] as? Bool
         self.equals = json["equals"] as? String
-        self.matches = json["matches"] as? String
+        if let arr = json["matches"] as? [String] {
+            self.matches = arr
+        } else if let s = json["matches"] as? String {
+            self.matches = [s]
+        } else {
+            self.matches = nil
+        }
     }
 
     /// Validate a predicate object loudly at load time. Returns nil if the
@@ -48,9 +59,12 @@ struct Predicate {
         if json["exists"] != nil && !(json["exists"] is Bool) {
             return "\(context) 'exists' must be bool"
         }
-        for key in ["equals", "matches"] {
-            if json[key] != nil && !(json[key] is String) {
-                return "\(context) '\(key)' must be string"
+        if json["equals"] != nil && !(json["equals"] is String) {
+            return "\(context) 'equals' must be string"
+        }
+        if let m = json["matches"], !(m is String) {
+            guard let arr = m as? [Any], arr.allSatisfy({ $0 is String }) else {
+                return "\(context) 'matches' must be string or array of strings"
             }
         }
         return nil
@@ -63,9 +77,10 @@ struct Predicate {
         if let equals = equals {
             guard let str = value as? String, str == equals else { return false }
         }
-        if let matches = matches {
+        if let patterns = matches, !patterns.isEmpty {
             let str = (value as? String) ?? ""
-            if str.range(of: matches, options: .caseInsensitive) == nil { return false }
+            let anyHit = patterns.contains { str.range(of: $0, options: .caseInsensitive) != nil }
+            if !anyHit { return false }
         }
         return true
     }

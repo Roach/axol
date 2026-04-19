@@ -196,12 +196,18 @@ final class AxolCharacterView: NSView {
     var onDoubleClick: (() -> Void)?
     var onRightClick:  (() -> Void)?
     var onCmdClick:    (() -> Void)?
+    var onOptClick:    (() -> Void)?
     var onDragStart:   (() -> Void)?
     var onDragEnd:     (() -> Void)?
     var onDragDelta:   ((CGFloat, CGFloat) -> Void)?
+    /// Absolute drag: receives the window origin (screen points) that
+    /// makes the cursor's grab point align with its position at mouseDown.
+    /// No accumulated delta → no drift. Preferred over onDragDelta.
+    var onDragTo:      ((CGPoint) -> Void)?
 
     private var isDragging = false
-    private var moveAccum: CGFloat = 0
+    private var mouseDownLocation: CGPoint = .zero
+    private var dragWindowOriginAtMouseDown: CGPoint = .zero
     private var lastMouseLocation: CGPoint = .zero
     private let pendingSingleClick = Scheduled()
     private let dragThreshold: CGFloat = 5.0
@@ -210,23 +216,33 @@ final class AxolCharacterView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         isDragging = false
-        moveAccum = 0
-        lastMouseLocation = NSEvent.mouseLocation
+        mouseDownLocation = NSEvent.mouseLocation
+        lastMouseLocation = mouseDownLocation
+        dragWindowOriginAtMouseDown = window?.frame.origin ?? .zero
     }
 
     override func mouseDragged(with event: NSEvent) {
+        // Absolute-position drag (preferred): compute where the window
+        // origin *should* be given the cursor's current screen position
+        // and its offset at mouseDown. No delta accumulation → no drift.
+        // Falls back to step-delta for consumers still on onDragDelta.
         let current = NSEvent.mouseLocation
-        let dx = current.x - lastMouseLocation.x
-        let dy = current.y - lastMouseLocation.y
-        lastMouseLocation = current
-        moveAccum += abs(dx) + abs(dy)
-        if !isDragging && moveAccum > dragThreshold {
+        let totalDx = current.x - mouseDownLocation.x
+        let totalDy = current.y - mouseDownLocation.y
+        if !isDragging {
+            if abs(totalDx) + abs(totalDy) <= dragThreshold { return }
             isDragging = true
             onDragStart?()
         }
-        if isDragging {
-            onDragDelta?(dx, dy)
+        if let cb = onDragTo {
+            cb(CGPoint(x: dragWindowOriginAtMouseDown.x + totalDx,
+                       y: dragWindowOriginAtMouseDown.y + totalDy))
+        } else {
+            let stepDx = current.x - lastMouseLocation.x
+            let stepDy = current.y - lastMouseLocation.y
+            onDragDelta?(stepDx, stepDy)
         }
+        lastMouseLocation = current
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -238,6 +254,11 @@ final class AxolCharacterView: NSView {
         if event.modifierFlags.contains(.command) {
             pendingSingleClick.cancel()
             onCmdClick?()
+            return
+        }
+        if event.modifierFlags.contains(.option) {
+            pendingSingleClick.cancel()
+            onOptClick?()
             return
         }
         if event.clickCount >= 2 {
@@ -353,17 +374,19 @@ final class AxolCharacterView: NSView {
     // MARK: Idle animations (one-shot, pool-selected)
 
     enum IdleKind: String, CaseIterable {
-        case peek, stretch, hop, tilt, wiggle, doubleBlink, gillFlickLeft, gillFlickRight
+        case peek, stretch, hop, tilt, wiggle, doubleBlink, gillFlickLeft, gillFlickRight, flip
     }
 
     /// Idle animations available to the scheduler. `hop` is intentionally
     /// reserved for urgent-alert attention and not in this pool. The subtle
     /// micro-animations (doubleBlink, gill flicks) are listed twice so the
-    /// idle picker weights them higher than the larger-motion idles.
+    /// idle picker weights them higher than the larger-motion idles. `flip`
+    /// is listed once — it's the most dramatic move, so a rare treat.
     static let idlePool: [IdleKind] = [
         .peek, .stretch, .tilt, .wiggle,
         .doubleBlink, .doubleBlink,
         .gillFlickLeft, .gillFlickRight,
+        .flip,
     ]
 
     func playIdle(_ kind: IdleKind) {
@@ -376,6 +399,7 @@ final class AxolCharacterView: NSView {
         case .doubleBlink:     playDoubleBlink()
         case .gillFlickLeft:   playGillFlick(leftSide: true)
         case .gillFlickRight:  playGillFlick(leftSide: false)
+        case .flip:            playFlip()
         }
     }
 
@@ -423,6 +447,100 @@ final class AxolCharacterView: NSView {
         a.values   = [0.0, -2.0, 14.0, 0.0, 6.0, 0.0]
         a.keyTimes = [0.0, 0.08, 0.32, 0.55, 0.78, 1.0]
         a.duration = 1.0
+        a.calculationMode = .cubic
+        a.timingFunction = CAMediaTimingFunction(controlPoints: 0.28, 0.84, 0.42, 1)
+        a.isAdditive = true
+        layer?.add(a, forKey: "hop")
+    }
+
+    /// Underwater 360° flip — she's in water, so no jumping; the motion
+    /// is all rotation. Body winds up by leaning back a few degrees,
+    /// spins a full turn, then overshoots slightly past zero and
+    /// settles. Gills and arms "drag" behind the body (they're child
+    /// layers, so applying rotation in the *opposite* direction of the
+    /// body's spin makes them appear to lag through the water), then
+    /// whip forward and catch up on the settle.
+    private func playFlip() {
+        let dur: Double = 1.6
+        let deg = Double.pi / 180
+
+        // Body: small wind-up back, full −360° spin, small overshoot
+        // past zero, settle. Values are cumulative angles (radians).
+        let rotation = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rotation.values = [
+            0.0,
+            0.20,                       // wind-up (lean back)
+            0.15,                       // release
+            -(2 * Double.pi - 0.15),    // near-full spin
+            -(2 * Double.pi) - 0.12,    // overshoot past zero
+            -(2 * Double.pi),           // settle back to start
+        ]
+        rotation.keyTimes = [0.0, 0.14, 0.22, 0.82, 0.92, 1.0]
+        rotation.duration = dur
+        // Slow wind-up, snappy spin, gentle settle.
+        rotation.timingFunction = CAMediaTimingFunction(controlPoints: 0.35, 0.05, 0.35, 1)
+        contentLayer.add(rotation, forKey: "flip-rotation")
+
+        // Gill drag — OPPOSITE sign to the body's spin direction, so in
+        // screen-space they look like they're being pulled through the
+        // water. Ramps up during the fast spin, whips forward, then
+        // overshoots and settles with a small counter-swing.
+        let gillDrag: [Double] = [0, -2, 14, 22, -8, 0]
+        let gillTimes: [NSNumber] = [0.0, 0.14, 0.45, 0.78, 0.92, 1.0].map { NSNumber(value: $0) }
+        let leftGill = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        leftGill.values   = gillDrag.map { $0 * deg }
+        leftGill.keyTimes = gillTimes
+        leftGill.duration = dur
+        leftGill.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        leftGill.isAdditive = true
+        leftGillsLayer.add(leftGill, forKey: "flip-drag")
+
+        // Right gill drags the opposite local direction for asymmetry
+        // — a real creature's gills aren't a rigid pair, they flutter
+        // independently. Slight time offset adds to the liveliness.
+        let rightGillDrag: [Double] = [0, -1, 12, 24, -6, 0]
+        let rightGillTimes: [NSNumber] = [0.0, 0.14, 0.48, 0.80, 0.93, 1.0].map { NSNumber(value: $0) }
+        let rightGill = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rightGill.values   = rightGillDrag.map { $0 * deg }
+        rightGill.keyTimes = rightGillTimes
+        rightGill.duration = dur
+        rightGill.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        rightGill.isAdditive = true
+        rightGillsLayer.add(rightGill, forKey: "flip-drag")
+
+        // Arms (her visible feet/appendages) drag a touch more than
+        // gills — more mass, later catch-up. Mirror-asymmetric so the
+        // two sides don't move in lockstep.
+        let leftArmDrag:  [Double] = [0, -4, 20, 28, -10, 0]
+        let rightArmDrag: [Double] = [0, -3, 18, 30,  -8, 0]
+        let armTimes: [NSNumber] = [0.0, 0.16, 0.48, 0.82, 0.94, 1.0].map { NSNumber(value: $0) }
+
+        let leftArm = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        leftArm.values   = leftArmDrag.map { $0 * deg }
+        leftArm.keyTimes = armTimes
+        leftArm.duration = dur
+        leftArm.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        leftArm.isAdditive = true
+        armLeftLayer.add(leftArm, forKey: "flip-drag")
+
+        let rightArm = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        rightArm.values   = rightArmDrag.map { -$0 * deg }
+        rightArm.keyTimes = armTimes
+        rightArm.duration = dur
+        rightArm.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        rightArm.isAdditive = true
+        armRightLayer.add(rightArm, forKey: "flip-drag")
+    }
+
+    /// Bigger-amplitude bounce for high-attention moments (permission
+    /// prompts) — a deeper anticipation and ~2x the peak height of the
+    /// regular hop so it reads as a "notice me!" beat rather than an
+    /// ambient idle.
+    func playAttentionHop() {
+        let a = CAKeyframeAnimation(keyPath: "transform.translation.y")
+        a.values   = [0.0, -4.0, 28.0, 0.0, 12.0, 0.0]
+        a.keyTimes = [0.0, 0.08, 0.32, 0.58, 0.80, 1.0]
+        a.duration = 1.1
         a.calculationMode = .cubic
         a.timingFunction = CAMediaTimingFunction(controlPoints: 0.28, 0.84, 0.42, 1)
         a.isAdditive = true
@@ -806,10 +924,24 @@ final class BubbleView: NSView {
     private let tailWidth:    CGFloat = 12
     private let maxBubbleWidth: CGFloat = 200
     private let minBubbleWidth: CGFloat = 120
+    /// Per-present override that widens the bubble for content-heavy modes
+    /// (currently: permission requests, which need room for a readable
+    /// command preview alongside the Allow/Deny buttons).
+    private var maxBubbleWidthOverride: CGFloat?
 
     private var action: [String: Any]?
     private var isUrgent: Bool = false
     private let autoDismissTimer = Scheduled()
+
+    // Permission mode — when true, the whole-bubble click is disabled and
+    // two buttons (Allow / Deny) handle resolution. No auto-dismiss.
+    private var permissionMode: Bool = false
+    private let allowButton = NSButton(title: "Allow", target: nil, action: nil)
+    private let denyButton  = NSButton(title: "Deny",  target: nil, action: nil)
+    private var onAllow: (() -> Void)?
+    private var onDeny:  (() -> Void)?
+    private let permissionButtonRowHeight: CGFloat = 22
+    private let permissionButtonGap: CGFloat = 6
 
     /// Which edge the tail protrudes from. Set by `present()`; drives both
     /// the shape-path draw and the text-field positioning in `layoutContent`.
@@ -865,11 +997,138 @@ final class BubbleView: NSView {
         indicatorDotsLayer.isHidden = true
         root.addSublayer(indicatorDotsLayer)
 
+        // Custom pill buttons — NSButton's native bezel styles render as
+        // near-invisible white-on-pink on the bubble's tinted background.
+        // Explicit layer fills + attributed titles give us guaranteed
+        // legible, on-theme pills.
+        for (b, label, bgHex, fgHex) in [
+            (allowButton, "Allow", "2E8B57", "FFFFFF"),
+            (denyButton,  "Deny",  "FFFFFF", "2D2533"),
+        ] {
+            b.isBordered = false
+            b.bezelStyle = .shadowlessSquare
+            b.wantsLayer = true
+            b.layer?.backgroundColor = AxolCharacterView.hexColor(bgHex)
+            b.layer?.cornerRadius = 8
+            b.layer?.masksToBounds = true
+            if b === denyButton {
+                b.layer?.borderWidth = 1
+                b.layer?.borderColor = AxolCharacterView.hexColor("D6457A")
+            }
+            b.attributedTitle = NSAttributedString(
+                string: label,
+                attributes: [
+                    .foregroundColor: NSColor.fromHex(fgHex),
+                    .font: NSFont.systemFont(ofSize: 12, weight: .semibold)
+                ])
+            b.isHidden = true
+            addSubview(b)
+        }
+        allowButton.target = self
+        allowButton.action = #selector(handleAllow)
+        denyButton.target  = self
+        denyButton.action  = #selector(handleDeny)
+
         alphaValue = 0
         isHidden = true
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    @objc private func handleAllow() {
+        let cb = onAllow
+        onAllow = nil; onDeny = nil
+        cb?()
+        hide()
+    }
+
+    @objc private func handleDeny() {
+        let cb = onDeny
+        onAllow = nil; onDeny = nil
+        cb?()
+        hide()
+    }
+
+    /// Show a permission-request bubble with Allow/Deny buttons. No
+    /// auto-dismiss — the user must answer, or the upstream connection
+    /// has to close (handled externally via PendingPermissions.discard).
+    func presentPermission(title: String, body: String?, icon: String? = nil,
+                           tailSide: BubbleShape.Side = .bottom,
+                           onAllow: @escaping () -> Void,
+                           onDeny:  @escaping () -> Void) {
+        self.action = nil
+        self.isUrgent = true  // reuse urgent-pinned semantics: no auto-dismiss
+        self.tailSide = tailSide
+        self.permissionMode = true
+        self.onAllow = onAllow
+        self.onDeny  = onDeny
+
+        indicatorDotsLayer.isHidden = true
+        titleField.stringValue = title
+        let bodyText = body?.trimmingCharacters(in: .whitespaces) ?? ""
+        bodyField.stringValue = bodyText
+        bodyField.isHidden = bodyText.isEmpty
+
+        applyStyle(priority: "urgent", clickable: false)
+        allowButton.isHidden = false
+        denyButton.isHidden  = false
+
+        // Icon prefix (same SF-Symbol / brand-glyph path the regular alert
+        // bubble uses). Attach it inline with the title — keeps the visual
+        // parity with Notification-style bubbles.
+        if let iconName = icon?.trimmingCharacters(in: .whitespaces), !iconName.isEmpty {
+            if let image = Self.iconImage(for: iconName) {
+                let attachment = NSTextAttachment()
+                attachment.image = image
+                let attach = NSMutableAttributedString(attachment: attachment)
+                attach.addAttribute(.baselineOffset, value: -1,
+                                    range: NSRange(location: 0, length: attach.length))
+                let para = NSMutableParagraphStyle()
+                para.alignment = .center
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: titleField.font!,
+                    .foregroundColor: titleField.textColor ?? NSColor.labelColor,
+                    .paragraphStyle: para
+                ]
+                let full = NSMutableAttributedString()
+                full.append(attach)
+                full.append(NSAttributedString(string: "  " + title, attributes: attrs))
+                full.addAttribute(.paragraphStyle, value: para,
+                                  range: NSRange(location: 0, length: full.length))
+                titleField.attributedStringValue = full
+            } else {
+                titleField.stringValue = "\(iconName) \(title)"
+            }
+        }
+
+        // Permission bubbles get their own geometry: modestly wider than
+        // alert bubbles with room for 2 wrapped lines so the Notification-
+        // style body ("Claude needs your permission to use X") reads as a
+        // full sentence instead of getting mid-word ellipsized.
+        maxBubbleWidthOverride = 220
+        bodyField.maximumNumberOfLines = 2
+        bodyField.lineBreakMode = .byWordWrapping
+        bodyField.usesSingleLineMode = false
+
+        layoutContent()
+
+        if let parent = superview {
+            let idealX = (parent.frame.width - frame.width) / 2
+            let adjustedX = Self.edgeAdjustedX(idealX: idealX, panelWidth: frame.width, in: parent)
+            let adjustedY = Self.edgeAdjustedY(idealY: 128, panelHeight: frame.height, in: parent)
+            frame.origin = CGPoint(x: adjustedX, y: adjustedY)
+        }
+
+        autoDismissTimer.cancel()
+        isHidden = false
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.22
+            animator().alphaValue = 1.0
+        }
+
+        let fullText = title + " " + bodyText
+        onShow?(Self.talkDurationFor(text: fullText))
+    }
 
     /// Show the bubble with the given content + styling.
     ///
@@ -888,6 +1147,15 @@ final class BubbleView: NSView {
         self.action = action
         self.isUrgent = (priority == "urgent")
         self.tailSide = tailSide
+        self.permissionMode = false
+        self.allowButton.isHidden = true
+        self.denyButton.isHidden = true
+        self.maxBubbleWidthOverride = nil
+        // Restore normal-alert body wrapping in case a prior permission
+        // bubble narrowed it down.
+        bodyField.maximumNumberOfLines = 4
+        bodyField.lineBreakMode = .byWordWrapping
+        bodyField.usesSingleLineMode = false
         let clickable = action != nil
 
         // Only surface the indicator when there's actually a stack to
@@ -946,7 +1214,8 @@ final class BubbleView: NSView {
         if let parent = superview {
             let idealX = (parent.frame.width - frame.width) / 2
             let adjustedX = Self.edgeAdjustedX(idealX: idealX, panelWidth: frame.width, in: parent)
-            frame.origin = CGPoint(x: adjustedX, y: 128)
+            let adjustedY = Self.edgeAdjustedY(idealY: 128, panelHeight: frame.height, in: parent)
+            frame.origin = CGPoint(x: adjustedX, y: adjustedY)
         }
 
         autoDismissTimer.cancel()
@@ -978,16 +1247,23 @@ final class BubbleView: NSView {
             guard let self = self else { return }
             self.isHidden = true
             self.action = nil
+            self.permissionMode = false
+            self.allowButton.isHidden = true
+            self.denyButton.isHidden = true
             self.onHide?()
         })
     }
 
     var isVisible: Bool { !isHidden && alphaValue > 0 }
     var isUrgentlyPinned: Bool { isVisible && isUrgent }
+    var isPermissionMode: Bool { permissionMode }
 
     // MARK: - Click to run action
 
     override func hitTest(_ point: NSPoint) -> NSView? {
+        // In permission mode, fall through to default hit-testing so the
+        // Allow/Deny buttons receive clicks instead of the whole bubble.
+        if permissionMode { return super.hitTest(point) }
         // Only accept clicks when visible and clickable (has an action)
         guard !isHidden, action != nil else { return nil }
         // The body field is a wrapping NSTextField — its default hit-testing
@@ -1047,7 +1323,8 @@ final class BubbleView: NSView {
     }
 
     private func layoutContent() {
-        let maxContentWidth = maxBubbleWidth - 2 * horizPadding
+        let effectiveMaxBubbleWidth = maxBubbleWidthOverride ?? maxBubbleWidth
+        let maxContentWidth = effectiveMaxBubbleWidth - 2 * horizPadding
 
         // Measure the raw text width directly — more reliable than
         // NSTextField.sizeThatFits/intrinsicContentSize, which can under-report
@@ -1065,11 +1342,12 @@ final class BubbleView: NSView {
         var bodyHeight: CGFloat = 0
         if !bodyField.isHidden {
             // Use NSString bounding-rect calculation to get an accurate
-            // wrapped height for up to 4 lines.
+            // wrapped height for up to 4 lines (1 line in permission mode).
             let bodyAttrs: [NSAttributedString.Key: Any] = [.font: bodyField.font!]
             let bodyText = bodyField.stringValue as NSString
             let oneLineHeight = ceil(bodyText.size(withAttributes: bodyAttrs).height)
-            let maxBodyLines = oneLineHeight * 4
+            let lineCap: CGFloat = permissionMode ? 2 : 4
+            let maxBodyLines = oneLineHeight * lineCap
             let boundingRect = bodyText.boundingRect(
                 with: CGSize(width: maxContentWidth, height: maxBodyLines),
                 options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
@@ -1079,11 +1357,19 @@ final class BubbleView: NSView {
             bodyHeight = ceil(min(boundingRect.height, maxBodyLines))
         }
 
-        let rawWidth = max(titleWidth, bodyWidth)
+        // Permission-mode button row: fit two buttons side-by-side with a
+        // gap, plus a tight vertical gap above them. Ensure the bubble is
+        // wide enough to hold both buttons comfortably.
+        let permissionBodyButtonsGap: CGFloat = 4
+        let buttonRowExtra: CGFloat = permissionMode
+            ? (permissionButtonRowHeight + permissionBodyButtonsGap) : 0
+        let buttonsMinContent: CGFloat = permissionMode ? 140 : 0
+
+        let rawWidth = max(titleWidth, bodyWidth, buttonsMinContent)
         let contentWidth = max(min(rawWidth, maxContentWidth), minBubbleWidth - 2 * horizPadding)
         let bubbleWidth = contentWidth + 2 * horizPadding
         let gap: CGFloat = bodyField.isHidden ? 0 : 3
-        let bodyAreaHeight = titleHeight + gap + bodyHeight + 2 * vertPadding
+        let bodyAreaHeight = titleHeight + gap + bodyHeight + 2 * vertPadding + buttonRowExtra
 
         // A side tail pokes out of a vertical edge instead of the bottom, so
         // the overall bubble width grows by tailHeight while the height stays
@@ -1127,16 +1413,37 @@ final class BubbleView: NSView {
             width: contentWidth + 2 * titleInset,
             height: titleHeight
         )
+        // When in permission mode the button row sits flush with the bottom
+        // padding; body text (if any) stacks above it with a tight gap.
+        let bodyBaseY = yOffsetBase + vertPadding
+                      + (permissionMode ? permissionButtonRowHeight + permissionBodyButtonsGap : 0)
         if bodyField.isHidden {
             bodyField.frame = .zero
         } else {
-            let bodyY = yOffsetBase + vertPadding
             let bodyInset: CGFloat = 4
             bodyField.frame = CGRect(
                 x: xOffset + horizPadding - bodyInset,
-                y: bodyY,
+                y: bodyBaseY,
                 width: contentWidth + 2 * bodyInset,
                 height: bodyHeight
+            )
+        }
+
+        if permissionMode {
+            let buttonsY = yOffsetBase + vertPadding
+            let available = contentWidth - permissionButtonGap
+            let btnW = floor(available / 2)
+            allowButton.frame = CGRect(
+                x: xOffset + horizPadding,
+                y: buttonsY,
+                width: btnW,
+                height: permissionButtonRowHeight
+            )
+            denyButton.frame = CGRect(
+                x: xOffset + horizPadding + btnW + permissionButtonGap,
+                y: buttonsY,
+                width: btnW,
+                height: permissionButtonRowHeight
             )
         }
 
@@ -1237,6 +1544,21 @@ final class BubbleView: NSView {
         let target = idealX + shift
         return min(max(0, target), maxX)
     }
+
+    /// Clamp bubble origin-y so the bubble's top edge stays inside the
+    /// parent (stage) view. Without this, a tall permission bubble with a
+    /// long body and two-row layout can push its top off the top of the
+    /// window — the title ends up clipped and invisible.
+    ///
+    /// We prefer the ideal y (so the tail keeps pointing at the character),
+    /// but shift the bubble down if needed so `originY + panelHeight`
+    /// doesn't exceed the parent height. A small margin keeps the shadow
+    /// from flush-sitting on the window edge.
+    static func edgeAdjustedY(idealY: CGFloat, panelHeight: CGFloat, in stage: NSView) -> CGFloat {
+        let margin: CGFloat = 4
+        let maxY = max(0, stage.frame.height - panelHeight - margin)
+        return min(max(0, idealY), maxY)
+    }
 }
 
 extension NSColor {
@@ -1256,16 +1578,16 @@ extension NSColor {
 final class SourcePillView: NSView {
     private let label = NSTextField(labelWithString: "")
 
-    init(text: String) {
+    init(text: String, bgHex: String = "FFE8F2", fgHex: String = "D6457A") {
         super.init(frame: .zero)
         wantsLayer = true
         let bg = CALayer()
         layer = bg
         bg.cornerRadius = 8
-        bg.backgroundColor = AxolCharacterView.hexColor("FFE8F2")
+        bg.backgroundColor = AxolCharacterView.hexColor(bgHex)
 
         label.font = NSFont.systemFont(ofSize: 9, weight: .semibold)
-        label.textColor = NSColor.fromHex("D6457A")
+        label.textColor = NSColor.fromHex(fgHex)
         label.stringValue = text
         label.sizeToFit()
         addSubview(label)
@@ -1293,7 +1615,23 @@ final class HistoryRowView: NSView {
 
     init(entry: AlertEntry, width: CGFloat) {
         self.entry = entry
-        self.sourcePill = SourcePillView(text: entry.source)
+        // For permission entries, the source pill doubles as a decision
+        // chip: green "Allowed" / red "Denied" / muted "Pending". Saves
+        // the duplicate "claude-code" pill (which the rest of the row
+        // already signals via icon) and puts the decision at natural
+        // reading position instead of floating in the right margin.
+        if entry.isPermissionRequest {
+            switch entry.permissionDecision {
+            case "allow":
+                self.sourcePill = SourcePillView(text: "Allowed", bgHex: "DDEFE3", fgHex: "2E8B57")
+            case "deny":
+                self.sourcePill = SourcePillView(text: "Denied",  bgHex: "F7DDDD", fgHex: "C0392B")
+            default:
+                self.sourcePill = SourcePillView(text: "Pending", bgHex: "EDE8EA", fgHex: "6E5F6B")
+            }
+        } else {
+            self.sourcePill = SourcePillView(text: entry.source)
+        }
         let body = (entry.body ?? "").trimmingCharacters(in: .whitespaces)
         self.bodyLabel = body.isEmpty ? nil : NSTextField(labelWithString: body)
         super.init(frame: .zero)
@@ -1793,14 +2131,24 @@ enum BubbleShape {
 /// Three small blue bubbles that rise from above Axol's head when an
 /// alert is unresolved, each with a slightly different horizontal drift.
 final class WorryBubblesView: NSView {
-    private let bubbles: [CAShapeLayer]
-    private var running = false
+    /// Hard cap on concurrent worry bubbles. Over ~6 it stops reading as
+    /// "worried" and starts reading as a soda can.
+    private let maxBubbles = 6
+    private var bubbles: [CAShapeLayer] = []
+    private var currentLevel: Int = 0
+    private var currentTempo: Double = 1.0
 
     override init(frame: NSRect) {
-        // wb-1: 6px (drifts right), wb-2: 5px (drifts left), wb-3: 7px (slight waver)
+        super.init(frame: frame)
+        wantsLayer = true
+        layer = CALayer()
+        layer?.masksToBounds = false
+        // Three size/drift archetypes (left/right/waver) cycled across the
+        // pool. Creating all maxBubbles layers upfront lets start(level:)
+        // just activate a subset rather than allocate mid-animation.
         let sizes: [CGFloat] = [6, 5, 7]
-        var layers: [CAShapeLayer] = []
-        for size in sizes {
+        for i in 0..<maxBubbles {
+            let size = sizes[i % sizes.count]
             let l = CAShapeLayer()
             let r = CGRect(x: -size / 2, y: -size / 2, width: size, height: size)
             l.path = CGPath(ellipseIn: r, transform: nil)
@@ -1810,48 +2158,43 @@ final class WorryBubblesView: NSView {
             l.bounds = r
             l.position = CGPoint(x: frame.width / 2, y: size / 2)
             l.opacity = 0
-            layers.append(l)
+            bubbles.append(l)
+            layer?.addSublayer(l)
         }
-        self.bubbles = layers
-        super.init(frame: frame)
-        wantsLayer = true
-        layer = CALayer()
-        layer?.masksToBounds = false
-        for b in bubbles { layer?.addSublayer(b) }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func start() {
-        guard !running else { return }
-        running = true
+    /// Run worry bubbles with density = `level` (clamped 1..maxBubbles)
+    /// and cycle duration scaled by `tempo` (1.0 = default, <1.0 =
+    /// faster — used for urgent alerts). Idempotent when called with the
+    /// same params.
+    func start(level: Int, tempo: Double = 1.0) {
+        let desired = max(1, min(level, maxBubbles))
+        if currentLevel == desired && currentTempo == tempo { return }
+        currentLevel = desired
+        currentTempo = tempo
 
-        // Per-bubble rise paths with subtle horizontal drift. Y values are in
-        // Cocoa coords (up is positive) — matching the CSS up-and-away trajectory.
+        // Left/right/waver rise paths. Y values in Cocoa coords (up
+        // positive). Keyed to [0,1]; duration scales via `tempo`.
         let paths: [[(t: Double, dx: CGFloat, dy: CGFloat, scale: CGFloat, opacity: Float)]] = [
-            // wb-1: drifts right
-            [(0,   0,  0,  0.4, 0.0),
-             (0.15, 0, 0,  0.4, 0.85),
-             (0.5,  3, 18, 0.95, 0.85),
-             (0.85, 5, 32, 1.05, 0.7),
-             (1.0,  7, 40, 1.1,  0.0)],
-            // wb-2: drifts left
-            [(0,   0,   0,  0.4, 0.0),
-             (0.15, 0,  0,  0.4, 0.85),
-             (0.5, -2, 18, 0.95, 0.85),
-             (0.85,-6, 32, 1.05, 0.7),
-             (1.0, -8, 40, 1.1,  0.0)],
-            // wb-3: gentle waver
-            [(0,   0,  0,  0.4, 0.0),
-             (0.15, 0, 0,  0.4, 0.85),
-             (0.5,  2, 19, 0.95, 0.85),
-             (0.85, 1, 33, 1.05, 0.7),
-             (1.0,  3, 40, 1.1,  0.0)],
+            [(0,  0, 0, 0.4, 0.0), (0.15, 0, 0, 0.4, 0.85),
+             (0.5, 3, 18, 0.95, 0.85), (0.85, 5, 32, 1.05, 0.7), (1.0, 7, 40, 1.1, 0.0)],
+            [(0,  0, 0, 0.4, 0.0), (0.15, 0, 0, 0.4, 0.85),
+             (0.5, -2, 18, 0.95, 0.85), (0.85, -6, 32, 1.05, 0.7), (1.0, -8, 40, 1.1, 0.0)],
+            [(0,  0, 0, 0.4, 0.0), (0.15, 0, 0, 0.4, 0.85),
+             (0.5, 2, 19, 0.95, 0.85), (0.85, 1, 33, 1.05, 0.7), (1.0, 3, 40, 1.1, 0.0)],
         ]
-        let delays: [Double] = [0, 0.87, 1.74]
+        let duration = 2.6 * tempo
+        let step = duration / Double(desired)
         let now = CACurrentMediaTime()
+
         for (i, bubble) in bubbles.enumerated() {
-            let frames = paths[i]
+            bubble.removeAllAnimations()
+            bubble.opacity = 0
+            if i >= desired { continue }
+
+            let frames = paths[i % paths.count]
             let transformAnim = CAKeyframeAnimation(keyPath: "transform")
             transformAnim.values = frames.map { frame -> CATransform3D in
                 var t = CATransform3DIdentity
@@ -1860,27 +2203,27 @@ final class WorryBubblesView: NSView {
                 return t
             }
             transformAnim.keyTimes = frames.map { NSNumber(value: $0.t) }
-            transformAnim.duration = 2.6
+            transformAnim.duration = duration
             transformAnim.repeatCount = .infinity
-            transformAnim.beginTime = now + delays[i]
+            transformAnim.beginTime = now + Double(i) * step
             transformAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
 
             let opacityAnim = CAKeyframeAnimation(keyPath: "opacity")
             opacityAnim.values   = frames.map { NSNumber(value: $0.opacity) }
             opacityAnim.keyTimes = frames.map { NSNumber(value: $0.t) }
-            opacityAnim.duration = 2.6
+            opacityAnim.duration = duration
             opacityAnim.repeatCount = .infinity
-            opacityAnim.beginTime = now + delays[i]
+            opacityAnim.beginTime = now + Double(i) * step
             opacityAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
 
             bubble.add(transformAnim, forKey: "rise-transform")
-            bubble.add(opacityAnim, forKey: "rise-opacity")
+            bubble.add(opacityAnim,   forKey: "rise-opacity")
         }
     }
 
     func stop() {
-        guard running else { return }
-        running = false
+        currentLevel = 0
+        currentTempo = 1.0
         for b in bubbles {
             b.removeAllAnimations()
             b.opacity = 0
@@ -2020,7 +2363,7 @@ final class MicroView: NSView {
         character.onDragDelta   = { [weak self] dx, dy in self?.onDragDelta?(dx, dy) }
         character.onDragEnd     = { [weak self] in self?.onDragEnd?() }
 
-        badgeLayer.fillColor = AxolCharacterView.hexColor("D6457A")
+        badgeLayer.fillColor = AxolCharacterView.hexColor("4A90E2")
         badgeLayer.isHidden = true
         badgeLayer.shadowColor = NSColor.black.cgColor
         badgeLayer.shadowOpacity = 0.2
@@ -2086,7 +2429,7 @@ final class MicroView: NSView {
 
 /// Tiny blue alert-count pill shown in mini mode. Non-interactive — the
 /// character underneath still handles clicks/drags through it. Unlike the
-/// pink micro-mode badge, this one is always blue (mini mode's accent) and
+/// micro-mode badge, this one is laid out in isolation (no character) and
 /// only appears when unseen alerts are stacked up.
 final class MiniBadgeView: NSView {
     private let badgeLayer = CAShapeLayer()
@@ -2316,9 +2659,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         adapters.load()
 
-        server = AxolServer(onEvent: { [weak self] data in
-            self?.forwardToUI(data)
-        })
+        server = AxolServer(
+            onEvent: { [weak self] data in
+                self?.forwardToUI(data)
+            },
+            onPermission: { [weak self] requestId, payload, conn in
+                guard let self = self else { return }
+                PendingPermissions.shared.register(requestId: requestId, connection: conn)
+                conn.stateUpdateHandler = { state in
+                    switch state {
+                    case .failed, .cancelled:
+                        PendingPermissions.shared.discard(requestId: requestId)
+                        DispatchQueue.main.async { [weak self] in
+                            self?.dismissPermissionBubble(requestId: requestId)
+                        }
+                    default: break
+                    }
+                }
+                self.presentPermissionBubble(requestId: requestId, payload: payload)
+            })
         server?.start(port: 47329)
 
         // Restore saved mode from last run. Skip for .full since we already
@@ -2379,6 +2738,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if self.stage.history.isVisible {
                 if priority != "low" {
                     self.stage.history.present(in: self.stage, entries: self.alertStore.entries)
+                }
+                return
+            }
+
+            // Permission bubbles are fully modal — nothing (not even another
+            // urgent alert) replaces them. CC is literally blocked waiting
+            // on the user's click. Queue the new alert so it surfaces after
+            // the permission resolves.
+            if self.stage.bubble.isPermissionMode {
+                if priority != "low"
+                   && self.pendingBubbles.count < self.pendingBubbleCap {
+                    self.pendingBubbles.append(PendingBubble(envelope: envelope, attention: attention, entryId: entryId))
                 }
                 return
             }
@@ -2565,6 +2936,66 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         nudgesEnabled.toggle()
     }
 
+    // MARK: - Load at startup (LaunchAgent)
+
+    private static let launchAgentLabel = "com.axol.agent"
+    private static var launchAgentPlistURL: URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home.appendingPathComponent("Library/LaunchAgents/\(launchAgentLabel).plist")
+    }
+
+    private var loadAtStartupEnabled: Bool {
+        FileManager.default.fileExists(atPath: Self.launchAgentPlistURL.path)
+    }
+
+    @objc private func toggleLoadAtStartup(_ sender: NSMenuItem) {
+        let url = Self.launchAgentPlistURL
+        let label = Self.launchAgentLabel
+        let uid = getuid()
+        if loadAtStartupEnabled {
+            // bootout first so the running job doesn't linger after the
+            // plist is gone. Failures are non-fatal — `launchctl` prints
+            // its own error; we still remove the file.
+            _ = runLaunchctl(["bootout", "gui/\(uid)/\(label)"])
+            try? FileManager.default.removeItem(at: url)
+        } else {
+            guard let exe = Bundle.main.executablePath else { return }
+            let plist: [String: Any] = [
+                "Label": label,
+                "ProgramArguments": [exe],
+                "RunAtLoad": true,
+                "KeepAlive": false,
+            ]
+            guard let data = try? PropertyListSerialization.data(
+                fromPropertyList: plist, format: .xml, options: 0) else { return }
+            let dir = url.deletingLastPathComponent()
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            do {
+                try data.write(to: url)
+                _ = runLaunchctl(["bootstrap", "gui/\(uid)", url.path])
+            } catch {
+                NSLog("axol: could not write LaunchAgent plist: \(error)")
+            }
+        }
+    }
+
+    @discardableResult
+    private func runLaunchctl(_ args: [String]) -> Int32 {
+        let p = Process()
+        p.launchPath = "/bin/launchctl"
+        p.arguments = args
+        p.standardOutput = Pipe()
+        p.standardError  = Pipe()
+        do {
+            try p.run()
+            p.waitUntilExit()
+            return p.terminationStatus
+        } catch {
+            NSLog("axol: launchctl \(args.joined(separator: " ")) failed: \(error)")
+            return -1
+        }
+    }
+
     func showMenu() {
         let menu = NSMenu()
 
@@ -2598,6 +3029,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         nudgesItem.state = nudgesEnabled ? .on : .off
         menu.addItem(nudgesItem)
 
+        let startupItem = NSMenuItem(title: "Load at Startup",
+                                     action: #selector(toggleLoadAtStartup(_:)),
+                                     keyEquivalent: "")
+        startupItem.target = self
+        startupItem.state = loadAtStartupEnabled ? .on : .off
+        menu.addItem(startupItem)
+
         menu.addItem(.separator())
 
         let aboutItem = NSMenuItem(title: "About",
@@ -2620,10 +3058,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.character.onRightClick = { [weak self] in
             self?.showMenu()
         }
-        stage.character.onDragDelta = { [weak self] dx, dy in
+        stage.character.onDragTo = { [weak self] origin in
             guard let self = self, let w = self.window else { return }
-            let proposed = CGPoint(x: w.frame.origin.x + dx, y: w.frame.origin.y + dy)
-            w.setFrameOrigin(self.clampOriginToScreen(proposed, size: w.frame.size))
+            w.setFrameOrigin(self.clampOriginToScreen(origin, size: w.frame.size))
             self.savePositionDebounced()
         }
         stage.character.onLeftClick = { [weak self] in
@@ -2654,11 +3091,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.character.onCmdClick = { [weak self] in
             self?.cycleMode()
         }
+        stage.character.onOptClick = { [weak self] in
+            self?.playRandomIdleForUser()
+        }
 
         // miniCharacter mirrors the same handlers so mini mode supports the
         // same drag / click / cmd-click / double-click interactions.
         stage.miniCharacter.onLeftClick   = { [weak self] in self?.stage.character.onLeftClick?() }
         stage.miniCharacter.onCmdClick    = { [weak self] in self?.cycleMode() }
+        stage.miniCharacter.onOptClick    = { [weak self] in self?.playRandomIdleForUser() }
         stage.miniCharacter.onRightClick  = { [weak self] in self?.showMenu() }
         stage.miniCharacter.onDoubleClick = { [weak self] in self?.showHistory() }
         stage.miniCharacter.onDragStart   = { [weak self] in
@@ -2835,6 +3276,120 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// only carries the action payload, not the entry identity.
     private var currentBubbleEntryId: Int?
 
+    /// request_id of the permission request currently displayed in the
+    /// bubble, if any. Lets an upstream client-disconnect (handled in
+    /// Server.swift via connection stateUpdateHandler) auto-dismiss the
+    /// bubble in the MVP — without this, a killed Claude Code session
+    /// would leave a stale permission bubble on screen.
+    private var currentPermissionId: String?
+
+    /// Repeating nudge timer — keeps Axol animating while a permission
+    /// bubble is open so the user notices even if they looked away.
+    /// Alternates wave → wiggle each tick for variety.
+    private let permissionNudgeTimer = Scheduled()
+    private let permissionNudgeInterval: TimeInterval = 5.0
+    private var permissionNudgeToggle: Bool = false
+
+    /// Pull a minimal title/body out of a Claude Code PermissionRequest
+    /// payload. MVP: don't attempt suggestion rendering or argument pretty-
+    /// printing — just show the tool name and let the user decide.
+    /// Build a permission bubble in the same visual shape as a CC
+    /// Notification-style alert: project-folder as title, a short
+    /// "Claude needs your permission to use X" body, Claude icon.
+    private static func permissionTitleBody(from payload: [String: Any]) -> (title: String, body: String, icon: String) {
+        let tool = (payload["tool_name"] as? String) ?? "tool"
+        var title = "Claude"
+        if let cwd = payload["cwd"] as? String,
+           let leaf = (cwd as NSString).pathComponents.last,
+           !leaf.isEmpty, leaf != "/" {
+            title = leaf
+        } else if let sid = payload["session_id"] as? String, sid.count >= 4 {
+            title = "Claude · \(String(sid.suffix(4)))"
+        }
+        let body = "Claude needs your permission to use \(tool)"
+        return (title, body, "claude")
+    }
+
+    func presentPermissionBubble(requestId: String, payload: [String: Any]) {
+        let built = Self.permissionTitleBody(from: payload)
+
+        // If something else is on screen, drop it — permission requests are
+        // modal-intent: Claude Code's tool call is blocked waiting on this.
+        if stage.bubble.isVisible { stage.bubble.hide() }
+
+        // Archive the permission request in the alert history so it shows
+        // up in the recent-alerts panel with a decision dot once answered.
+        // `kind: "permission"` tags it for the row renderer; we stamp the
+        // decision later via setPermissionDecision.
+        let archiveEnvelope: [String: Any] = [
+            "title": built.title,
+            "body": built.body,
+            "icon": built.icon,
+            "priority": "normal",
+            "source": "claude-code",
+            "kind": "permission"
+        ]
+        let archived = alertStore.push(envelope: archiveEnvelope)
+        let entryId = archived.id
+        updateWorryBubbles()
+
+        currentPermissionId = requestId
+        currentBubbleEntryId = entryId
+        let side: BubbleShape.Side = (mode == .mini) ? .right : .bottom
+        stage.bubble.presentPermission(
+            title: built.title, body: built.body, icon: built.icon, tailSide: side,
+            onAllow: { [weak self] in
+                PendingPermissions.shared.resolve(requestId: requestId, behavior: "allow")
+                self?.alertStore.setPermissionDecision(id: entryId, decision: "allow")
+                self?.currentPermissionId = nil
+                self?.permissionNudgeTimer.cancel()
+                self?.updateWorryBubbles()
+            },
+            onDeny: { [weak self] in
+                PendingPermissions.shared.resolve(requestId: requestId, behavior: "deny")
+                self?.alertStore.setPermissionDecision(id: entryId, decision: "deny")
+                self?.currentPermissionId = nil
+                self?.permissionNudgeTimer.cancel()
+                self?.updateWorryBubbles()
+            }
+        )
+        if mode == .mini { placeMiniBubble() }
+
+        // Initial big bounce + schedule recurring wave/wiggle nudges
+        // until answered.
+        if isNapping { endNap() }
+        permissionNudgeToggle = false
+        stage.character.playAttentionHop()
+        scheduleNextPermissionNudge()
+    }
+
+    private func scheduleNextPermissionNudge() {
+        permissionNudgeTimer.run(after: permissionNudgeInterval) { [weak self] in
+            guard let self = self else { return }
+            guard self.stage.bubble.isPermissionMode,
+                  self.stage.bubble.isVisible else { return }
+            if self.permissionNudgeToggle {
+                self.stage.character.playIdle(.wiggle)
+            } else {
+                self.stage.character.wave()
+            }
+            self.permissionNudgeToggle.toggle()
+            self.scheduleNextPermissionNudge()
+        }
+    }
+
+    /// Called when the upstream connection dies before the user answered.
+    /// If the on-screen bubble is for this requestId, hide it.
+    func dismissPermissionBubble(requestId: String) {
+        if currentPermissionId == requestId {
+            currentPermissionId = nil
+            permissionNudgeTimer.cancel()
+            if stage.bubble.isVisible && stage.bubble.isPermissionMode {
+                stage.bubble.hide()
+            }
+        }
+    }
+
     private func drainPendingBubbles() {
         guard !pendingBubbles.isEmpty,
               !stage.history.isVisible,
@@ -2874,7 +3429,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         && !stage.history.isVisible
                         && mode == .full
         if shouldRun {
-            stage.worryBubbles.start()
+            // Density scales with backlog; urgent entries accelerate the
+            // cycle so a single urgent alert still feels more insistent
+            // than a pile of normal ones.
+            let level = alertStore.unseenActionableCount
+            let tempo = alertStore.hasUrgentUnseenAlert ? 0.65 : 1.0
+            stage.worryBubbles.start(level: level, tempo: tempo)
         } else {
             stage.worryBubbles.stop()
         }
@@ -3227,7 +3787,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// window's origin.x shifts left to make room.
     private func placeMiniBubble() {
         let currentFrame = window.frame
-        let grown = Self.miniWithBubbleSize
+        // Grow the mini stage vertically to fit the bubble — a regular
+        // one-liner still lands in the compact 80pt window, but a taller
+        // permission bubble (title + 2-line body + buttons) pushes the
+        // stage up to its own height + a small margin. Without this the
+        // bubble is centered in a stage shorter than itself and the top
+        // and bottom rounded corners clip against the window edges.
+        let bubbleH = stage.bubble.frame.height
+        let minH = Self.miniWithBubbleSize.height
+        let neededH = max(minH, ceil(bubbleH) + 16)
+        let grown = NSSize(width: Self.miniWithBubbleSize.width, height: neededH)
 
         let charScreenX = currentFrame.minX + stage.miniCharacter.frame.midX
         let charScreenY = currentFrame.minY + stage.miniCharacter.frame.midY
@@ -3397,6 +3966,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let kind = pool.randomElement() ?? .tilt
         stage.character.playIdle(kind)
         scheduleIdle(firstRun: false)
+    }
+
+    /// User-triggered idle (option+click): pick a random move from the
+    /// full idle pool and play it on whichever character is currently
+    /// visible. Wakes her from a nap first so she can actually perform.
+    func playRandomIdleForUser() {
+        if isNapping { endNap() }
+        let kind = AxolCharacterView.idlePool.randomElement() ?? .hop
+        let target: AxolCharacterView = (mode == .mini)
+            ? stage.miniCharacter : stage.character
+        target.playIdle(kind)
     }
 
     // MARK: - Quip pool

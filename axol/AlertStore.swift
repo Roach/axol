@@ -11,6 +11,10 @@ struct AlertEntry {
     /// the entry's action. Actioned entries are filtered out of the bubble
     /// rotation — they remain in the history panel but won't replay.
     var actionedAt: Date?
+    /// For permission-request entries: "allow" once approved, "deny" once
+    /// refused, nil while pending (or for regular alerts). Drives the small
+    /// colored dot on history rows.
+    var permissionDecision: String?
 
     var title: String   { (envelope["title"] as? String) ?? "" }
     var body: String?   { envelope["body"] as? String }
@@ -18,6 +22,7 @@ struct AlertEntry {
     var priority: String { (envelope["priority"] as? String) ?? "normal" }
     var action: [String: Any]? { (envelope["actions"] as? [[String: Any]])?.first }
     var icon: String? { envelope["icon"] as? String }
+    var isPermissionRequest: Bool { (envelope["kind"] as? String) == "permission" }
 }
 
 /// Centralized alert history + seen-set. Newest first; capped at maxEntries.
@@ -26,11 +31,28 @@ final class AlertStore {
     private var nextId: Int = 0
     let maxEntries: Int = 5
     let ttlAfterSeen: TimeInterval = 5 * 60
+    /// Cap on how long an unseen/unactioned entry can keep worry bubbles
+    /// alive. Without this, a bubble that auto-dismissed while the user
+    /// was away from the screen pins `hasUnseenAlerts == true` forever.
+    /// Give the user a generous window (they might step away), but
+    /// eventually let the noise stop on its own.
+    let ttlUnseen: TimeInterval = 30 * 60
 
     /// True if at least one archived entry has an action and is unseen.
     /// Drives the "character has a pending alert" signal (worry bubbles).
     var hasUnseenAlerts: Bool {
         entries.contains { $0.seenAt == nil && $0.action != nil }
+    }
+
+    /// Count of unseen + actionable entries — feeds worry-bubble density.
+    var unseenActionableCount: Int {
+        entries.reduce(0) { $0 + (($1.seenAt == nil && $1.action != nil) ? 1 : 0) }
+    }
+
+    /// True if any unseen actionable entry is urgent — bumps worry-bubble
+    /// tempo so the user picks up on the higher-priority thing faster.
+    var hasUrgentUnseenAlert: Bool {
+        entries.contains { $0.seenAt == nil && $0.action != nil && $0.priority == "urgent" }
     }
 
     /// Most-recent archived entry that the user can still act on (has an
@@ -47,12 +69,24 @@ final class AlertStore {
     @discardableResult
     func push(envelope: [String: Any]) -> AlertEntry {
         nextId += 1
-        let entry = AlertEntry(id: nextId, envelope: envelope, time: Date(), seenAt: nil, actionedAt: nil)
+        let entry = AlertEntry(id: nextId, envelope: envelope, time: Date(),
+                               seenAt: nil, actionedAt: nil, permissionDecision: nil)
         entries.insert(entry, at: 0)
         if entries.count > maxEntries {
             entries = Array(entries.prefix(maxEntries))
         }
         return entry
+    }
+
+    /// Stamp a permission entry with the user's decision after they click
+    /// Allow / Deny. Also marks the entry as actioned + seen — the decision
+    /// is the terminal state, the row shouldn't stay "pending" in history.
+    func setPermissionDecision(id: Int, decision: String) {
+        guard let idx = entries.firstIndex(where: { $0.id == id }) else { return }
+        let now = Date()
+        entries[idx].permissionDecision = decision
+        if entries[idx].actionedAt == nil { entries[idx].actionedAt = now }
+        if entries[idx].seenAt == nil { entries[idx].seenAt = now }
     }
 
     func markSeen(id: Int) {
@@ -86,14 +120,20 @@ final class AlertStore {
         }
     }
 
-    /// Remove entries that were marked seen more than `ttlAfterSeen` ago.
-    /// Returns the number of entries removed (for UI refresh decisions).
+    /// Remove entries that are either (a) marked seen more than
+    /// `ttlAfterSeen` ago or (b) unseen but older than `ttlUnseen`. The
+    /// second clause is the escape hatch that stops worry bubbles from
+    /// running forever when an auto-dismissed alert never got
+    /// acknowledged. Returns the number of entries removed.
     @discardableResult
     func sweep() -> Int {
-        let cutoff = Date().addingTimeInterval(-ttlAfterSeen)
+        let now = Date()
+        let seenCutoff   = now.addingTimeInterval(-ttlAfterSeen)
+        let unseenCutoff = now.addingTimeInterval(-ttlUnseen)
         let before = entries.count
         entries.removeAll { e in
-            if let seen = e.seenAt, seen < cutoff { return true }
+            if let seen = e.seenAt, seen < seenCutoff { return true }
+            if e.seenAt == nil && e.time < unseenCutoff { return true }
             return false
         }
         return before - entries.count

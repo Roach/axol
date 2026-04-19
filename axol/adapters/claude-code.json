@@ -24,7 +24,7 @@
         { "type": "focus-pid", "pid": "{{claude_pid}}", "label": "Open terminal" }
       ],
       "context": { "cwd": "{{cwd}}", "session_id": "{{session_id}}" },
-      "skip_if": { "field": "message", "matches": "waiting for your input" }
+      "skip_if": { "field": "message", "matches": ["waiting for your input", "needs your permission"] }
     },
     "Stop": {
       "title": "{{basename cwd}}",
