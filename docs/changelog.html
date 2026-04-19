@@ -413,6 +413,61 @@ type: article
   </header>
 
   <article class="release">
+    <span class="release-tag"><span class="spark" aria-hidden="true">🪸</span>v2.1</span>
+    <div style="height:6px"></div>
+    <span class="release-date">April 18, 2026</span>
+    <h2>she holds the door</h2>
+    <p class="release-lede">Axol can now be asked for a decision — from Claude Code locally, or from any cloud caller via neuromast. The loop is the same shape in both cases: bubble comes up, user clicks, decision flows back to whoever was waiting.</p>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>interactive permission bubbles</h3>
+      <ul>
+        <li><b>Allow / Deny buttons</b> — permission requests pop a modal bubble with a green Allow and outlined Deny. No auto-dismiss; she waits for you.</li>
+        <li><b>Attention choreography</b> — big anticipation hop on arrival, then alternating wave / wiggle every five seconds until answered, so you notice even if you looked away.</li>
+        <li><b>Claude Code integration</b> — a <code>PermissionRequest</code> hook bridge routes CC's tool-permission prompts through Axol. She stays out of the way unless CC would have prompted otherwise.</li>
+        <li><b>Answered history</b> — every decision is logged to the Recent Alerts panel with a compact <span style="background:#DDEFE3;color:#2E8B57;padding:1px 8px;border-radius:8px;font-weight:700;font-size:11px">✓</span> or <span style="background:#F7DDDD;color:#C0392B;padding:1px 8px;border-radius:8px;font-weight:700;font-size:11px">✕</span> chip alongside the source label.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-remote"/></svg></span>remote approvals via neuromast</h3>
+      <ul>
+        <li><b>Cloud approval endpoint</b> — <code>POST /app/api/permission/{source}</code> parks a pending request and 202-accepts in under a second, so callers with tight webhook SLAs (Slack 3 s, Stripe 10 s) never block on a human.</li>
+        <li><b>Optional inline hold</b> — add <code>"hold": 20</code> and the endpoint waits up to 25 s for the user's click before falling back to async; callers who can wait skip a polling round-trip.</li>
+        <li><b>Decision polling</b> — <code>GET /app/api/decision/{id}</code> returns <code>allow / deny / pending / expired</code>. Opaque id is its own auth — no secret needed on the hot read path.</li>
+        <li><b>Per-service defaults</b> — <code>SERVICES_CONFIG</code> env sets hold window + expiry per source; per-request fields still win.</li>
+        <li><b>Lateral-line threading</b> — the forwarder now detects <code>kind: "permission"</code> envelopes, posts them to Axol's local <code>/permission</code> (held open), and relays the decision back to neuromast. Drops cleanly through all five deploy targets; no Cloudflare-only primitives.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m.5 4v4.5H12a.5.5 0 0 1 0 1H8a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 1 0" /></svg></span>movement, mood, and little things</h3>
+      <ul>
+        <li><b>Underwater flip</b> — a new idle animation. Wind-up, 360° spin, overshoot, gills and arms dragging through the water so the move reads as alive, not rigid.</li>
+        <li><b>Option-click to improvise</b> — hold ⌥ and click Axol to play any idle on demand.</li>
+        <li><b>Worry bubbles that breathe</b> — density scales with the unseen backlog; tempo doubles when anything urgent is unanswered.</li>
+        <li><b>Proper drag</b> — absolute cursor-to-window tracking, so she stays under your cursor instead of drifting off.</li>
+        <li><b>Load at startup</b> in the right-click menu — writes a LaunchAgent, no manual <code>launchctl</code> dance.</li>
+        <li><b>Micro-mode badge</b> now matches mini's blue for visual consistency.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m1 3v1h6V5zm0 3v1h6V8zm0 3v1h4v-1z"/></svg></span>docs</h3>
+      <ul>
+        <li>Site moved to Jekyll — shared layout for head, SEO, and social cards; one edit propagates everywhere.</li>
+        <li>OpenGraph + Twitter cards on every page.</li>
+        <li>New approval-flow section on <b>remote alerts</b> with a worked GitHub Actions deploy-gate example.</li>
+      </ul>
+    </div>
+
+    <div class="quip" aria-label="Axol's take">
+      <svg class="quip-axol" viewBox="0 0 80 80" aria-hidden="true"><use href="#cl-mode-axol"/></svg>
+      <div class="quip-bubble">"You decide. I'll hold the bubble open."</div>
+    </div>
+  </article>
+
+  <article class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">✨</span>v2.0</span>
     <div style="height:6px"></div>
     <span class="release-date">April 18, 2026</span>

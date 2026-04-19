@@ -75,11 +75,53 @@ if [[ "$count" -eq 0 ]]; then
 fi
 
 # 2. Forward each body. Only ack the ids that Axol actually accepted.
+#
+# Permission envelopes take a separate path: they're POSTed to Axol's
+# /permission endpoint, which holds the connection open until the user
+# clicks Allow or Deny (or the stateUpdateHandler aborts on disconnect).
+# We capture Axol's response — already in the CC-compatible hookSpecific
+# shape — and relay the decision back to neuromast so the original
+# caller can pick it up via GET /api/decision/<request_id>.
+PERMISSION_URL="$(printf '%s' "$LOCAL_URL" | sed -E 's|/?$|/permission|')"
+PERMISSION_MAX_TIME=300   # 5 min — caps how long one tick can block
 ids_json='[]'
 while IFS= read -r row; do
     id=$(jq -r '.id' <<<"$row")
     body=$(jq -c '.body' <<<"$row")
-    if curl -fsS --max-time 5 -o /dev/null \
+    kind=$(jq -r '.kind // empty' <<<"$body")
+    if [[ "$kind" == "permission" ]]; then
+        request_id=$(jq -r '.request_id // empty' <<<"$body")
+        if [[ -z "$request_id" ]]; then
+            echo "[$(date -u +%FT%TZ)] permission id=$id missing request_id; acking to drop" >&2
+            ids_json=$(jq --arg id "$id" '. + [$id]' <<<"$ids_json")
+            continue
+        fi
+        # Blocks until the user clicks, or curl times out. On timeout,
+        # don't ack — neuromast's expiry sweep handles eventual cleanup
+        # and the next tick can retry if the bubble is still needed.
+        if axol_resp=$(curl -fsS --max-time "$PERMISSION_MAX_TIME" \
+                            -X POST -H 'Content-Type: application/json' \
+                            --data "$body" "$PERMISSION_URL"); then
+            behavior=$(jq -r '.hookSpecificOutput.decision.behavior // empty' <<<"$axol_resp")
+            if [[ -z "$behavior" ]]; then
+                echo "[$(date -u +%FT%TZ)] permission id=$id: malformed response from Axol" >&2
+                continue
+            fi
+            decision_payload=$(jq -nc --arg b "$behavior" '{behavior:$b}')
+            if curl -fsS --max-time 10 -o /dev/null \
+                    -H "Authorization: Bearer $AXOL_POLL_TOKEN" \
+                    -H 'Content-Type: application/json' \
+                    -X POST --data "$decision_payload" \
+                    "$AXOL_CLOUD_URL/app/api/decision/$request_id"; then
+                ids_json=$(jq --arg id "$id" '. + [$id]' <<<"$ids_json")
+                echo "[$(date -u +%FT%TZ)] permission id=$id resolved: $behavior"
+            else
+                echo "[$(date -u +%FT%TZ)] permission id=$id decision POST failed; will retry" >&2
+            fi
+        else
+            echo "[$(date -u +%FT%TZ)] permission id=$id: Axol hold timed out or aborted; leaving in queue" >&2
+        fi
+    elif curl -fsS --max-time 5 -o /dev/null \
             -X POST -H 'Content-Type: application/json' \
             --data "$body" "$LOCAL_URL"; then
         ids_json=$(jq --arg id "$id" '. + [$id]' <<<"$ids_json")

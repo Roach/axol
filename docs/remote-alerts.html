@@ -1033,6 +1033,101 @@ type: article
     <p><code>id</code> is monotonic (timestamp-prefixed UUID), so <code>since=&lt;last-id&gt;</code> on the next pull fetches only newer items.</p>
   </section>
 
+  <section id="approval-flow">
+    <h2>approval flow</h2>
+    <p>Neuromast can also run the loop in reverse — a remote caller asks Axol for a human decision, and the answer makes its way back. Built on the same queue, same auth, same forwarder; the only addition is two endpoints that park a pending request and record the decision.</p>
+
+    <h3 style="margin-top: 22px;">flow</h3>
+    <ol>
+      <li><b>Caller</b> POSTs <code>/app/api/permission/{source}</code> with a <code>tool_name</code>, optional <code>tool_input</code>, and a <code>request_id</code>. Neuromast 202-accepts immediately, returns the id.</li>
+      <li><b>Lateral-line</b> pulls the envelope (<code>kind: "permission"</code>) on its next tick and POSTs it to Axol's local <code>/permission</code> endpoint, which holds the connection open while Axol renders an Allow/Deny bubble.</li>
+      <li><b>User</b> clicks. Axol returns Claude Code's <code>hookSpecificOutput</code> shape. Lateral-line forwards the decision to <code>/app/api/decision/{request_id}</code>.</li>
+      <li><b>Caller</b> discovers the answer via <code>GET /app/api/decision/{request_id}</code> (poll or optional <code>?wait=N</code> long-poll).</li>
+    </ol>
+
+    <h3 style="margin-top: 22px;">why it looks like this</h3>
+    <p>The POST always returns fast (&lt;1 s). That matters for callers with tight ack windows — Slack slash commands (3 s), PagerDuty webhooks (5–10 s), Stripe events (10 s). Those integrations can't block on a human clicking a button, so neuromast doesn't try to hide the async nature: it persists the pending request, returns an id, and lets the caller resume on its own schedule.</p>
+    <p>If your caller <em>can</em> hold (a CLI tool, a GitHub Actions step, your own script), include <code>"hold": 25</code> in the body. Neuromast will wait up to 25 s for the answer before falling back to 202. Hold is capped at 25 s to stay inside Cloudflare Workers' idle-request budget and is advisory-inline: under KV replication lag it can still time out even when the user has clicked. Your caller should treat a 202 as "check back."</p>
+
+    <h3 style="margin-top: 22px;">per-service defaults</h3>
+    <p>Different services have different tolerances. Drop a <code>SERVICES_CONFIG</code> env var (JSON) on neuromast to set per-source defaults; per-request fields always win:</p>
+    <pre><code>{
+  "github-actions": { "hold_default": 20, "expires_default_s": 600 },
+  "slack-command":  { "hold_default":  2, "expires_default_s":  30 },
+  "stripe":         { "hold_default":  0, "expires_default_s": 300 }
+}</code></pre>
+
+    <h3 style="margin-top: 22px;">request shape</h3>
+    <p>Auth is the same ladder as <code>/app/api/hooks/{source}</code> — a per-source HMAC if you've configured <code>HOOK_SCHEME_*</code> + <code>HOOK_SECRET_*</code>, otherwise the <code>SHARED_SECRET</code> query key.</p>
+    <pre><code>POST /app/api/permission/github-actions?key=&lt;shared-secret&gt;
+Content-Type: application/json
+
+{
+  "request_id":   "run-4821-step-deploy-prod",
+  "tool_name":    "Deploy",
+  "tool_input":   { "env": "prod", "sha": "abc123" },
+  "session_hint": "ci · actions #4821",
+  "cwd":          "/repo/acme/api",
+  "hold":         20,
+  "expires_at":   "2026-04-18T20:05:00Z"
+}</code></pre>
+    <p><b>Response when held (200)</b> — decision landed in time:</p>
+    <pre><code>{
+  "request_id": "run-4821-step-deploy-prod",
+  "status":     "allow",
+  "decided_at": "2026-04-18T19:57:12Z"
+}</code></pre>
+    <p><b>Response when accepted async (202)</b> — use the id to poll:</p>
+    <pre><code>{
+  "request_id": "run-4821-step-deploy-prod",
+  "status":     "pending",
+  "expires_at": "2026-04-18T20:05:00Z"
+}</code></pre>
+
+    <h3 style="margin-top: 22px;">polling the decision</h3>
+    <pre><code>GET /app/api/decision/{request_id}
+GET /app/api/decision/{request_id}?wait=20   # optional long-poll</code></pre>
+    <p>Returns <code>{ status: "pending" | "allow" | "deny" | "expired" }</code>. The id is opaque to Axol; possession of it is the implicit auth for polling (caller minted it, caller knows it), which keeps the hot path secret-free.</p>
+
+    <h3 style="margin-top: 22px;">example: GitHub Actions deploy gate</h3>
+    <pre><code>- name: Request human approval
+  id: approve
+  run: |
+    resp=$(curl -sS -X POST \
+      -H 'Content-Type: application/json' \
+      --data '{
+        "request_id":   "${{ github.run_id }}-deploy-prod",
+        "tool_name":    "Deploy to prod",
+        "tool_input":   { "sha": "${{ github.sha }}" },
+        "session_hint": "actions #${{ github.run_number }}",
+        "hold":         20
+      }' \
+      "$NEUROMAST_URL/app/api/permission/github-actions?key=$NEUROMAST_SHARED_SECRET")
+    echo "$resp"
+    echo "id=$(jq -r '.request_id' &lt;&lt;&lt;"$resp")"      &gt;&gt; "$GITHUB_OUTPUT"
+    echo "status=$(jq -r '.status' &lt;&lt;&lt;"$resp")"     &gt;&gt; "$GITHUB_OUTPUT"
+
+- name: Wait for decision (poll)
+  if: steps.approve.outputs.status == 'pending'
+  id: wait
+  run: |
+    for i in $(seq 1 60); do
+      sleep 10
+      resp=$(curl -sS "$NEUROMAST_URL/app/api/decision/${{ steps.approve.outputs.id }}")
+      status=$(jq -r '.status' &lt;&lt;&lt;"$resp")
+      if [ "$status" != "pending" ]; then
+        echo "status=$status" &gt;&gt; "$GITHUB_OUTPUT"
+        exit 0
+      fi
+    done
+    echo "status=expired" &gt;&gt; "$GITHUB_OUTPUT"
+
+- name: Deploy
+  if: steps.approve.outputs.status == 'allow' || steps.wait.outputs.status == 'allow'
+  run: ./deploy.sh</code></pre>
+    <p>The initial POST returns in a second or two. If the user clicks within the 20 s hold, deploy runs immediately; otherwise the workflow polls, finishes within 10 min of the click, or times out with <code>expired</code>.</p>
+  </section>
+
   <section id="deploy-guides">
     <h2>deploy guides</h2>
     <p>Step-by-step setup for the cloud side of the lateral line, per target.</p>
