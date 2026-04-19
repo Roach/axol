@@ -1612,6 +1612,7 @@ final class HistoryRowView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let timeLabel  = NSTextField(labelWithString: "")
     private let sourcePill: SourcePillView
+    private let decisionChip: SourcePillView?
     private let bodyLabel: NSTextField?
     private let hoverLayer = CALayer()
     private var trackingArea: NSTrackingArea?
@@ -1622,21 +1623,25 @@ final class HistoryRowView: NSView {
         // compact icon chip — a green ✓ for Allow, a red ✕ for Deny.
         // Before the user answers we fall through to the regular source
         // pill; the absence of an icon is itself the "pending" signal.
+        // Source pill always renders; for answered permission entries we
+        // add a second ✓/✕ chip next to it so the row reads as "claude-
+        // code · decided" at a glance.
+        self.sourcePill = SourcePillView(text: entry.source)
         if entry.isPermissionRequest, let decision = entry.permissionDecision {
             switch decision {
             case "allow":
-                self.sourcePill = SourcePillView(
+                self.decisionChip = SourcePillView(
                     text: "✓", bgHex: "DDEFE3", fgHex: "2E8B57",
                     fontSize: 12, fontWeight: .bold, minWidth: 22)
             case "deny":
-                self.sourcePill = SourcePillView(
+                self.decisionChip = SourcePillView(
                     text: "✕", bgHex: "F7DDDD", fgHex: "C0392B",
                     fontSize: 12, fontWeight: .bold, minWidth: 22)
             default:
-                self.sourcePill = SourcePillView(text: entry.source)
+                self.decisionChip = nil
             }
         } else {
-            self.sourcePill = SourcePillView(text: entry.source)
+            self.decisionChip = nil
         }
         let body = (entry.body ?? "").trimmingCharacters(in: .whitespaces)
         self.bodyLabel = body.isEmpty ? nil : NSTextField(labelWithString: body)
@@ -1685,6 +1690,9 @@ final class HistoryRowView: NSView {
         addSubview(timeLabel)
 
         addSubview(sourcePill)
+        if let decisionChip = decisionChip {
+            addSubview(decisionChip)
+        }
 
         // Optional body line below
         if let bodyLabel = bodyLabel {
@@ -1710,8 +1718,11 @@ final class HistoryRowView: NSView {
         let timeSize = timeLabel.intrinsicContentSize
         let timeWidth = ceil(timeSize.width) + 4
         let pillWidth = sourcePill.frame.width
+        let chipGap: CGFloat = 4
+        let chipWidth: CGFloat = decisionChip?.frame.width ?? 0
+        let chipReserve = chipWidth > 0 ? chipWidth + chipGap : 0
         let headHeight: CGFloat = 16
-        let titleWidth = max(0, width - 2 * padX - pillWidth - timeWidth - 2 * gap)
+        let titleWidth = max(0, width - 2 * padX - pillWidth - chipReserve - timeWidth - 2 * gap)
 
         // Row body vertical layout (Cocoa y = bottom-up)
         var totalHeight = rowTopPadding + headHeight + rowBottomPadding
@@ -1720,12 +1731,21 @@ final class HistoryRowView: NSView {
         frame.size = CGSize(width: width, height: totalHeight)
         hoverLayer.frame = CGRect(x: 2, y: 2, width: width - 4, height: totalHeight - 4)
 
-        // Header line: title on the left (flex), pill in the middle, time on the right
+        // Header line: title flex-grows on the left; time anchors to the
+        // right; source pill (and optional decision chip) sit between,
+        // right-aligned so they always line up regardless of title length.
         let headY = totalHeight - rowTopPadding - headHeight
-        titleLabel.frame = CGRect(x: padX, y: headY, width: titleWidth, height: headHeight)
-        let pillX = padX + titleWidth + gap
+        let timeX = width - padX - timeWidth
+        timeLabel.frame = CGRect(x: timeX, y: headY + 1, width: timeWidth, height: headHeight - 2)
+        var rightEdge = timeX - gap
+        if let chip = decisionChip {
+            let chipX = rightEdge - chipWidth
+            chip.frame.origin = CGPoint(x: chipX, y: headY + (headHeight - chip.frame.height) / 2)
+            rightEdge = chipX - chipGap
+        }
+        let pillX = rightEdge - pillWidth
         sourcePill.frame.origin = CGPoint(x: pillX, y: headY + (headHeight - sourcePill.frame.height) / 2)
-        timeLabel.frame = CGRect(x: pillX + pillWidth + gap, y: headY + 1, width: timeWidth, height: headHeight - 2)
+        titleLabel.frame = CGRect(x: padX, y: headY, width: titleWidth, height: headHeight)
 
         // Body line below
         if let bodyLabel = bodyLabel {

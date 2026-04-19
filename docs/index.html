@@ -177,6 +177,8 @@ type: website
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    flex: 1 1 auto;
+    margin-right: auto;
   }
   .demo-history .d-pill {
     font-size: 9px;
@@ -2143,18 +2145,20 @@ cd axol/axol
       const d = demos[h.key]; if (!d) return '';
       const iconSvg = d.kind && ICONS[d.kind] ? ICONS[d.kind] : '';
       const body = d.body ? '<div class="d-body">' + escapeHtml(d.body) + '</div>' : '';
-      // Decided permission rows get a compact ✓/✕ chip instead of the
-      // source pill — matches the native app's icon indicator.
-      const pill = h.decision === 'allow'
+      // Source pill always renders — right-aligned in the row header.
+      // Decided permission rows tack on a ✓/✕ chip after it so the
+      // source ("claude-code") and the decision both read at a glance.
+      const sourcePill = '<span class="d-pill">' + escapeHtml(h.source) + '</span>';
+      const decisionChip = h.decision === 'allow'
           ? '<span class="d-pill d-pill-allow" title="Allowed">✓</span>'
           : h.decision === 'deny'
           ? '<span class="d-pill d-pill-deny" title="Denied">✕</span>'
-          : '<span class="d-pill">' + escapeHtml(h.source) + '</span>';
+          : '';
       return '<div class="d-row kind-' + (d.kind || '') + (idx === 0 ? ' highlight' : '') + '">' +
                '<div class="d-head">' +
                  '<span class="d-icon">' + iconSvg + '</span>' +
                  '<span class="d-title">' + escapeHtml(d.title) + '</span>' +
-                 pill +
+                 sourcePill + decisionChip +
                  '<span class="d-time">' + h.time + '</span>' +
                '</div>' + body +
              '</div>';
