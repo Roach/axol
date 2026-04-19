@@ -302,122 +302,158 @@ type: article
   .tok-string { color: #3A6E4A; }
   .tok-punct { color: #9A8E95; }
 
-  /* Approval-flow diagram — horizontal animated SVG used in the
-     approval-flow section. Cycle is 8s long with three phases:
-       0–30%   request dot drops caller → neuromast → lateral-line → axol
-       30–50%  bubble appears above axol ("Allow?")
-       50–80%  decision dot climbs back axol → lateral-line → neuromast → caller
-       80–100% brief pause before loop */
-  .approval-diagram svg { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  /* Approval-flow diagram — two-lane horizontal animated SVG. Pink
+     request dots flow left→right along the top lane, a "needs
+     permission" bubble fades in above Axol while the user decides,
+     then green decision dots flow right→left along the bottom lane.
+     8-second cycle.
+     Visual vocabulary matches the site's other diagrams: pink-accent
+     dashed arrows with arrowheads, white stage pills with brand
+     glyphs, and a fully-detailed miniature Axol in the rightmost
+     stage. */
+  .approval-diagram svg {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
   .approval-diagram .ad-track {
-    fill: none; stroke: #F3DDE9; stroke-width: 1.5; stroke-dasharray: 4 5;
+    fill: none; stroke: #D6457A; stroke-width: 1.5;
+    stroke-dasharray: 4 5; opacity: 0.55;
   }
-  .approval-diagram .ad-stage circle {
-    fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+  .approval-diagram .ad-track-return {
+    stroke: #2E8B57; opacity: 0.48;
   }
-  .approval-diagram .ad-stage text {
-    text-anchor: middle; font-size: 11px; font-weight: 600; fill: #2D2533;
-  }
-  .approval-diagram .ad-s-axol circle { stroke: var(--pink-accent); stroke-width: 2; }
-  .approval-diagram .ad-req {
-    fill: var(--pink-accent); opacity: 0;
-    transform-box: fill-box; transform-origin: center;
-  }
-  .approval-diagram .ad-dec {
-    fill: #2E8B57; opacity: 0;
-    transform-box: fill-box; transform-origin: center;
-  }
-  .approval-diagram .ad-req-1 { animation: ad-req-1 8s linear infinite; }
-  .approval-diagram .ad-req-2 { animation: ad-req-2 8s linear infinite; }
-  .approval-diagram .ad-req-3 { animation: ad-req-3 8s linear infinite; }
-  .approval-diagram .ad-dec-3 { animation: ad-dec-3 8s linear infinite; }
-  .approval-diagram .ad-dec-2 { animation: ad-dec-2 8s linear infinite; }
-  .approval-diagram .ad-dec-1 { animation: ad-dec-1 8s linear infinite; }
 
-  /* Request: translate +80px (arrow length between two adjacent stages,
-     allowing 2px overshoot so the dot visually lands on the destination). */
+  /* Stage tiles — round white pill with a soft pink border and a
+     drop-shadow for subtle elevation. Axol's stage uses the stronger
+     accent border so the terminal node reads as "the important one". */
+  .approval-diagram .ad-stage-bg {
+    fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+    filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10));
+  }
+  .approval-diagram .ad-s-axol .ad-stage-bg {
+    stroke: var(--pink-accent); stroke-width: 2;
+  }
+
+  .approval-diagram .ad-label {
+    text-anchor: middle; font-size: 12px; font-weight: 700;
+    fill: var(--ink); letter-spacing: -0.005em;
+  }
+  .approval-diagram .ad-sublabel {
+    text-anchor: middle; font-size: 10px; font-weight: 500;
+    fill: var(--ink-soft); letter-spacing: 0.02em;
+  }
+
+  /* Dots — request pink, decision green. transform-box: fill-box
+     makes each circle's transform origin its own center, so the
+     translate animations below move along the arrow axis instead of
+     from the svg origin. */
+  .approval-diagram .ad-req,
+  .approval-diagram .ad-dec {
+    transform-box: fill-box; transform-origin: center;
+    opacity: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  }
+  .approval-diagram .ad-req { fill: var(--pink-accent); }
+  .approval-diagram .ad-dec { fill: #2E8B57; }
+
+  .approval-diagram .ad-req-1 { animation: ad-req-1 8s ease-in-out infinite; }
+  .approval-diagram .ad-req-2 { animation: ad-req-2 8s ease-in-out infinite; }
+  .approval-diagram .ad-req-3 { animation: ad-req-3 8s ease-in-out infinite; }
+  .approval-diagram .ad-dec-3 { animation: ad-dec-3 8s ease-in-out infinite; }
+  .approval-diagram .ad-dec-2 { animation: ad-dec-2 8s ease-in-out infinite; }
+  .approval-diagram .ad-dec-1 { animation: ad-dec-1 8s ease-in-out infinite; }
+
+  /* Each arrow is 68 units long (174−106 = 68 between stage edges),
+     so dots translate +68 forward or −68 on the return lane. */
   @keyframes ad-req-1 {
     0%, 1%   { transform: translateX(0);    opacity: 0; }
     3%       { opacity: 1; }
-    10%      { transform: translateX(80px); opacity: 1; }
-    12%      { transform: translateX(80px); opacity: 0; }
-    100%     { transform: translateX(80px); opacity: 0; }
+    9%       { transform: translateX(68px); opacity: 1; }
+    11%      { transform: translateX(68px); opacity: 0; }
+    100%     { transform: translateX(68px); opacity: 0; }
   }
   @keyframes ad-req-2 {
-    0%, 10%  { transform: translateX(0);    opacity: 0; }
-    12%      { opacity: 1; }
-    19%      { transform: translateX(80px); opacity: 1; }
-    21%      { transform: translateX(80px); opacity: 0; }
-    100%     { transform: translateX(80px); opacity: 0; }
+    0%, 9%   { transform: translateX(0);    opacity: 0; }
+    11%      { opacity: 1; }
+    18%      { transform: translateX(68px); opacity: 1; }
+    20%      { transform: translateX(68px); opacity: 0; }
+    100%     { transform: translateX(68px); opacity: 0; }
   }
   @keyframes ad-req-3 {
-    0%, 19%  { transform: translateX(0);    opacity: 0; }
-    21%      { opacity: 1; }
-    28%      { transform: translateX(80px); opacity: 1; }
-    30%      { transform: translateX(80px); opacity: 0; }
-    100%     { transform: translateX(80px); opacity: 0; }
+    0%, 18%  { transform: translateX(0);    opacity: 0; }
+    20%      { opacity: 1; }
+    28%      { transform: translateX(68px); opacity: 1; }
+    30%      { transform: translateX(68px); opacity: 0; }
+    100%     { transform: translateX(68px); opacity: 0; }
   }
-
-  /* Decision: translate −80px (same distance, reverse direction). */
   @keyframes ad-dec-3 {
-    0%, 50%  { transform: translateX(0);     opacity: 0; }
-    52%      { opacity: 1; }
-    59%      { transform: translateX(-80px); opacity: 1; }
-    61%      { transform: translateX(-80px); opacity: 0; }
-    100%     { transform: translateX(-80px); opacity: 0; }
+    0%, 52%  { transform: translateX(0);     opacity: 0; }
+    54%      { opacity: 1; }
+    61%      { transform: translateX(-68px); opacity: 1; }
+    63%      { transform: translateX(-68px); opacity: 0; }
+    100%     { transform: translateX(-68px); opacity: 0; }
   }
   @keyframes ad-dec-2 {
-    0%, 59%  { transform: translateX(0);     opacity: 0; }
-    61%      { opacity: 1; }
-    68%      { transform: translateX(-80px); opacity: 1; }
-    70%      { transform: translateX(-80px); opacity: 0; }
-    100%     { transform: translateX(-80px); opacity: 0; }
+    0%, 61%  { transform: translateX(0);     opacity: 0; }
+    63%      { opacity: 1; }
+    70%      { transform: translateX(-68px); opacity: 1; }
+    72%      { transform: translateX(-68px); opacity: 0; }
+    100%     { transform: translateX(-68px); opacity: 0; }
   }
   @keyframes ad-dec-1 {
-    0%, 68%  { transform: translateX(0);     opacity: 0; }
-    70%      { opacity: 1; }
-    77%      { transform: translateX(-80px); opacity: 1; }
-    79%      { transform: translateX(-80px); opacity: 0; }
-    100%     { transform: translateX(-80px); opacity: 0; }
+    0%, 70%  { transform: translateX(0);     opacity: 0; }
+    72%      { opacity: 1; }
+    79%      { transform: translateX(-68px); opacity: 1; }
+    81%      { transform: translateX(-68px); opacity: 0; }
+    100%     { transform: translateX(-68px); opacity: 0; }
   }
 
+  /* Bubble pops above Axol once the request reaches her and stays
+     up through the "user is deciding" window before fading as the
+     first decision dot starts its return. */
   .approval-diagram .ad-bubble {
     opacity: 0;
     animation: ad-bubble 8s ease-in-out infinite;
   }
   @keyframes ad-bubble {
-    0%, 30%  { opacity: 0; transform: translate(480px, 30px); }
-    34%      { opacity: 1; transform: translate(480px, 26px); }
-    50%      { opacity: 1; transform: translate(480px, 26px); }
-    54%      { opacity: 0; transform: translate(480px, 30px); }
-    100%     { opacity: 0; transform: translate(480px, 30px); }
+    0%, 29%  { opacity: 0; transform: translate(490px, 58px); }
+    33%      { opacity: 1; transform: translate(490px, 54px); }
+    50%      { opacity: 1; transform: translate(490px, 54px); }
+    54%      { opacity: 0; transform: translate(490px, 58px); }
+    100%     { opacity: 0; transform: translate(490px, 58px); }
   }
 
   .approval-diagram .ad-caption {
-    font-size: 11px; font-weight: 500; fill: #6E5F6B; letter-spacing: 0.02em;
-    opacity: 0;
+    font-size: 12px; font-weight: 500; fill: var(--ink-soft);
+    letter-spacing: 0.02em; opacity: 0;
   }
-  .approval-diagram .ad-caption-req { animation: ad-caption-req 8s ease-in-out infinite; }
-  .approval-diagram .ad-caption-dec { animation: ad-caption-dec 8s ease-in-out infinite; }
+  .approval-diagram .ad-caption-req {
+    fill: #B5305E; animation: ad-caption-req 8s ease-in-out infinite;
+  }
+  .approval-diagram .ad-caption-dec {
+    fill: #2E8B57; animation: ad-caption-dec 8s ease-in-out infinite;
+  }
   @keyframes ad-caption-req {
-    0%, 1%   { opacity: 0; }
-    4%, 28%  { opacity: 1; }
+    0%, 0%    { opacity: 0; }
+    4%, 28%   { opacity: 1; }
     32%, 100% { opacity: 0; }
   }
   @keyframes ad-caption-dec {
-    0%, 49%   { opacity: 0; }
-    53%, 78%  { opacity: 1; }
-    82%, 100% { opacity: 0; }
+    0%, 52%   { opacity: 0; }
+    55%, 80%  { opacity: 1; }
+    84%, 100% { opacity: 0; }
   }
 
+  /* Static fallback for reduced-motion: show the bubble above Axol and
+     a single dot on each lane, so the diagram still reads as a
+     request/decision round-trip without any movement. */
   @media (prefers-reduced-motion: reduce) {
     .approval-diagram .ad-req,
     .approval-diagram .ad-dec,
     .approval-diagram .ad-bubble,
     .approval-diagram .ad-caption { animation: none !important; }
-    .approval-diagram .ad-req-1,
-    .approval-diagram .ad-dec-3 { opacity: 0.6; }
-    .approval-diagram .ad-bubble { opacity: 0.9; transform: translate(480px, 26px); }
+    .approval-diagram .ad-req-2 { opacity: 0.7; }
+    .approval-diagram .ad-dec-2 { opacity: 0.7; }
+    .approval-diagram .ad-bubble { opacity: 0.95; transform: translate(490px, 54px); }
     .approval-diagram .ad-caption-req { opacity: 0.75; }
   }
 
@@ -1157,50 +1193,120 @@ type: article
     <p>Neuromast can also run the loop in reverse — a remote caller asks Axol for a human decision, and the answer makes its way back. Built on the same queue, same auth, same forwarder; the only addition is two endpoints that park a pending request and record the decision.</p>
 
     <div class="approval-diagram" role="img" aria-label="Approval flow: caller to neuromast to lateral-line to Axol, decision flowing back through the same path.">
-      <svg viewBox="0 0 560 150" width="100%" style="max-width:560px; display:block; margin: 10px auto 4px;" xmlns="http://www.w3.org/2000/svg">
-        <!-- static tracks -->
-        <path class="ad-track" d="M 90 75 L 170 75" />
-        <path class="ad-track" d="M 230 75 L 310 75" />
-        <path class="ad-track" d="M 370 75 L 450 75" />
+      <svg viewBox="0 0 620 200" width="100%" style="max-width:620px; display:block; margin: 14px auto 4px;" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="afBodyGrad" cx="50%" cy="40%" r="60%">
+            <stop offset="0%"   stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+          <marker id="afArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+          </marker>
+          <marker id="afArrowHeadGreen" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#2E8B57" />
+          </marker>
+        </defs>
 
-        <!-- request dots (pink) travel left→right across arrows 1, 2, 3 -->
-        <circle class="ad-req ad-req-1" cx="90"  cy="75" r="5" />
-        <circle class="ad-req ad-req-2" cx="230" cy="75" r="5" />
-        <circle class="ad-req ad-req-3" cx="370" cy="75" r="5" />
+        <!-- Pink dashed tracks — the request lane (visible at baseline). -->
+        <path class="ad-track" d="M 106 92 L 174 92" marker-end="url(#afArrowHead)" />
+        <path class="ad-track" d="M 246 92 L 314 92" marker-end="url(#afArrowHead)" />
+        <path class="ad-track" d="M 386 92 L 454 92" marker-end="url(#afArrowHead)" />
 
-        <!-- decision dots (green) travel right→left across arrows 3, 2, 1 -->
-        <circle class="ad-dec ad-dec-3" cx="450" cy="75" r="5" />
-        <circle class="ad-dec ad-dec-2" cx="310" cy="75" r="5" />
-        <circle class="ad-dec ad-dec-1" cx="170" cy="75" r="5" />
+        <!-- Green dashed return tracks — the decision lane. Sits just
+             below the request lane, arrows point left. -->
+        <path class="ad-track ad-track-return" d="M 454 108 L 386 108" marker-end="url(#afArrowHeadGreen)" />
+        <path class="ad-track ad-track-return" d="M 314 108 L 246 108" marker-end="url(#afArrowHeadGreen)" />
+        <path class="ad-track ad-track-return" d="M 174 108 L 106 108" marker-end="url(#afArrowHeadGreen)" />
 
-        <!-- stages -->
-        <g class="ad-stage ad-s-caller" transform="translate(60,75)">
-          <circle r="28" />
-          <text dy="4">caller</text>
-        </g>
-        <g class="ad-stage ad-s-neuromast" transform="translate(200,75)">
-          <circle r="28" />
-          <text dy="4">neuromast</text>
-        </g>
-        <g class="ad-stage ad-s-lateral" transform="translate(340,75)">
-          <circle r="28" />
-          <text dy="4">lateral-line</text>
-        </g>
-        <g class="ad-stage ad-s-axol" transform="translate(480,75)">
-          <circle r="28" />
-          <text dy="4">axol</text>
+        <!-- Request dots travel along the top lane. Positioned at the
+             start of each arrow; transform animates them to the end. -->
+        <circle class="ad-req ad-req-1" cx="106" cy="92" r="5" />
+        <circle class="ad-req ad-req-2" cx="246" cy="92" r="5" />
+        <circle class="ad-req ad-req-3" cx="386" cy="92" r="5" />
+
+        <!-- Decision dots travel the return lane. Start at the right of
+             each arrow, transform shifts them left. -->
+        <circle class="ad-dec ad-dec-3" cx="454" cy="108" r="5" />
+        <circle class="ad-dec ad-dec-2" cx="314" cy="108" r="5" />
+        <circle class="ad-dec ad-dec-1" cx="174" cy="108" r="5" />
+
+        <!-- Stage 1: caller. Cloud-up icon inside a white pill. -->
+        <g class="ad-stage" transform="translate(70,100)">
+          <circle class="ad-stage-bg" r="32" />
+          <g transform="translate(-10,-10)" fill="#D6457A" aria-hidden="true">
+            <path d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383" />
+            <path d="M7.646 4.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V14.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708z" />
+          </g>
+          <text class="ad-label" dy="52">caller</text>
+          <text class="ad-sublabel" dy="65">POST /permission</text>
         </g>
 
-        <!-- permission bubble at axol, fades in during the decision-forming phase -->
-        <g class="ad-bubble" transform="translate(480, 26)">
-          <rect x="-40" y="-18" width="80" height="28" rx="8" fill="#FFEEF5" stroke="#D6457A" stroke-width="1" />
-          <path d="M -4 10 L 0 16 L 4 10 Z" fill="#FFEEF5" stroke="#D6457A" stroke-width="1" />
-          <text dy="1" text-anchor="middle" font-size="11" font-weight="600" fill="#2D2533">Allow?</text>
+        <!-- Stage 2: neuromast. Single-sensor glyph reused from the page. -->
+        <g class="ad-stage" transform="translate(210,100)">
+          <circle class="ad-stage-bg" r="32" />
+          <svg x="-12" y="-12" width="24" height="24" color="#D6457A" overflow="visible">
+            <use href="#glyph-neuromast" />
+          </svg>
+          <text class="ad-label" dy="52">neuromast</text>
+          <text class="ad-sublabel" dy="65">queue + KV</text>
         </g>
 
-        <!-- phase captions -->
-        <text class="ad-caption ad-caption-req" x="280" y="130" text-anchor="middle">POST /permission · 202 accepted</text>
-        <text class="ad-caption ad-caption-dec" x="280" y="130" text-anchor="middle">decision · GET /decision/{id}</text>
+        <!-- Stage 3: lateral-line. Row-of-sensors glyph. -->
+        <g class="ad-stage" transform="translate(350,100)">
+          <circle class="ad-stage-bg" r="32" />
+          <svg x="-12" y="-12" width="24" height="24" color="#D6457A" overflow="visible">
+            <use href="#glyph-lateral-line" />
+          </svg>
+          <text class="ad-label" dy="52">lateral-line</text>
+          <text class="ad-sublabel" dy="65">forwarder</text>
+        </g>
+
+        <!-- Stage 4: axol. Full miniature — gills, body, eyes, mouth. -->
+        <g class="ad-stage ad-s-axol" transform="translate(490,100)">
+          <circle class="ad-stage-bg" r="32" />
+          <g transform="translate(-20,-20) scale(0.182)" aria-hidden="true">
+            <!-- Gills (back pair first so they sit behind the body) -->
+            <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+            <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+            <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#C94F89" transform="rotate(22 50 122)" />
+            <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+            <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+            <ellipse cx="170" cy="122" rx="20" ry="11" fill="#C94F89" transform="rotate(-22 170 122)" />
+            <!-- Body -->
+            <ellipse cx="110" cy="114" rx="74" ry="62" fill="url(#afBodyGrad)" />
+            <!-- Belly highlight -->
+            <ellipse cx="110" cy="135" rx="40" ry="22" fill="#FFE5F0" opacity="0.9" />
+            <!-- Eyes + highlights -->
+            <circle cx="86"  cy="104" r="8" fill="#2D2533" />
+            <circle cx="134" cy="104" r="8" fill="#2D2533" />
+            <circle cx="88"  cy="101" r="2.4" fill="#FFFFFF" />
+            <circle cx="136" cy="101" r="2.4" fill="#FFFFFF" />
+            <!-- Cheeks -->
+            <circle cx="72"  cy="122" r="7" fill="#F89AC0" opacity="0.7" />
+            <circle cx="148" cy="122" r="7" fill="#F89AC0" opacity="0.7" />
+            <!-- Mouth (smile) -->
+            <path d="M 98 132 Q 110 142 122 132" stroke="#7A2D4D" stroke-width="3" fill="none" stroke-linecap="round" />
+          </g>
+          <text class="ad-label" dy="52">axol</text>
+          <text class="ad-sublabel" dy="65">bubble · click</text>
+        </g>
+
+        <!-- Permission bubble above axol. Fades in during the decision
+             phase so viewers see "the user just answered" as the green
+             dots begin their return. -->
+        <g class="ad-bubble">
+          <rect x="-42" y="-22" width="84" height="32" rx="10" fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
+          <path d="M -5 10 L 0 18 L 5 10 Z" fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
+          <text dy="-3" text-anchor="middle" font-size="12" font-weight="700" fill="#2D2533">Claude</text>
+          <text dy="10" text-anchor="middle" font-size="9" fill="#6E5F6B">needs permission</text>
+        </g>
+
+        <!-- Phase captions — fade in alongside their track's active
+             window so the reader gets wire-protocol context at a glance. -->
+        <text class="ad-caption ad-caption-req" x="310" y="180" text-anchor="middle">POST /permission · 202 accepted</text>
+        <text class="ad-caption ad-caption-dec" x="310" y="180" text-anchor="middle">decision · GET /decision/{id}</text>
       </svg>
     </div>
 
