@@ -461,6 +461,52 @@ type: website
     100% { transform: translateY(0); }
   }
 
+  /* Underwater flip — windup lean back, full rotation, overshoot, settle.
+     Mirrors the native AxolCharacterView.playFlip beats. Gills and arms
+     rotate the opposite direction (in local space) during the spin so
+     they appear to drag through water instead of going rigid with the
+     body — the defining tell that sells the move as live. */
+  .stage.spinning svg { animation: hero-spin 1.6s cubic-bezier(0.35, 0.05, 0.35, 1) 1; }
+  @keyframes hero-spin {
+    0%   { transform: rotate(0); }
+    14%  { transform: rotate(11deg); }   /* windup */
+    22%  { transform: rotate(8deg); }    /* release */
+    82%  { transform: rotate(-352deg); } /* full spin */
+    92%  { transform: rotate(-367deg); } /* overshoot past zero */
+    100% { transform: rotate(-360deg); } /* settle */
+  }
+  .stage.spinning .gills {
+    animation: hero-spin-drag 1.6s ease-in-out 1;
+  }
+  .stage.spinning .gills-right { animation-delay: 0.04s; }
+  @keyframes hero-spin-drag {
+    0%   { transform: rotate(0); }
+    14%  { transform: rotate(-2deg); }
+    45%  { transform: rotate(16deg); }
+    78%  { transform: rotate(24deg); }
+    92%  { transform: rotate(-8deg); }
+    100% { transform: rotate(0); }
+  }
+  .stage.spinning .arm-left,
+  .stage.spinning .arm-right {
+    animation: hero-spin-arm-drag 1.6s ease-in-out 1;
+  }
+  .stage.spinning .arm-right { animation-delay: 0.02s; }
+  @keyframes hero-spin-arm-drag {
+    0%   { transform: rotate(0); }
+    16%  { transform: rotate(-4deg); }
+    48%  { transform: rotate(20deg); }
+    82%  { transform: rotate(30deg); }
+    94%  { transform: rotate(-10deg); }
+    100% { transform: rotate(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stage.spinning svg,
+    .stage.spinning .gills,
+    .stage.spinning .arm-left,
+    .stage.spinning .arm-right { animation: none !important; }
+  }
+
   /* Arm animations — rotate around the shoulder. Origin values are in SVG
      user units (viewBox 0 0 220 200), pointing at the top of each arm
      ellipse so the limb swings from where it meets the body. */
@@ -2172,7 +2218,7 @@ cd axol/axol
     demoHistory.classList.remove('visible');
   }
 
-  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'permission', 'shipped', 'claude', 'recap', 'history', 'signoff'];
+  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'permission', 'shipped', 'claude', 'recap', 'history', 'signoff', 'spin'];
   let i = 0;
   function playNext() {
     const key = sequence[i];
@@ -2184,6 +2230,19 @@ cd axol/axol
         hideDemoHistory();
         if (i < sequence.length) setTimeout(playNext, 500);
       }, holdMs);
+      return;
+    }
+    if (key === 'spin') {
+      // Celebratory underwater flip after signoff — no bubble, just
+      // the animation. Clear the class first so a re-entry restarts it.
+      stage.classList.remove('spinning');
+      void stage.offsetWidth;
+      stage.classList.add('spinning');
+      i++;
+      setTimeout(() => {
+        stage.classList.remove('spinning');
+        if (i < sequence.length) setTimeout(playNext, 500);
+      }, 1700);
       return;
     }
     showDemo(key);
