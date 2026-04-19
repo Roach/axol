@@ -362,64 +362,99 @@ type: article
   .approval-diagram .ad-dec-2 { animation: ad-dec-2 8s ease-in-out infinite; }
   .approval-diagram .ad-dec-1 { animation: ad-dec-1 8s ease-in-out infinite; }
 
-  /* Each arrow is 68 units long (174−106 = 68 between stage edges),
-     so dots translate +68 forward or −68 on the return lane. */
+  /* Each dot travels 140 units — from one stage's center to the next.
+     With stages painted AFTER dots in document order, the tile's white
+     fill covers both endpoints, so a constant-opacity dot naturally
+     vanishes behind the source tile (at t=0) and the destination tile
+     (at t=end) — no opacity fade needed to sell the "absorbed by the
+     tile" effect. The 1%→3% rise just hides the start-frame flash
+     between cycles. */
   @keyframes ad-req-1 {
-    0%, 1%   { transform: translateX(0);    opacity: 0; }
+    0%, 1%   { transform: translateX(0);     opacity: 0; }
     3%       { opacity: 1; }
-    9%       { transform: translateX(68px); opacity: 1; }
-    11%      { transform: translateX(68px); opacity: 0; }
-    100%     { transform: translateX(68px); opacity: 0; }
+    9%       { transform: translateX(140px); opacity: 1; }
+    11%      { transform: translateX(140px); opacity: 0; }
+    100%     { transform: translateX(140px); opacity: 0; }
   }
   @keyframes ad-req-2 {
-    0%, 9%   { transform: translateX(0);    opacity: 0; }
+    0%, 9%   { transform: translateX(0);     opacity: 0; }
     11%      { opacity: 1; }
-    18%      { transform: translateX(68px); opacity: 1; }
-    20%      { transform: translateX(68px); opacity: 0; }
-    100%     { transform: translateX(68px); opacity: 0; }
+    18%      { transform: translateX(140px); opacity: 1; }
+    20%      { transform: translateX(140px); opacity: 0; }
+    100%     { transform: translateX(140px); opacity: 0; }
   }
   @keyframes ad-req-3 {
-    0%, 18%  { transform: translateX(0);    opacity: 0; }
+    0%, 18%  { transform: translateX(0);     opacity: 0; }
     20%      { opacity: 1; }
-    28%      { transform: translateX(68px); opacity: 1; }
-    30%      { transform: translateX(68px); opacity: 0; }
-    100%     { transform: translateX(68px); opacity: 0; }
+    28%      { transform: translateX(140px); opacity: 1; }
+    30%      { transform: translateX(140px); opacity: 0; }
+    100%     { transform: translateX(140px); opacity: 0; }
   }
   @keyframes ad-dec-3 {
-    0%, 52%  { transform: translateX(0);     opacity: 0; }
+    0%, 52%  { transform: translateX(0);      opacity: 0; }
     54%      { opacity: 1; }
-    61%      { transform: translateX(-68px); opacity: 1; }
-    63%      { transform: translateX(-68px); opacity: 0; }
-    100%     { transform: translateX(-68px); opacity: 0; }
+    61%      { transform: translateX(-140px); opacity: 1; }
+    63%      { transform: translateX(-140px); opacity: 0; }
+    100%     { transform: translateX(-140px); opacity: 0; }
   }
   @keyframes ad-dec-2 {
-    0%, 61%  { transform: translateX(0);     opacity: 0; }
+    0%, 61%  { transform: translateX(0);      opacity: 0; }
     63%      { opacity: 1; }
-    70%      { transform: translateX(-68px); opacity: 1; }
-    72%      { transform: translateX(-68px); opacity: 0; }
-    100%     { transform: translateX(-68px); opacity: 0; }
+    70%      { transform: translateX(-140px); opacity: 1; }
+    72%      { transform: translateX(-140px); opacity: 0; }
+    100%     { transform: translateX(-140px); opacity: 0; }
   }
   @keyframes ad-dec-1 {
-    0%, 70%  { transform: translateX(0);     opacity: 0; }
+    0%, 70%  { transform: translateX(0);      opacity: 0; }
     72%      { opacity: 1; }
-    79%      { transform: translateX(-68px); opacity: 1; }
-    81%      { transform: translateX(-68px); opacity: 0; }
-    100%     { transform: translateX(-68px); opacity: 0; }
+    79%      { transform: translateX(-140px); opacity: 1; }
+    81%      { transform: translateX(-140px); opacity: 0; }
+    100%     { transform: translateX(-140px); opacity: 0; }
   }
 
-  /* Bubble pops above Axol once the request reaches her and stays
-     up through the "user is deciding" window before fading as the
-     first decision dot starts its return. */
+  /* Bubble pops above Axol once the request reaches her and stays up
+     through the "user is deciding" window before fading as the first
+     decision dot starts its return. Origin sits at y=68 — just above
+     the stage circle top — so the bubble tail's tip docks cleanly to
+     the tile edge. */
   .approval-diagram .ad-bubble {
     opacity: 0;
     animation: ad-bubble 8s ease-in-out infinite;
   }
   @keyframes ad-bubble {
-    0%, 29%  { opacity: 0; transform: translate(490px, 58px); }
-    33%      { opacity: 1; transform: translate(490px, 54px); }
-    50%      { opacity: 1; transform: translate(490px, 54px); }
-    54%      { opacity: 0; transform: translate(490px, 58px); }
-    100%     { opacity: 0; transform: translate(490px, 58px); }
+    0%, 29%  { opacity: 0; transform: translate(490px, 72px); }
+    33%      { opacity: 1; transform: translate(490px, 68px); }
+    50%      { opacity: 1; transform: translate(490px, 68px); }
+    54%      { opacity: 0; transform: translate(490px, 72px); }
+    100%     { opacity: 0; transform: translate(490px, 72px); }
+  }
+
+  /* Picked-option pulse — a ring expands outward from the Allow
+     button mid-hold, matching the "click" beat in the hero reel.
+     Allow is the winner here; if we ever want to show a deny flow we
+     swap the class on the <g>. */
+  .approval-diagram .ad-btn-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    animation: ad-btn-pulse 8s ease-out infinite;
+  }
+  @keyframes ad-btn-pulse {
+    0%, 44%  { opacity: 0;   transform: scale(1); }
+    46%      { opacity: 0.8; transform: scale(1); }
+    52%      { opacity: 0;   transform: scale(1.6); }
+    100%     { opacity: 0;   transform: scale(1); }
+  }
+  .approval-diagram .ad-btn-allow > rect:first-of-type {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ad-btn-press 8s ease-out infinite;
+  }
+  @keyframes ad-btn-press {
+    0%, 44%  { transform: scale(1);    filter: none; }
+    46%      { transform: scale(1.06); filter: brightness(1.1); }
+    52%      { transform: scale(1);    filter: none; }
+    100%     { transform: scale(1);    filter: none; }
   }
 
   .approval-diagram .ad-caption {
@@ -445,15 +480,19 @@ type: article
 
   /* Static fallback for reduced-motion: show the bubble above Axol and
      a single dot on each lane, so the diagram still reads as a
-     request/decision round-trip without any movement. */
+     request/decision round-trip without any movement. Dot on the
+     request lane is translated halfway (+70) so it sits between
+     stages — i.e. mid-flight, not covered by either tile. */
   @media (prefers-reduced-motion: reduce) {
     .approval-diagram .ad-req,
     .approval-diagram .ad-dec,
     .approval-diagram .ad-bubble,
+    .approval-diagram .ad-btn-pulse,
+    .approval-diagram .ad-btn-allow > rect:first-of-type,
     .approval-diagram .ad-caption { animation: none !important; }
-    .approval-diagram .ad-req-2 { opacity: 0.7; }
-    .approval-diagram .ad-dec-2 { opacity: 0.7; }
-    .approval-diagram .ad-bubble { opacity: 0.95; transform: translate(490px, 54px); }
+    .approval-diagram .ad-req-2 { opacity: 1; transform: translateX(70px); }
+    .approval-diagram .ad-dec-2 { opacity: 1; transform: translateX(-70px); }
+    .approval-diagram .ad-bubble { opacity: 0.98; transform: translate(490px, 68px); }
     .approval-diagram .ad-caption-req { opacity: 0.75; }
   }
 
@@ -1220,17 +1259,20 @@ type: article
         <path class="ad-track ad-track-return" d="M 314 108 L 246 108" marker-end="url(#afArrowHeadGreen)" />
         <path class="ad-track ad-track-return" d="M 174 108 L 106 108" marker-end="url(#afArrowHeadGreen)" />
 
-        <!-- Request dots travel along the top lane. Positioned at the
-             start of each arrow; transform animates them to the end. -->
-        <circle class="ad-req ad-req-1" cx="106" cy="92" r="5" />
-        <circle class="ad-req ad-req-2" cx="246" cy="92" r="5" />
-        <circle class="ad-req ad-req-3" cx="386" cy="92" r="5" />
+        <!-- Request dots start at the source stage's center and travel
+             to the destination stage's center — +140 units per hop.
+             Because stages are painted after the dots in document order,
+             a dot parked on a stage's center is fully hidden by the
+             tile's white fill, so the loop "absorbs" each dot on
+             arrival without any explicit opacity fade. -->
+        <circle class="ad-req ad-req-1" cx="70"  cy="92" r="5" />
+        <circle class="ad-req ad-req-2" cx="210" cy="92" r="5" />
+        <circle class="ad-req ad-req-3" cx="350" cy="92" r="5" />
 
-        <!-- Decision dots travel the return lane. Start at the right of
-             each arrow, transform shifts them left. -->
-        <circle class="ad-dec ad-dec-3" cx="454" cy="108" r="5" />
-        <circle class="ad-dec ad-dec-2" cx="314" cy="108" r="5" />
-        <circle class="ad-dec ad-dec-1" cx="174" cy="108" r="5" />
+        <!-- Decision dots: same idea, reversed direction. -->
+        <circle class="ad-dec ad-dec-3" cx="490" cy="108" r="5" />
+        <circle class="ad-dec ad-dec-2" cx="350" cy="108" r="5" />
+        <circle class="ad-dec ad-dec-1" cx="210" cy="108" r="5" />
 
         <!-- Stage 1: caller. Cloud-up icon inside a white pill. -->
         <g class="ad-stage" transform="translate(70,100)">
@@ -1293,14 +1335,42 @@ type: article
           <text class="ad-sublabel" dy="65">bubble · click</text>
         </g>
 
-        <!-- Permission bubble above axol. Fades in during the decision
-             phase so viewers see "the user just answered" as the green
-             dots begin their return. -->
+        <!-- Permission bubble above Axol. Fades in when the request
+             reaches her, holds through the decide window, and fades as
+             the green return dots begin their trip. The Allow button
+             pulses mid-hold to indicate which side the user picked. -->
         <g class="ad-bubble">
-          <rect x="-42" y="-22" width="84" height="32" rx="10" fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
-          <path d="M -5 10 L 0 18 L 5 10 Z" fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
-          <text dy="-3" text-anchor="middle" font-size="12" font-weight="700" fill="#2D2533">Claude</text>
-          <text dy="10" text-anchor="middle" font-size="9" fill="#6E5F6B">needs permission</text>
+          <!-- Bubble body + tail. Origin placed just above the stage
+               top (y=68) so the tail's tip docks at the stage edge. -->
+          <rect x="-54" y="-56" width="108" height="48" rx="10"
+                fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
+          <path d="M -6 -8 L 0 0 L 6 -8 Z"
+                fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
+
+          <!-- Header copy -->
+          <text y="-41" text-anchor="middle" font-size="11" font-weight="700"
+                fill="#2D2533">Claude</text>
+          <text y="-29" text-anchor="middle" font-size="9" fill="#6E5F6B">needs permission</text>
+
+          <!-- Allow / Deny buttons. Coordinates placed so the row sits
+               flush against the bottom of the bubble rect with 2pt of
+               vertical padding. -->
+          <g class="ad-btn ad-btn-allow" transform="translate(-26, -18)">
+            <rect x="-22" y="0" width="44" height="14" rx="4"
+                  fill="#2E8B57" stroke="none" />
+            <text x="0" y="10" text-anchor="middle" font-size="9"
+                  font-weight="700" fill="#FFFFFF">Allow</text>
+            <!-- Pulse ring — scales out and fades when the "click"
+                 beat lands, matching the hero reel's picked pulse. -->
+            <rect class="ad-btn-pulse" x="-22" y="0" width="44" height="14" rx="4"
+                  fill="none" stroke="#2E8B57" stroke-width="2" />
+          </g>
+          <g class="ad-btn ad-btn-deny" transform="translate(26, -18)">
+            <rect x="-22" y="0" width="44" height="14" rx="4"
+                  fill="#FFFFFF" stroke="#D6457A" stroke-width="1" />
+            <text x="0" y="10" text-anchor="middle" font-size="9"
+                  font-weight="700" fill="#2D2533">Deny</text>
+          </g>
         </g>
 
         <!-- Phase captions — fade in alongside their track's active
