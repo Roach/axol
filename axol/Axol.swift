@@ -2327,6 +2327,7 @@ final class MicroView: NSView {
     var onCmdClick: (() -> Void)?
     var onRightClick: (() -> Void)?
     var onDragDelta: ((CGFloat, CGFloat) -> Void)?
+    var onDragTo: ((CGPoint) -> Void)?
     var onDragEnd: (() -> Void)?
 
     private var isDragging = false
@@ -2361,6 +2362,7 @@ final class MicroView: NSView {
         character.onCmdClick    = { [weak self] in self?.onCmdClick?() }
         character.onRightClick  = { [weak self] in self?.onRightClick?() }
         character.onDragDelta   = { [weak self] dx, dy in self?.onDragDelta?(dx, dy) }
+        character.onDragTo      = { [weak self] origin in self?.onDragTo?(origin) }
         character.onDragEnd     = { [weak self] in self?.onDragEnd?() }
 
         badgeLayer.fillColor = AxolCharacterView.hexColor("4A90E2")
@@ -3105,10 +3107,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.miniCharacter.onDragStart   = { [weak self] in
             if self?.isNapping == true { self?.endNap() }
         }
-        stage.miniCharacter.onDragDelta = { [weak self] dx, dy in
+        stage.miniCharacter.onDragTo = { [weak self] origin in
             guard let self = self, let w = self.window else { return }
-            let proposed = CGPoint(x: w.frame.origin.x + dx, y: w.frame.origin.y + dy)
-            w.setFrameOrigin(self.clampOriginToScreen(proposed, size: w.frame.size))
+            w.setFrameOrigin(self.clampOriginToScreen(origin, size: w.frame.size))
             self.savePositionDebounced()
         }
 
@@ -3167,10 +3168,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stage.micro.onRightClick = { [weak self] in
             self?.showMenu()
         }
-        stage.micro.onDragDelta = { [weak self] dx, dy in
+        stage.micro.onDragTo = { [weak self] origin in
             guard let self = self, let w = self.window else { return }
-            let proposed = CGPoint(x: w.frame.origin.x + dx, y: w.frame.origin.y + dy)
-            w.setFrameOrigin(self.clampOriginToScreen(proposed, size: w.frame.size))
+            w.setFrameOrigin(self.clampOriginToScreen(origin, size: w.frame.size))
             self.savePositionDebounced()
         }
     }
