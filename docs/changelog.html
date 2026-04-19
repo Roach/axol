@@ -429,14 +429,82 @@ type: article
       </ul>
     </div>
 
+    <div class="approval-diagram" role="img" aria-label="Approval round-trip: caller → neuromast → lateral-line → Axol, decision back through the same path.">
+      <svg viewBox="0 0 560 130" width="100%" style="max-width:520px; display:block; margin: 14px auto 6px;" xmlns="http://www.w3.org/2000/svg">
+        <path class="ad-track" d="M 90 70 L 170 70" />
+        <path class="ad-track" d="M 230 70 L 310 70" />
+        <path class="ad-track" d="M 370 70 L 450 70" />
+        <circle class="ad-req ad-req-1" cx="90"  cy="70" r="5" />
+        <circle class="ad-req ad-req-2" cx="230" cy="70" r="5" />
+        <circle class="ad-req ad-req-3" cx="370" cy="70" r="5" />
+        <circle class="ad-dec ad-dec-3" cx="450" cy="70" r="5" />
+        <circle class="ad-dec ad-dec-2" cx="310" cy="70" r="5" />
+        <circle class="ad-dec ad-dec-1" cx="170" cy="70" r="5" />
+        <g class="ad-stage" transform="translate(60,70)">
+          <circle r="26" /><text dy="4">caller</text>
+        </g>
+        <g class="ad-stage" transform="translate(200,70)">
+          <circle r="26" /><text dy="4">neuromast</text>
+        </g>
+        <g class="ad-stage" transform="translate(340,70)">
+          <circle r="26" /><text dy="4">lateral-line</text>
+        </g>
+        <g class="ad-stage ad-s-axol" transform="translate(480,70)">
+          <circle r="26" /><text dy="4">axol</text>
+        </g>
+        <g class="ad-bubble">
+          <rect x="-40" y="-18" width="80" height="28" rx="8" fill="#FFEEF5" stroke="#D6457A" stroke-width="1" />
+          <path d="M -4 10 L 0 16 L 4 10 Z" fill="#FFEEF5" stroke="#D6457A" stroke-width="1" />
+          <text dy="1" text-anchor="middle" font-size="11" font-weight="600" fill="#2D2533">Allow?</text>
+        </g>
+      </svg>
+    </div>
+    <style>
+      /* Scoped to the v2.1 entry — same approval-diagram idiom used on
+         remote-alerts.html#approval-flow. Cycle phases mirror it. */
+      .approval-diagram svg { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+      .approval-diagram .ad-track { fill: none; stroke: #F3DDE9; stroke-width: 1.5; stroke-dasharray: 4 5; }
+      .approval-diagram .ad-stage circle { fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5; }
+      .approval-diagram .ad-stage text { text-anchor: middle; font-size: 11px; font-weight: 600; fill: #2D2533; }
+      .approval-diagram .ad-s-axol circle { stroke: var(--pink-accent); stroke-width: 2; }
+      .approval-diagram .ad-req { fill: var(--pink-accent); opacity: 0; transform-box: fill-box; transform-origin: center; }
+      .approval-diagram .ad-dec { fill: #2E8B57;            opacity: 0; transform-box: fill-box; transform-origin: center; }
+      .approval-diagram .ad-req-1 { animation: cl-ad-req-1 8s linear infinite; }
+      .approval-diagram .ad-req-2 { animation: cl-ad-req-2 8s linear infinite; }
+      .approval-diagram .ad-req-3 { animation: cl-ad-req-3 8s linear infinite; }
+      .approval-diagram .ad-dec-3 { animation: cl-ad-dec-3 8s linear infinite; }
+      .approval-diagram .ad-dec-2 { animation: cl-ad-dec-2 8s linear infinite; }
+      .approval-diagram .ad-dec-1 { animation: cl-ad-dec-1 8s linear infinite; }
+      @keyframes cl-ad-req-1 { 0%,1% {transform:translateX(0);   opacity:0} 3%{opacity:1} 10%{transform:translateX(80px);opacity:1} 12%,100% {transform:translateX(80px);  opacity:0} }
+      @keyframes cl-ad-req-2 { 0%,10%{transform:translateX(0);   opacity:0} 12%{opacity:1} 19%{transform:translateX(80px);opacity:1} 21%,100%{transform:translateX(80px);  opacity:0} }
+      @keyframes cl-ad-req-3 { 0%,19%{transform:translateX(0);   opacity:0} 21%{opacity:1} 28%{transform:translateX(80px);opacity:1} 30%,100%{transform:translateX(80px);  opacity:0} }
+      @keyframes cl-ad-dec-3 { 0%,50%{transform:translateX(0);   opacity:0} 52%{opacity:1} 59%{transform:translateX(-80px);opacity:1} 61%,100%{transform:translateX(-80px); opacity:0} }
+      @keyframes cl-ad-dec-2 { 0%,59%{transform:translateX(0);   opacity:0} 61%{opacity:1} 68%{transform:translateX(-80px);opacity:1} 70%,100%{transform:translateX(-80px); opacity:0} }
+      @keyframes cl-ad-dec-1 { 0%,68%{transform:translateX(0);   opacity:0} 70%{opacity:1} 77%{transform:translateX(-80px);opacity:1} 79%,100%{transform:translateX(-80px); opacity:0} }
+      .approval-diagram .ad-bubble { opacity: 0; animation: cl-ad-bubble 8s ease-in-out infinite; }
+      @keyframes cl-ad-bubble {
+        0%, 30%  { opacity: 0; transform: translate(480px, 25px); }
+        34%      { opacity: 1; transform: translate(480px, 21px); }
+        50%      { opacity: 1; transform: translate(480px, 21px); }
+        54%      { opacity: 0; transform: translate(480px, 25px); }
+        100%     { opacity: 0; transform: translate(480px, 25px); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .approval-diagram .ad-req,
+        .approval-diagram .ad-dec,
+        .approval-diagram .ad-bubble { animation: none !important; }
+        .approval-diagram .ad-bubble { opacity: 0.9; transform: translate(480px, 21px); }
+      }
+    </style>
+
     <div class="feature-group">
-      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-remote"/></svg></span>remote approvals via neuromast</h3>
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-remote"/></svg></span>remote approvals via <a href="remote-alerts.html#approval-flow">neuromast</a></h3>
       <ul>
-        <li><b>Cloud approval endpoint</b> — <code>POST /app/api/permission/{source}</code> parks a pending request and 202-accepts in under a second, so callers with tight webhook SLAs (Slack 3 s, Stripe 10 s) never block on a human.</li>
-        <li><b>Optional inline hold</b> — add <code>"hold": 20</code> and the endpoint waits up to 25 s for the user's click before falling back to async; callers who can wait skip a polling round-trip.</li>
-        <li><b>Decision polling</b> — <code>GET /app/api/decision/{id}</code> returns <code>allow / deny / pending / expired</code>. Opaque id is its own auth — no secret needed on the hot read path.</li>
-        <li><b>Per-service defaults</b> — <code>SERVICES_CONFIG</code> env sets hold window + expiry per source; per-request fields still win.</li>
-        <li><b>Lateral-line threading</b> — the forwarder now detects <code>kind: "permission"</code> envelopes, posts them to Axol's local <code>/permission</code> (held open), and relays the decision back to neuromast. Drops cleanly through all five deploy targets; no Cloudflare-only primitives.</li>
+        <li><b><a href="remote-alerts.html#approval-flow">Cloud approval endpoint</a></b> — <code>POST /app/api/permission/{source}</code> parks a pending request and 202-accepts in under a second, so callers with tight webhook SLAs (Slack 3 s, Stripe 10 s) never block on a human.</li>
+        <li><b>Optional inline <a href="remote-alerts.html#approval-flow">hold</a></b> — add <code>"hold": 20</code> and the endpoint waits up to 25 s for the user's click before falling back to async; callers who can wait skip a polling round-trip.</li>
+        <li><b><a href="remote-alerts.html#approval-flow">Decision polling</a></b> — <code>GET /app/api/decision/{id}</code> returns <code>allow / deny / pending / expired</code>. Opaque id is its own auth — no secret needed on the hot read path.</li>
+        <li><b><a href="remote-alerts.html#approval-flow">Per-service defaults</a></b> — <code>SERVICES_CONFIG</code> env sets hold window + expiry per source; per-request fields still win.</li>
+        <li><b>Lateral-line threading</b> — the forwarder now detects <code>kind: "permission"</code> envelopes, posts them to Axol's local <code>/permission</code> (held open), and relays the decision back to neuromast. Drops cleanly through all <a href="remote-alerts.html#deploy-guides">five deploy targets</a>; no Cloudflare-only primitives.</li>
       </ul>
     </div>
 
@@ -448,16 +516,13 @@ type: article
         <li><b>Worry bubbles that breathe</b> — density scales with the unseen backlog; tempo doubles when anything urgent is unanswered.</li>
         <li><b>Proper drag</b> — absolute cursor-to-window tracking, so she stays under your cursor instead of drifting off.</li>
         <li><b>Load at startup</b> in the right-click menu — writes a LaunchAgent, no manual <code>launchctl</code> dance.</li>
-        <li><b>Micro-mode badge</b> now matches mini's blue for visual consistency.</li>
       </ul>
     </div>
 
     <div class="feature-group">
       <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m1 3v1h6V5zm0 3v1h6V8zm0 3v1h4v-1z"/></svg></span>docs</h3>
       <ul>
-        <li>Site moved to Jekyll — shared layout for head, SEO, and social cards; one edit propagates everywhere.</li>
-        <li>OpenGraph + Twitter cards on every page.</li>
-        <li>New approval-flow section on <b>remote alerts</b> with a worked GitHub Actions deploy-gate example.</li>
+        <li>New <a href="remote-alerts.html#approval-flow">approval-flow</a> section on <b>remote alerts</b> with a worked GitHub Actions deploy-gate example.</li>
       </ul>
     </div>
 
