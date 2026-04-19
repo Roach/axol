@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url }}" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="{{ '/favicon.svg' | relative_url }}" />
+<title>{{ page.title }}</title>
+{% seo title=false %}
+{%- assign img_width = page.image_width | default: site.image_width -%}
+{%- assign img_height = page.image_height | default: site.image_height -%}
+{%- assign img_alt = page.image_alt | default: site.image_alt -%}
+{%- assign img = page.image | default: site.image -%}
+{%- if img_width and img_height %}
+<meta property="og:image:width" content="{{ img_width }}" />
+<meta property="og:image:height" content="{{ img_height }}" />
+{%- endif %}
+{%- if img_alt %}
+<meta property="og:image:alt" content="{{ img_alt }}" />
+{%- endif %}
+<meta name="twitter:image" content="{{ img }}" />
+</head>
+<body>
+{{ content }}
+</body>
+</html>

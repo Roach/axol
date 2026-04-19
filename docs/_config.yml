@@ -1,0 +1,37 @@
+title: Axol
+tagline: a cheerful desktop companion
+description: >-
+  Axol is a tiny axolotl that lives in the corner of your screen, surfaces
+  alerts from any tool that can POST JSON, and cheers you on.
+url: https://roach.github.io
+baseurl: /axol
+lang: en_US
+
+# Shared OG / Twitter image + dimensions. Per-page front matter can override
+# `image` when a page has a more representative graphic.
+image: https://github.com/user-attachments/assets/0278e1d5-b354-4090-bd69-0ceba1767a9f
+image_width: 450
+image_height: 237
+image_alt: Axol, a pink axolotl, waving from the corner of a screen.
+
+twitter:
+  card: summary_large_image
+
+plugins:
+  - jekyll-seo-tag
+
+# Every page defaults to the shared layout and the "article" og:type; the
+# homepage overrides to "website" in its own front matter.
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
+      type: article
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor
