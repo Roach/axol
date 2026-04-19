@@ -188,6 +188,23 @@ type: website
     border-radius: 999px;
     flex: 0 0 auto;
   }
+  /* Answered-permission chips — compact icon instead of source text.
+     Mirror the native app's green-check / red-cross treatment. */
+  .demo-history .d-pill-allow,
+  .demo-history .d-pill-deny {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0;
+    padding: 0;
+    width: 18px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .demo-history .d-pill-allow { background: #DDEFE3; color: #2E8B57; }
+  .demo-history .d-pill-deny  { background: #F7DDDD; color: #C0392B; }
   .demo-history .d-time {
     font-size: 9.5px;
     color: #A89CA3;
@@ -321,6 +338,42 @@ type: website
     font-size: 12px;
     color: var(--ink-soft);
     line-height: 1.35;
+  }
+  /* Allow/Deny pill row inside a permission bubble. Mirrors the native
+     app's pills: solid green allow, outline deny. The `.picked` class
+     pulses the chosen side ~halfway through the hold so viewers register
+     which way the decision went. */
+  .bubble .bbuttons {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .bubble .bbtn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 7px;
+    line-height: 1.2;
+  }
+  .bubble .bbtn-allow {
+    background: #2E8B57;
+    color: #FFFFFF;
+  }
+  .bubble .bbtn-deny {
+    background: #FFFFFF;
+    color: #2D2533;
+    border: 1px solid #D6457A;
+  }
+  .bubble .bbtn.picked { animation: bbtn-pick 0.9s ease-in-out 1.3s 1; }
+  @keyframes bbtn-pick {
+    0%   { transform: scale(1);    box-shadow: none; }
+    30%  { transform: scale(1.08); box-shadow: 0 3px 10px rgba(46, 139, 87, 0.4); }
+    70%  { transform: scale(1.04); box-shadow: 0 2px 6px rgba(46, 139, 87, 0.25); }
+    100% { transform: scale(1);    box-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble .bbtn.picked { animation: none !important; }
   }
 
   .mouth-open {
@@ -1980,6 +2033,7 @@ cd axol/axol
     review:  { title: 'github',      body: 'PR #482 approved',                               priority: 'normal', alert: true,  sweat: false, kind: 'github' },
     shipped: { title: 'main',        body: 'shipped to production',                          priority: 'normal', alert: true,  sweat: false, kind: 'ship', celebrate: true },
     claude:  { title: 'claude-code', body: 'finished',                                       priority: 'normal', alert: true,  sweat: false, kind: 'claude' },
+    permission: { title: 'axol',     body: 'Claude needs your permission to use Bash',       priority: 'urgent', alert: true,  sweat: false, kind: 'claude', permission: 'allow', hold: 2600 },
     recap:   { title: '',            body: "Let's recap —",                                  priority: null,     alert: false, sweat: false },
     signoff: { title: '',            body: "Happy shipping!",                                 priority: null,     alert: false, sweat: false, wave: true },
   };
@@ -1998,7 +2052,15 @@ cd axol/axol
     }
     const t = '<span class="btitle">' + icon + escapeHtml(d.title || '') + '</span>';
     const b = d.body ? '<span class="bbody">' + escapeHtml(d.body) + '</span>' : '';
-    return t + b;
+    // Permission bubbles get Allow/Deny pills — the selected one pulses
+    // near the end of the hold so the viewer registers the decision.
+    const buttons = d.permission
+      ? '<span class="bbuttons">'
+        + '<span class="bbtn bbtn-allow' + (d.permission === 'allow' ? ' picked' : '') + '">Allow</span>'
+        + '<span class="bbtn bbtn-deny'  + (d.permission === 'deny'  ? ' picked' : '') + '">Deny</span>'
+        + '</span>'
+      : '';
+    return t + b + buttons;
   }
   function demoText(d) {
     return d.body ? d.title + ' ' + d.body : d.title;
@@ -2067,11 +2129,11 @@ cd axol/axol
 
   // Static history timeline shown when sequence hits 'history' — newest first.
   const historyShape = [
-    { key: 'claude',  source: 'claude-code', time: 'now' },
+    { key: 'permission', source: 'claude-code', time: 'now', decision: 'allow' },
+    { key: 'claude',  source: 'claude-code', time: '30s' },
     { key: 'shipped', source: 'ci-bot',      time: '1m' },
     { key: 'review',  source: 'github',      time: '2m' },
     { key: 'green',   source: 'ci-bot',      time: '3m' },
-    { key: 'deploy',  source: 'ci-bot',      time: '4m' },
   ];
   const demoHistory = document.getElementById('demoHistory');
   const demoHistoryRows = document.getElementById('demoHistoryRows');
@@ -2081,11 +2143,18 @@ cd axol/axol
       const d = demos[h.key]; if (!d) return '';
       const iconSvg = d.kind && ICONS[d.kind] ? ICONS[d.kind] : '';
       const body = d.body ? '<div class="d-body">' + escapeHtml(d.body) + '</div>' : '';
+      // Decided permission rows get a compact ✓/✕ chip instead of the
+      // source pill — matches the native app's icon indicator.
+      const pill = h.decision === 'allow'
+          ? '<span class="d-pill d-pill-allow" title="Allowed">✓</span>'
+          : h.decision === 'deny'
+          ? '<span class="d-pill d-pill-deny" title="Denied">✕</span>'
+          : '<span class="d-pill">' + escapeHtml(h.source) + '</span>';
       return '<div class="d-row kind-' + (d.kind || '') + (idx === 0 ? ' highlight' : '') + '">' +
                '<div class="d-head">' +
                  '<span class="d-icon">' + iconSvg + '</span>' +
                  '<span class="d-title">' + escapeHtml(d.title) + '</span>' +
-                 '<span class="d-pill">' + escapeHtml(h.source) + '</span>' +
+                 pill +
                  '<span class="d-time">' + h.time + '</span>' +
                '</div>' + body +
              '</div>';
@@ -2099,7 +2168,7 @@ cd axol/axol
     demoHistory.classList.remove('visible');
   }
 
-  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'shipped', 'claude', 'recap', 'history', 'signoff'];
+  const sequence = ['hello', 'intro', 'deploy', 'green', 'review', 'permission', 'shipped', 'claude', 'recap', 'history', 'signoff'];
   let i = 0;
   function playNext() {
     const key = sequence[i];

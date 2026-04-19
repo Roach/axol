@@ -1578,7 +1578,9 @@ extension NSColor {
 final class SourcePillView: NSView {
     private let label = NSTextField(labelWithString: "")
 
-    init(text: String, bgHex: String = "FFE8F2", fgHex: String = "D6457A") {
+    init(text: String, bgHex: String = "FFE8F2", fgHex: String = "D6457A",
+         fontSize: CGFloat = 9, fontWeight: NSFont.Weight = .semibold,
+         minWidth: CGFloat = 0) {
         super.init(frame: .zero)
         wantsLayer = true
         let bg = CALayer()
@@ -1586,16 +1588,17 @@ final class SourcePillView: NSView {
         bg.cornerRadius = 8
         bg.backgroundColor = AxolCharacterView.hexColor(bgHex)
 
-        label.font = NSFont.systemFont(ofSize: 9, weight: .semibold)
+        label.font = NSFont.systemFont(ofSize: fontSize, weight: fontWeight)
         label.textColor = NSColor.fromHex(fgHex)
         label.stringValue = text
         label.sizeToFit()
         addSubview(label)
 
-        let w = label.frame.width + 12
+        let w = max(minWidth, label.frame.width + 12)
         let h: CGFloat = 16
         frame.size = CGSize(width: w, height: h)
-        label.frame.origin = CGPoint(x: 6, y: (h - label.frame.height) / 2)
+        label.frame.origin = CGPoint(x: (w - label.frame.width) / 2,
+                                     y: (h - label.frame.height) / 2)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -1615,19 +1618,22 @@ final class HistoryRowView: NSView {
 
     init(entry: AlertEntry, width: CGFloat) {
         self.entry = entry
-        // For permission entries, the source pill doubles as a decision
-        // chip: green "Allowed" / red "Denied" / muted "Pending". Saves
-        // the duplicate "claude-code" pill (which the rest of the row
-        // already signals via icon) and puts the decision at natural
-        // reading position instead of floating in the right margin.
-        if entry.isPermissionRequest {
-            switch entry.permissionDecision {
+        // For answered permission entries, swap the source pill for a
+        // compact icon chip — a green ✓ for Allow, a red ✕ for Deny.
+        // Before the user answers we fall through to the regular source
+        // pill; the absence of an icon is itself the "pending" signal.
+        if entry.isPermissionRequest, let decision = entry.permissionDecision {
+            switch decision {
             case "allow":
-                self.sourcePill = SourcePillView(text: "Allowed", bgHex: "DDEFE3", fgHex: "2E8B57")
+                self.sourcePill = SourcePillView(
+                    text: "✓", bgHex: "DDEFE3", fgHex: "2E8B57",
+                    fontSize: 12, fontWeight: .bold, minWidth: 22)
             case "deny":
-                self.sourcePill = SourcePillView(text: "Denied",  bgHex: "F7DDDD", fgHex: "C0392B")
+                self.sourcePill = SourcePillView(
+                    text: "✕", bgHex: "F7DDDD", fgHex: "C0392B",
+                    fontSize: 12, fontWeight: .bold, minWidth: 22)
             default:
-                self.sourcePill = SourcePillView(text: "Pending", bgHex: "EDE8EA", fgHex: "6E5F6B")
+                self.sourcePill = SourcePillView(text: entry.source)
             }
         } else {
             self.sourcePill = SourcePillView(text: entry.source)
