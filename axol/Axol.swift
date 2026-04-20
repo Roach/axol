@@ -940,6 +940,12 @@ final class BubbleView: NSView {
     private let denyButton  = NSButton(title: "Deny",  target: nil, action: nil)
     private var onAllow: (() -> Void)?
     private var onDeny:  (() -> Void)?
+    /// Fires when the user clicks the title/body/padding area (but not the
+    /// Allow/Deny buttons) while in permission mode. The bubble stays on
+    /// screen — the permission itself isn't resolved yet, the click just
+    /// brings the originating terminal forward so the user can see the
+    /// context of the request.
+    private var onPermissionFocusClick: (() -> Void)?
     private let permissionButtonRowHeight: CGFloat = 22
     private let permissionButtonGap: CGFloat = 6
 
@@ -1054,6 +1060,7 @@ final class BubbleView: NSView {
     /// has to close (handled externally via PendingPermissions.discard).
     func presentPermission(title: String, body: String?, icon: String? = nil,
                            tailSide: BubbleShape.Side = .bottom,
+                           onFocusClick: (() -> Void)? = nil,
                            onAllow: @escaping () -> Void,
                            onDeny:  @escaping () -> Void) {
         self.action = nil
@@ -1062,6 +1069,7 @@ final class BubbleView: NSView {
         self.permissionMode = true
         self.onAllow = onAllow
         self.onDeny  = onDeny
+        self.onPermissionFocusClick = onFocusClick
 
         indicatorDotsLayer.isHidden = true
         titleField.stringValue = title
@@ -1248,6 +1256,7 @@ final class BubbleView: NSView {
             self.isHidden = true
             self.action = nil
             self.permissionMode = false
+            self.onPermissionFocusClick = nil
             self.allowButton.isHidden = true
             self.denyButton.isHidden = true
             self.onHide?()
@@ -1261,9 +1270,20 @@ final class BubbleView: NSView {
     // MARK: - Click to run action
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        // In permission mode, fall through to default hit-testing so the
-        // Allow/Deny buttons receive clicks instead of the whole bubble.
-        if permissionMode { return super.hitTest(point) }
+        if permissionMode {
+            // Let the Allow / Deny buttons take their own clicks.
+            let defaultHit = super.hitTest(point)
+            if defaultHit === allowButton || defaultHit === denyButton {
+                return defaultHit
+            }
+            // Title / body / padding route to self so the user can click
+            // through to focus the originating terminal — same affordance
+            // as a regular clickable bubble. No focus handler wired (e.g.
+            // missing claude_pid) ⇒ fall through and the click is inert.
+            guard !isHidden, onPermissionFocusClick != nil else { return defaultHit }
+            let local = convert(point, from: superview)
+            return bounds.contains(local) ? self : nil
+        }
         // Only accept clicks when visible and clickable (has an action)
         guard !isHidden, action != nil else { return nil }
         // The body field is a wrapping NSTextField — its default hit-testing
@@ -1275,6 +1295,12 @@ final class BubbleView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        if permissionMode {
+            // Permission bubbles stay on screen after a focus click — the
+            // request is still pending until Allow / Deny resolves it.
+            onPermissionFocusClick?()
+            return
+        }
         if let a = action, let cb = onAction {
             cb(a)
             hide()
@@ -1282,7 +1308,7 @@ final class BubbleView: NSView {
     }
 
     override func resetCursorRects() {
-        if action != nil {
+        if action != nil || (permissionMode && onPermissionFocusClick != nil) {
             addCursorRect(bounds, cursor: .pointingHand)
         }
     }
@@ -3362,8 +3388,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         currentPermissionId = requestId
         currentBubbleEntryId = entryId
         let side: BubbleShape.Side = (mode == .mini) ? .right : .bottom
+
+        // Title / body click focuses the originating terminal — same
+        // affordance as a regular clickable alert. Only wired when the
+        // payload carries a claude_pid (X-Claude-PID header from the hook
+        // shim); without it there's nothing to focus.
+        var focusClick: (() -> Void)? = nil
+        if let pid = payload["claude_pid"] as? Int {
+            focusClick = { [weak self] in
+                self?.focusTerminal(claudePid: Int32(pid))
+            }
+        }
+
         stage.bubble.presentPermission(
             title: built.title, body: built.body, icon: built.icon, tailSide: side,
+            onFocusClick: focusClick,
             onAllow: { [weak self] in
                 PendingPermissions.shared.resolve(requestId: requestId, behavior: "allow")
                 self?.alertStore.setPermissionDecision(id: entryId, decision: "allow")
