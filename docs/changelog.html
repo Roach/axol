@@ -413,6 +413,28 @@ type: article
   </header>
 
   <article class="release">
+    <span class="release-tag"><span class="spark" aria-hidden="true">🫧</span>v2.1.1</span>
+    <div style="height:6px"></div>
+    <span class="release-date">April 20, 2026</span>
+    <h2>bubble polish</h2>
+    <p class="release-lede">Three small fixes to the v2.1 permission flow — click-through to focus, history stays out of the way, and Axol dismisses her own bubble when you answer in Claude Code itself.</p>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>permission-bubble fixes</h3>
+      <ul>
+        <li><b>Click the title or body to focus the terminal.</b> Same affordance as any other actionable bubble — the prompt stays open until you Allow or Deny.</li>
+        <li><b>Recent Alerts stays out of the way</b> while a permission prompt is up. Double-clicking Axol no longer buries Allow / Deny behind the history panel.</li>
+        <li><b>Auto-dismiss when CC resolves in-terminal.</b> Claude Code still shows its own prompt alongside the hook; answer there and Axol notices curl's socket close, so the bubble goes away on its own.</li>
+      </ul>
+    </div>
+
+    <div class="quip" aria-label="Axol's take">
+      <svg class="quip-axol" viewBox="0 0 80 80" aria-hidden="true"><use href="#cl-mode-axol"/></svg>
+      <div class="quip-bubble">"If you've already decided, I won't keep nagging."</div>
+    </div>
+  </article>
+
+  <article class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">🪸</span>v2.1</span>
     <div style="height:6px"></div>
     <span class="release-date">April 18, 2026</span>
