@@ -86,6 +86,16 @@ final class AxolServer {
                             let requestId = (json["request_id"] as? String) ?? UUID().uuidString
                             let reqJson = json
                             DispatchQueue.main.async { onPermission(requestId, reqJson, conn) }
+                            // Keep a sentinel read running so peer-close fires
+                            // — Claude Code still prompts in-terminal in
+                            // parallel with the PermissionRequest hook, and
+                            // when the user answers in CC it kills the hook
+                            // subprocess, closing curl's socket. Without an
+                            // active read, NWConnection won't surface that
+                            // close and the Axol bubble would stay up. On
+                            // peer EOF / error we cancel, which fires the
+                            // existing stateUpdateHandler → dismissPermissionBubble.
+                            Self.watchForPeerClose(conn)
                             return  // connection stays open until resolve/discard
                         }
                         DispatchQueue.main.async { self.onEvent(json) }
@@ -102,6 +112,18 @@ final class AxolServer {
             }
         }
         readMore()
+    }
+
+    /// Keep an idle receive posted on a held-open permission connection so
+    /// the kernel surfaces peer EOF as a receive callback — without it,
+    /// NWConnection sits in `.ready` even after curl closes, and the bubble
+    /// only dismisses when the user clicks Allow/Deny. Any bytes, error, or
+    /// isComplete=true all mean "drop the connection" — there's no valid
+    /// follow-up traffic on a single-shot POST.
+    private static func watchForPeerClose(_ conn: NWConnection) {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 1) { _, _, _, _ in
+            conn.cancel()
+        }
     }
 
     private static func parseHTTP(_ data: Data) -> (headers: [String: String], body: Data, path: String)? {
