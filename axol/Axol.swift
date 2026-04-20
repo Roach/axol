@@ -3368,6 +3368,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // If something else is on screen, drop it — permission requests are
         // modal-intent: Claude Code's tool call is blocked waiting on this.
         if stage.bubble.isVisible { stage.bubble.hide() }
+        if stage.history.isVisible { stage.history.hide() }
 
         // Archive the permission request in the alert history so it shows
         // up in the recent-alerts panel with a decision dot once answered.
@@ -3940,6 +3941,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showHistory() {
+        // Permission bubbles are modal-intent (Claude Code's tool call is
+        // blocked waiting on Allow/Deny) — don't bury them under history.
+        if stage.bubble.isVisible && stage.bubble.isPermissionMode { return }
         if stage.bubble.isVisible && !stage.bubble.isUrgentlyPinned {
             stage.bubble.hide()
         }
