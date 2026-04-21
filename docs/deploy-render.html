@@ -201,6 +201,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <div class="wrap">
 
@@ -257,7 +279,17 @@ type: article
     </a>
   </header>
 
-  <section>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#why">why Render</a>
+    <a href="#prerequisites">prerequisites</a>
+    <a href="#step-push">1 · push</a>
+    <a href="#step-create">2 · create</a>
+    <a href="#step-connect">3 · connect</a>
+    <a href="#day-2">day-2</a>
+    <a href="#troubleshooting">troubleshooting</a>
+  </nav>
+
+  <section id="why">
     <h2>why pick Render</h2>
     <ul>
       <li><b>GitHub-native deploys</b> — connect once, every push to the tracked branch triggers a build. No CLI required.</li>
@@ -267,7 +299,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="prerequisites">
     <h2>prerequisites</h2>
     <ul>
       <li><b>A Render account</b> — sign up with GitHub or email.</li>
@@ -275,7 +307,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="step-push">
     <h2>1 · push <code>neuromast/</code> to your own GitHub repo</h2>
     <p>Skip if you forked Axol. Otherwise seed a fresh repo:</p>
 <pre><code><span class="tok-cmd">cp</span> <span class="tok-flag">-r</span> neuromast /tmp/my-neuromast
@@ -286,7 +318,7 @@ type: article
 <span class="tok-cmd">gh</span> repo create my-neuromast <span class="tok-flag">--private</span> <span class="tok-flag">--source=.</span> <span class="tok-flag">--push</span></code></pre>
   </section>
 
-  <section>
+  <section id="step-create">
     <h2>2 · create the Render services</h2>
     <ol class="setup-steps">
       <li>
@@ -330,14 +362,14 @@ type: article
     </ol>
   </section>
 
-  <section>
+  <section id="step-connect">
     <h2>3 · connect the local forwarder</h2>
 <pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
 <span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
 ./lateral-line/install.sh</code></pre>
   </section>
 
-  <section>
+  <section id="day-2">
     <h2>day-2 operations</h2>
 
     <h3>Redeploying</h3>
@@ -350,7 +382,7 @@ type: article
     <p>Render's free web services spin down after 15 min idle. The local forwarder's 15 s polling keeps the service warm during your work day — free-tier idle windows only happen overnight. If you want zero cold starts, upgrade the web service to the $7/mo plan.</p>
   </section>
 
-  <section>
+  <section id="troubleshooting">
     <h2>troubleshooting</h2>
     <ul class="troubleshooting">
       <li>

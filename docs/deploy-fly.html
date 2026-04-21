@@ -201,6 +201,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <div class="wrap">
 
@@ -252,7 +274,16 @@ type: article
     </a>
   </header>
 
-  <section>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#why">why Fly.io</a>
+    <a href="#prerequisites">prerequisites</a>
+    <a href="#step-launch">1 · launch</a>
+    <a href="#step-connect">2 · connect</a>
+    <a href="#day-2">day-2</a>
+    <a href="#troubleshooting">troubleshooting</a>
+  </nav>
+
+  <section id="why">
     <h2>why pick Fly.io</h2>
     <ul>
       <li><b>Global edge</b> — Fly deploys your app to regions close to your users. Usually overkill for a single-user webhook service, but it's free on the hobby plan.</li>
@@ -262,7 +293,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="prerequisites">
     <h2>prerequisites</h2>
     <ul>
       <li><b>A Fly.io account</b> — sign up at <a href="https://fly.io/app/sign-up" target="_blank" rel="noopener">fly.io</a>. Hobby plan is free with a small per-month credit.</li>
@@ -271,7 +302,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="step-launch">
     <h2>1 · launch the app</h2>
     <ol class="setup-steps">
       <li>
@@ -319,14 +350,14 @@ RUN npm run build</code></pre>
     </ol>
   </section>
 
-  <section>
+  <section id="step-connect">
     <h2>2 · connect the local forwarder</h2>
 <pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
 <span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
 ./lateral-line/install.sh</code></pre>
   </section>
 
-  <section>
+  <section id="day-2">
     <h2>day-2 operations</h2>
 
     <h3>Redeploying</h3>
@@ -340,7 +371,7 @@ RUN npm run build</code></pre>
     <p>Hobby: ~$5/month credit, covers a single small machine + Upstash Redis idle. Auto-stop reduces idle bill to near-zero; cold start adds ~2 s to the first request.</p>
   </section>
 
-  <section>
+  <section id="troubleshooting">
     <h2>troubleshooting</h2>
     <ul class="troubleshooting">
       <li>

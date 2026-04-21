@@ -320,6 +320,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <div class="wrap">
 
@@ -377,7 +399,17 @@ type: article
     </a>
   </header>
 
-  <section>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#why">why Railway</a>
+    <a href="#prerequisites">prerequisites</a>
+    <a href="#step-push">1 · push</a>
+    <a href="#step-create">2 · create</a>
+    <a href="#step-connect">3 · connect</a>
+    <a href="#day-2">day-2</a>
+    <a href="#troubleshooting">troubleshooting</a>
+  </nav>
+
+  <section id="why">
     <h2>why pick Railway</h2>
     <ul>
       <li><b>Standard Node runtime</b> — neuromast runs as a plain Astro app via <code>@astrojs/node</code>, not a Cloudflare Worker. Easier to reason about, easier to debug locally, no edge-specific quirks.</li>
@@ -390,7 +422,7 @@ type: article
     </div>
   </section>
 
-  <section>
+  <section id="prerequisites">
     <h2>prerequisites</h2>
     <ul>
       <li><b>A Railway account</b> — the free hobby plan covers this comfortably until you have real traffic.</li>
@@ -399,7 +431,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="step-push">
     <h2>1 · push <code>neuromast/</code> to your own GitHub repo</h2>
     <p>If you forked Axol, skip to step 2. Otherwise seed a fresh repo with just the <code>neuromast/</code> tree:</p>
 <pre><code><span class="tok-cmd">cp</span> <span class="tok-flag">-r</span> neuromast /tmp/my-neuromast
@@ -410,7 +442,7 @@ type: article
 <span class="tok-cmd">gh</span> repo create my-neuromast <span class="tok-flag">--private</span> <span class="tok-flag">--source=.</span> <span class="tok-flag">--push</span></code></pre>
   </section>
 
-  <section>
+  <section id="step-create">
     <h2>2 · create the Railway project</h2>
     <ol class="setup-steps">
       <li>
@@ -459,7 +491,7 @@ type: article
     </ol>
   </section>
 
-  <section>
+  <section id="step-connect">
     <h2>3 · connect the local forwarder</h2>
     <p>Same as the Webflow deploy — point the forwarder's <code>AXOL_CLOUD_URL</code> at your Railway domain:</p>
 <pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
@@ -468,7 +500,7 @@ type: article
     <p>With Axol running, post a test webhook and watch <code>~/Library/Logs/Axol/lateral-line.log</code> for the pull → forward → ack cycle.</p>
   </section>
 
-  <section>
+  <section id="day-2">
     <h2>day-2 operations</h2>
 
     <h3>Redeploying</h3>
@@ -485,7 +517,7 @@ type: article
     <p>Railway's hobby plan bills by usage — a Node service + small Redis sitting idle with occasional webhook traffic runs a few dollars a month at most. Check the <b>Usage</b> page for a live estimate. If you'd rather cap spending hard, set a monthly credit limit in account settings.</p>
   </section>
 
-  <section>
+  <section id="troubleshooting">
     <h2>troubleshooting</h2>
     <ul class="troubleshooting">
       <li>

@@ -314,6 +314,28 @@ type: article
     .release { padding: 24px 20px 24px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id], article[id] { scroll-margin-top: 24px; }
 </style>
 <!-- Concept glyphs + feature bullets. Concept glyphs mirror the ones in
      index.html so the remote-alerts flow reads with the same icons the
@@ -412,7 +434,14 @@ type: article
     <p class="tagline">Axol molts every so often. Here's what changed, and when.</p>
   </header>
 
-  <article class="release">
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#v2-1-1">v2.1.1 · bubble polish</a>
+    <a href="#v2-1">v2.1 · she holds the door</a>
+    <a href="#v2-0">v2.0 · she grew up</a>
+    <a href="#v1-0">v1.0 · she hatched!</a>
+  </nav>
+
+  <article id="v2-1-1" class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">🫧</span>v2.1.1</span>
     <div style="height:6px"></div>
     <span class="release-date">April 20, 2026</span>
@@ -434,7 +463,7 @@ type: article
     </div>
   </article>
 
-  <article class="release">
+  <article id="v2-1" class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">🪸</span>v2.1</span>
     <div style="height:6px"></div>
     <span class="release-date">April 18, 2026</span>
@@ -657,7 +686,7 @@ type: article
     </div>
   </article>
 
-  <article class="release">
+  <article id="v2-0" class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">✨</span>v2.0</span>
     <div style="height:6px"></div>
     <span class="release-date">April 18, 2026</span>
@@ -864,7 +893,7 @@ type: article
     </div>
   </article>
 
-  <article class="release">
+  <article id="v1-0" class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">🥚</span>v1.0</span>
     <div style="height:6px"></div>
     <span class="release-date">April 17, 2026 · first sighting</span>

@@ -955,6 +955,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <!-- Reusable concept glyphs. Neuromast: one sensor + ripples. Lateral
      line: row of sensors along a nerve, with signal intensity ramping. -->
@@ -1024,13 +1046,23 @@ type: article
     <a class="cta" href="#deploy-guides">Deploy guides →</a>
   </header>
 
-  <section>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#why">why</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#data-flow">data flow</a>
+    <a href="#authentication">auth</a>
+    <a href="#delivery">delivery</a>
+    <a href="#approval-flow">approval</a>
+    <a href="#deploy-guides">deploy</a>
+  </nav>
+
+  <section id="why">
     <h2>why</h2>
     <p>Axol's receiver binds to <code>127.0.0.1:47329</code> — loopback only, no exceptions. Anything you can <code>curl</code> from the same machine can talk to her, but GitHub / Stripe / Sentry / anything with a webhook has no way in.</p>
     <p>The lateral line gives Axol a dangling antenna: a public, signed endpoint that queues remote alerts, and a shell script on your Mac that periodically fetches them and posts them to the loopback port. It's named after the row of sensory cells down a fish's flank (axolotls have one too) — each inbound webhook is one <em>neuromast</em> picking up pressure from the outside, and the script is the nerve pulling signal back toward the brain.</p>
   </section>
 
-  <section>
+  <section id="anatomy">
     <h2>anatomy</h2>
     <p>Two pieces, both borrowed from fish biology, each doing one job:</p>
     <div class="anatomy">
@@ -1055,7 +1087,7 @@ type: article
     </div>
   </section>
 
-  <section>
+  <section id="data-flow">
     <h2>data flow</h2>
     <p style="margin-bottom: 14px;">Each stage pulses in turn as a webhook traces the path from sender to bubble.</p>
     <div class="flow flow-animated">
@@ -1161,7 +1193,7 @@ type: article
     </div>
   </section>
 
-  <section>
+  <section id="authentication">
     <h2>authentication</h2>
     <p>The <code>/hooks/{source}</code> route resolves auth in a fixed order:</p>
     <ol>
@@ -1209,7 +1241,7 @@ type: article
     <p><b>Optional replay window for github / generic.</b> Both schemes HMAC the raw body by default. Senders that care about replay protection can include an <code>X-Signature-Timestamp</code> header (unix seconds); neuromast verifies it's within 300 seconds and then signs <code>&lt;ts&gt;.&lt;body&gt;</code> instead — Stripe-style. Stripe's scheme already bakes the timestamp in, so this only matters for the other two.</p>
   </section>
 
-  <section>
+  <section id="delivery">
     <h2>delivery semantics</h2>
     <p><b>At-least-once.</b> The forwarder only acks items after the local Axol returns <code>204</code>. If Axol is offline, items stay queued and retry on the next tick. If the forwarder crashes between POSTing to Axol and calling <code>/ack</code>, you'll see one duplicate bubble — rare, and a fair trade for not silently dropping an alert.</p>
     <p><b>Bounded queue.</b> The queue index is capped at the 100 most-recent items. Older unacked entries age out of the index (though their bodies linger until the backing store's own expiration). For a single user this is effectively unlimited headroom — it's a backstop for a forwarder that's been offline for a week, not a broadcast queue.</p>

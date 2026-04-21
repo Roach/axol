@@ -200,6 +200,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <div class="wrap">
 
@@ -251,7 +273,17 @@ type: article
     </a>
   </header>
 
-  <section>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#why">why Cloudflare</a>
+    <a href="#prerequisites">prerequisites</a>
+    <a href="#step-setup">1 · set up</a>
+    <a href="#step-deploy">2 · deploy</a>
+    <a href="#step-connect">3 · connect</a>
+    <a href="#day-2">day-2</a>
+    <a href="#troubleshooting">troubleshooting</a>
+  </nav>
+
+  <section id="why">
     <h2>why pick Cloudflare direct</h2>
     <ul>
       <li><b>Native runtime</b> — neuromast already targets Workers via <code>@astrojs/cloudflare</code>. No adapter switch, no Redis, no Node server.</li>
@@ -264,7 +296,7 @@ type: article
     </div>
   </section>
 
-  <section>
+  <section id="prerequisites">
     <h2>prerequisites</h2>
     <ul>
       <li><b>A Cloudflare account</b> — the free tier is plenty. No credit card needed until you exceed the free limits.</li>
@@ -273,7 +305,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="step-setup">
     <h2>1 · set up the project</h2>
     <ol class="setup-steps">
       <li>
@@ -298,7 +330,7 @@ type: article
     </ol>
   </section>
 
-  <section>
+  <section id="step-deploy">
     <h2>2 · deploy</h2>
     <ol class="setup-steps">
       <li>
@@ -332,14 +364,14 @@ type: article
     </ol>
   </section>
 
-  <section>
+  <section id="step-connect">
     <h2>3 · connect the local forwarder</h2>
 <pre><code><span class="tok-cmd">AXOL_CLOUD_URL</span>=<span class="tok-str">"$AXOL_CLOUD_URL"</span> \
 <span class="tok-cmd">AXOL_POLL_TOKEN</span>=<span class="tok-str">"$POLL_TOKEN"</span> \
 ./lateral-line/install.sh</code></pre>
   </section>
 
-  <section>
+  <section id="day-2">
     <h2>day-2 operations</h2>
 
     <h3>Redeploying</h3>
@@ -353,7 +385,7 @@ type: article
     <p>Free tier: 100 k requests/day, 1 GB KV storage, 30 MB bundle size. Axol's traffic pattern sits well under this; a paid plan only matters if you're hosting many users or running heavy integrations.</p>
   </section>
 
-  <section>
+  <section id="troubleshooting">
     <h2>troubleshooting</h2>
     <ul class="troubleshooting">
       <li>

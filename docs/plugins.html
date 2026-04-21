@@ -620,6 +620,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <div class="wrap">
 
@@ -671,7 +693,18 @@ type: article
     <p class="tagline">Adapters translate whatever shape a tool emits into Axol's envelope. This is the canonical spec — match rules, template language, and the closed action vocabulary.</p>
   </header>
 
-  <section class="envelope-flow-section">
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#flow">the flow</a>
+    <a href="#built-ins">built-ins</a>
+    <a href="#fields">fields</a>
+    <a href="#match-predicate">match</a>
+    <a href="#template-language">templates</a>
+    <a href="#actions">actions</a>
+    <a href="#example">example</a>
+    <a href="#share">share</a>
+  </nav>
+
+  <section id="flow" class="envelope-flow-section">
     <h2>the flow</h2>
     <p>Raw payloads arrive with whatever shape their source happened to use. An adapter picks the one it recognizes, renders it into Axol's envelope, and hands it off to the bubble.</p>
     <div class="envelope-flow-mini" role="img" aria-label="Multiple payload shapes converge through an adapter, become an envelope, and render as a speech bubble above Axol.">
@@ -946,7 +979,7 @@ type: article
     </div>
   </section>
 
-  <section>
+  <section id="fields">
     <h2>adapter fields</h2>
     <p>Each adapter file is a JSON object with these top-level keys:</p>
     <table class="schema">
@@ -1010,7 +1043,7 @@ type: article
     <p>If the <code>switch</code> field resolves to a value that doesn't appear as a case key, nothing renders for that event — silently dropped like a missed match. Add a wildcard by naming a case whatever string your field will commonly produce, or pair with a fallback adapter sorted later in the directory.</p>
   </section>
 
-  <section>
+  <section id="template-language">
     <h2>template language</h2>
     <p>Every string value in a template runs through a tiny substitution engine. Whole strings that are just <code>{% raw %}{{…}}{% endraw %}</code> preserve their native type (so <code>{% raw %}"pid": "{{claude_pid}}"{% endraw %}</code> yields <code>"pid": 12345</code>, not <code>"12345"</code>).</p>
     <div class="tmpl">
@@ -1032,7 +1065,7 @@ type: article
     <div class="iconset" id="iconset"></div>
   </section>
 
-  <section>
+  <section id="actions">
     <h2>action vocabulary</h2>
     <p>Actions are a closed set. Unknown action types are silently dropped by the envelope validator — adapters can't invent new ones.</p>
 <pre><code class="lang-json">{ "type": "focus-pid",    "pid": 12345,               "label": "Open terminal" }
@@ -1042,7 +1075,7 @@ type: article
     <p><code>open-url</code> is restricted to <code>http://</code> and <code>https://</code>; <code>reveal-file</code> paths must exist and live inside <code>$HOME</code>. The first action in the envelope is what fires when the bubble is clicked.</p>
   </section>
 
-  <section>
+  <section id="example">
     <h2><span class="heading-mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg></span>end-to-end example: GitHub Actions</h2>
     <p>Wiring GitHub Actions to Axol end-to-end, using the remote-alerts bridge:</p>
 

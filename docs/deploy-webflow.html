@@ -333,6 +333,28 @@ type: article
     section { padding: 22px; }
     .wrap { padding: 24px 16px 60px; }
   }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
 </style>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <symbol id="glyph-neuromast" viewBox="0 0 24 24">
@@ -399,7 +421,16 @@ type: article
     </a>
   </header>
 
-  <section>
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#prerequisites">prerequisites</a>
+    <a href="#step-push">1 · push</a>
+    <a href="#step-create">2 · create</a>
+    <a href="#step-connect">3 · connect</a>
+    <a href="#day-2">day-2</a>
+    <a href="#troubleshooting">troubleshooting</a>
+  </nav>
+
+  <section id="prerequisites">
     <h2>prerequisites</h2>
     <ul>
       <li><b>A Webflow account</b> with at least one site you own. A throwaway blank site is fine — the worker mounts under a path on it (default <code>/app</code>).</li>
@@ -409,7 +440,7 @@ type: article
     </ul>
   </section>
 
-  <section>
+  <section id="step-push">
     <h2>1 · push <code>neuromast/</code> to your own GitHub repo</h2>
     <p>If you forked Axol, skip to step 2 — your fork is already on GitHub. Otherwise, seed a fresh repo with just the <code>neuromast/</code> tree:</p>
 <pre><code><span class="tok-cmd">cp</span> <span class="tok-flag">-r</span> neuromast /tmp/my-neuromast
@@ -421,7 +452,7 @@ type: article
     <p>Private is fine — Webflow Cloud's GitHub App reads private repos you grant it access to. The only env vars in the repo are placeholder shapes; real secrets never get committed.</p>
   </section>
 
-  <section>
+  <section id="step-create">
     <h2>2 · create the Webflow Cloud project</h2>
     <ol class="setup-steps">
       <li>
@@ -467,7 +498,7 @@ type: article
     </ol>
   </section>
 
-  <section>
+  <section id="step-connect">
     <h2>3 · connect the local forwarder</h2>
     <ol class="setup-steps">
       <li>
@@ -490,7 +521,7 @@ type: article
     </ol>
   </section>
 
-  <section>
+  <section id="day-2">
     <h2>day-2 operations</h2>
 
     <h3>Redeploying</h3>
@@ -515,7 +546,7 @@ webflow cloud deploy <span class="tok-flag">--mount</span> /app <span class="tok
     </ol>
   </section>
 
-  <section>
+  <section id="troubleshooting">
     <h2>troubleshooting</h2>
     <ul class="troubleshooting">
       <li>
