@@ -437,6 +437,7 @@ type: article
       <li><b>A GitHub account and a repo you own</b> containing the <code>neuromast/</code> code. Webflow Cloud watches the branch you connect and redeploys on every push, so it needs write access to a repo you control — you can't point it at upstream <code>Roach/axol</code>. Easiest path is to fork Axol; alternative is to copy just the <code>neuromast/</code> directory into a fresh repo.</li>
       <li><b>No Cloudflare account needed.</b> Webflow Cloud provisions the underlying Worker + KV namespaces under their own tenancy and exposes everything through the Webflow dashboard.</li>
       <li><b>The CLI is optional.</b> Everything below happens in the Webflow dashboard + your git client. Install <code>@webflow/webflow-cli</code> only if you want local <code>npm run dev</code> / <code>webflow cloud deploy</code> for emergency manual pushes.</li>
+      <li><b>Astro 5.x only.</b> Webflow Cloud's builder doesn't yet support Astro 6 — <code>neuromast/package.json</code> pins <code>astro</code> to <code>5.x</code>, <code>@astrojs/cloudflare</code> to <code>12.x</code>, and <code>@astrojs/node</code> to <code>9.x</code> for this reason. If Dependabot opens a PR bumping any of those to a new major, leave it closed until WFC announces Astro 6 support.</li>
     </ul>
   </section>
 
@@ -556,6 +557,14 @@ webflow cloud deploy <span class="tok-flag">--mount</span> /app <span class="tok
       <li>
         <b>Build fails with "Cannot find module" errors</b>
         <p>If you forked the whole Axol repo, make sure the <b>Root directory</b> in the Webflow project settings is <code>neuromast</code> — otherwise Webflow tries to build from the repo root (which has no <code>package.json</code>) and the build dies immediately.</p>
+      </li>
+      <li>
+        <b>Build fails with <code>"Astro 6.x is not yet supported by Webflow Cloud. Please use Astro 5.x."</code></b>
+        <p>WFC's builder currently targets Astro 5. Pin <code>astro</code> to the latest <code>5.x</code>, <code>@astrojs/cloudflare</code> to <code>12.x</code>, and <code>@astrojs/node</code> to <code>9.x</code> in <code>package.json</code>, then <code>rm package-lock.json && npm install</code> to regenerate the lockfile. Most commonly this regression sneaks in via a merged Dependabot PR — check recent history on those three packages if you weren't expecting the bump.</p>
+      </li>
+      <li>
+        <b>Build fails with <code>"webflow.json is not present and framework could not be detected from package.json"</code></b>
+        <p>The builder only looks at the repo root. If your repo keeps <code>neuromast/</code> as a subdirectory, either set the project's <b>Root directory</b> to <code>neuromast</code> in the WFC dashboard, or deploy from a subtree-split branch whose root is the neuromast project (<code>git subtree split --prefix=neuromast -b neuromast-deploy</code>, then point WFC at <code>neuromast-deploy</code>).</p>
       </li>
       <li>
         <b><code>401</code> on every request</b>
