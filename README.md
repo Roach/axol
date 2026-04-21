@@ -13,6 +13,8 @@ Named after the sensory cell clusters along a fish's lateral line — each hook 
 
 The implementation currently targets Astro + Cloudflare Workers (which is what Webflow Cloud provides under the hood), but the routes and queue helpers are small enough that porting to another edge runtime is mostly swapping the KV binding for another key-value store.
 
+> **Astro version pin.** Webflow Cloud's builder currently supports Astro 5.x only; `package.json` pins `astro@5`, `@astrojs/cloudflare@12`, and `@astrojs/node@9` for this reason. Don't merge Dependabot bumps to those three until WFC announces Astro 6 support.
+
 ## Routes
 
 | Method | Path                   | Auth                                    | Purpose                                 |

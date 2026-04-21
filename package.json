@@ -16,9 +16,9 @@
     "deploy": "webflow cloud deploy"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "13.1.10",
-    "@astrojs/node": "10.0.5",
-    "astro": "6.1.7",
+    "@astrojs/cloudflare": "12.6.13",
+    "@astrojs/node": "9.5.5",
+    "astro": "5.18.1",
     "ioredis": "5.10.1"
   },
   "devDependencies": {
