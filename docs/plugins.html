@@ -719,7 +719,7 @@ type: article
         <!-- Adapter: compact, just template syntax -->
         <g transform="translate(215,55)" filter="url(#efmShadow)">
           <rect width="88" height="60" rx="14" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5" />
-          <text x="44" y="39" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" font-weight="700" fill="#D6457A">{{ }}</text>
+          <text x="44" y="39" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" font-weight="700" fill="#D6457A">{% raw %}{{ }}{% endraw %}</text>
         </g>
 
         <!-- Arrow: adapter → envelope -->
@@ -870,7 +870,7 @@ type: article
       <div class="converge-trunk">
         <div class="converge-node">
           <b>adapter</b>
-          matches the payload shape, renders an envelope via the <code>{{…}}</code> template language, and hands it to the validator → bubble.
+          matches the payload shape, renders an envelope via the <code>{% raw %}{{…}}{% endraw %}</code> template language, and hands it to the validator → bubble.
         </div>
         <div class="converge-trunk-arrow" aria-hidden="true">↓</div>
         <div style="font-size: 12.5px; color: var(--ink-soft);">envelope · validator · bubble — see the four stages below</div>
@@ -900,8 +900,8 @@ type: article
       <div class="flow-step">
         <b>adapter</b>
         <div>
-          <p class="desc"><code>match</code> picks the adapter. <code>switch</code> + <code>cases</code> choose a template by field value. <code>{{…}}</code> placeholders pull from the payload.</p>
-<pre><code class="lang-json">{
+          <p class="desc"><code>match</code> picks the adapter. <code>switch</code> + <code>cases</code> choose a template by field value. <code>{% raw %}{{…}}{% endraw %}</code> placeholders pull from the payload.</p>
+{% raw %}<pre><code class="lang-json">{
   "match":  { "field": "workflow_run", "exists": true },
   "switch": "workflow_run.conclusion",
   "cases": {
@@ -914,7 +914,7 @@ type: article
                      "url":  "{{workflow_run.html_url}}" }]
     }
   }
-}</code></pre>
+}</code></pre>{% endraw %}
         </div>
       </div>
       <div class="flow-arrow">↓</div>
@@ -986,7 +986,7 @@ type: article
 
     <h3>Flat template</h3>
     <p>Use when the match fires and you always want the same envelope shape. Single <code>template</code> object at the top level:</p>
-<pre><code class="lang-json">{
+{% raw %}<pre><code class="lang-json">{
   "name":     "generic",
   "match":    { "field": "title", "exists": true },
   "template": {
@@ -994,11 +994,11 @@ type: article
     "body":   "{{body | default ''}}",
     "icon":   "{{icon | default 'bell'}}"
   }
-}</code></pre>
+}</code></pre>{% endraw %}
 
     <h3>Switch + cases</h3>
     <p>Use when one source's payload can mean different things — e.g. GitHub's workflow_run emits <code>success</code> / <code>failure</code> / <code>cancelled</code> conclusions that deserve different priorities and copy. The <code>switch</code> value picks the case by exact string match:</p>
-<pre><code class="lang-json">{
+{% raw %}<pre><code class="lang-json">{
   "match":  { "field": "workflow_run", "exists": true },
   "switch": "workflow_run.conclusion",
   "cases": {
@@ -1006,19 +1006,19 @@ type: article
     "failure":  { "title": "{{workflow_run.head_branch}}", "body": "CI failed", "priority": "urgent", "icon": "github" },
     "cancelled":{ "title": "{{workflow_run.head_branch}}", "body": "CI cancelled", "priority": "low",    "icon": "github" }
   }
-}</code></pre>
+}</code></pre>{% endraw %}
     <p>If the <code>switch</code> field resolves to a value that doesn't appear as a case key, nothing renders for that event — silently dropped like a missed match. Add a wildcard by naming a case whatever string your field will commonly produce, or pair with a fallback adapter sorted later in the directory.</p>
   </section>
 
   <section>
     <h2>template language</h2>
-    <p>Every string value in a template runs through a tiny substitution engine. Whole strings that are just <code>{{…}}</code> preserve their native type (so <code>"pid": "{{claude_pid}}"</code> yields <code>"pid": 12345</code>, not <code>"12345"</code>).</p>
+    <p>Every string value in a template runs through a tiny substitution engine. Whole strings that are just <code>{% raw %}{{…}}{% endraw %}</code> preserve their native type (so <code>{% raw %}"pid": "{{claude_pid}}"{% endraw %}</code> yields <code>"pid": 12345</code>, not <code>"12345"</code>).</p>
     <div class="tmpl">
-      <code>{{field}}</code>            <span>top-level substitution</span>
+      {% raw %}<code>{{field}}</code>            <span>top-level substitution</span>
       <code>{{nested.field}}</code>     <span>dot-path into objects</span>
       <code>{{field | default 'x'}}</code> <span>fallback when missing or empty</span>
       <code>{{basename path}}</code>    <span>last path component</span>
-      <code>{{trim field}}</code>       <span>strip surrounding whitespace</span>
+      <code>{{trim field}}</code>       <span>strip surrounding whitespace</span>{% endraw %}
     </div>
 
     <div class="callout" style="margin-top: 18px;">
@@ -1048,7 +1048,7 @@ type: article
 
     <h3>1. Create the adapter</h3>
     <p>Save as <code>~/Library/Application Support/Axol/adapters/github.json</code>:</p>
-<pre><code class="lang-json">{
+{% raw %}<pre><code class="lang-json">{
   "name":   "github-ci",
   "match":  { "field": "workflow_run", "exists": true },
   "switch": "workflow_run.conclusion",
@@ -1070,7 +1070,7 @@ type: article
       "actions":  [{ "type": "open-url", "url": "{{workflow_run.html_url}}", "label": "View run" }]
     }
   }
-}</code></pre>
+}</code></pre>{% endraw %}
 
     <h3>2. Point GitHub at your neuromast</h3>
     <p>In the GitHub repo's <b>Settings → Webhooks</b>, add your neuromast's public URL — e.g. <code>https://&lt;your-neuromast&gt;/app/api/hooks/github</code>. Set the content type to <code>application/json</code> and copy the webhook secret into <code>HOOK_SECRET_GITHUB</code> on the neuromast environment (see the <a href="remote-alerts.html#deploy-guides">deploy guides</a>).</p>

@@ -897,7 +897,7 @@ type: article
       <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><use href="#cl-icon-plug"/></svg></span>adapter framework</h3>
       <ul>
         <li>Drop a JSON file into <code>~/Library/Application Support/Axol/adapters/</code> to translate any webhook shape into an envelope.</li>
-        <li><b>Tiny template language:</b> <code>{{field}}</code>, dot-paths, <code>{{x | default 'y'}}</code>, plus <code>basename</code> and <code>trim</code> filters.</li>
+        <li><b>Tiny template language:</b> <code>{% raw %}{{field}}{% endraw %}</code>, dot-paths, <code>{% raw %}{{x | default 'y'}}{% endraw %}</code>, plus <code>basename</code> and <code>trim</code> filters.</li>
         <li><b>Predicate matching</b> with <code>match</code> and <code>skip_if</code>; <code>switch</code> + <code>cases</code> for per-branch templates.</li>
         <li>Bundled <b>Claude Code adapter</b> out of the box — <code>SessionStart</code>, <code>Notification</code> (pins open for permission prompts), and <code>Stop</code>. Include <code>X-Claude-PID</code> to focus the right terminal.</li>
       </ul>

@@ -1108,7 +1108,7 @@ type: article
         <div class="desc">
           <p style="margin: 0 0 6px;">The loopback receiver (<code>127.0.0.1:47329</code>, hardened at the socket level) parses the POST body and walks it through four stages:</p>
           <ul style="margin: 0 0 8px 18px; padding: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.5;">
-            <li><b>Adapter match</b> — JSON files in <code>adapters/</code> and <code>~/Library/Application Support/Axol/adapters/</code> are tried alphabetically; first match wins. The winner renders an envelope via the <code>{{field}}</code> template language. <a href="plugins.html">Spec →</a></li>
+            <li><b>Adapter match</b> — JSON files in <code>adapters/</code> and <code>~/Library/Application Support/Axol/adapters/</code> are tried alphabetically; first match wins. The winner renders an envelope via the <code>{% raw %}{{field}}{% endraw %}</code> template language. <a href="plugins.html">Spec →</a></li>
             <li><b>Validator</b> — closed vocabulary: priorities <code>low | normal | high | urgent</code>, actions <code>focus-pid</code> / <code>open-url</code> / <code>reveal-file</code> / <code>noop</code>. URLs must be <code>http(s)://</code>, file reveals must live in <code>$HOME</code>. No shell execution path.</li>
             <li><b>Alert store</b> — newest-first, capped at 5 entries, 5-minute seen-TTL.</li>
             <li><b>Speech bubble</b> — priority-styled, with worry bubbles rising for unresolved high/urgent alerts. Click fires the first action.</li>
@@ -1433,7 +1433,7 @@ GET /app/api/decision/{request_id}?wait=20   # optional long-poll</code></pre>
     <p>Returns <code>{ status: "pending" | "allow" | "deny" | "expired" }</code>. The id is opaque to Axol; possession of it is the implicit auth for polling (caller minted it, caller knows it), which keeps the hot path secret-free.</p>
 
     <h3 style="margin-top: 22px;">example: GitHub Actions deploy gate</h3>
-    <pre><code>- name: Request human approval
+{% raw %}<pre><code>- name: Request human approval
   id: approve
   run: |
     resp=$(curl -sS -X POST \
@@ -1467,7 +1467,7 @@ GET /app/api/decision/{request_id}?wait=20   # optional long-poll</code></pre>
 
 - name: Deploy
   if: steps.approve.outputs.status == 'allow' || steps.wait.outputs.status == 'allow'
-  run: ./deploy.sh</code></pre>
+  run: ./deploy.sh</code></pre>{% endraw %}
     <p>The initial POST returns in a second or two. If the user clicks within the 20 s hold, deploy runs immediately; otherwise the workflow polls, finishes within 10 min of the click, or times out with <code>expired</code>.</p>
   </section>
 

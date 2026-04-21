@@ -421,7 +421,7 @@ type: article
       <li>
         <h3>Add the Redis plugin</h3>
         <p>In the project canvas: <b>+ New → Database → Add Redis</b>. Railway provisions a small Redis instance in the same region and wires it up automatically.</p>
-        <p>Open the web service's <b>Variables</b> tab — Railway injects <code>REDIS_URL</code> via a reference variable (something like <code>${{Redis.REDIS_URL}}</code>). Neuromast's storage factory auto-detects this and selects the Redis backend. Nothing else to configure.</p>
+        <p>Open the web service's <b>Variables</b> tab — Railway injects <code>REDIS_URL</code> via a reference variable (something like <code>${% raw %}{{Redis.REDIS_URL}}{% endraw %}</code>). Neuromast's storage factory auto-detects this and selects the Redis backend. Nothing else to configure.</p>
       </li>
       <li>
         <h3>Tell Astro to build for Node</h3>
@@ -498,7 +498,7 @@ type: article
       </li>
       <li>
         <b>Deploy logs show "redis error: ECONNREFUSED"</b>
-        <p>The Redis plugin isn't attached to the service, or <code>REDIS_URL</code> isn't a reference variable. In Variables, check that <code>REDIS_URL</code> shows as <code>${{Redis.REDIS_URL}}</code> (Railway's template syntax), not a hardcoded value.</p>
+        <p>The Redis plugin isn't attached to the service, or <code>REDIS_URL</code> isn't a reference variable. In Variables, check that <code>REDIS_URL</code> shows as <code>${% raw %}{{Redis.REDIS_URL}}{% endraw %}</code> (Railway's template syntax), not a hardcoded value.</p>
       </li>
       <li>
         <b><code>401</code> on every request</b>
