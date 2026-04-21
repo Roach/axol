@@ -6,6 +6,10 @@ Named after the sensory cell clusters along a fish's lateral line — each hook 
 
 **Deploy guides** (platform-specific setup):
 - Webflow Cloud — [`docs/deploy-webflow.html`](../docs/deploy-webflow.html)
+- Railway — [`docs/deploy-railway.html`](../docs/deploy-railway.html)
+- Fly.io — [`docs/deploy-fly.html`](../docs/deploy-fly.html)
+- Render — [`docs/deploy-render.html`](../docs/deploy-render.html)
+- Cloudflare (direct) — [`docs/deploy-cloudflare.html`](../docs/deploy-cloudflare.html)
 
 The implementation currently targets Astro + Cloudflare Workers (which is what Webflow Cloud provides under the hood), but the routes and queue helpers are small enough that porting to another edge runtime is mostly swapping the KV binding for another key-value store.
 
