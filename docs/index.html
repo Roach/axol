@@ -1007,12 +1007,14 @@ type: website
     text-underline-offset: 2px;
   }
 
-  /* Wide variant — illustration spans the full block width on top,
-     copy flows below. Used for the reused subpage partials
-     (envelope-flow-mini, gill-sample-diagram) that are too wide for
-     the 260px illustration column. */
+  /* Wide variant — heading + copy on top, full-width illustration below.
+     column-reverse keeps the HTML in "illo then body" order (so the
+     non-essential illustration ships after the content in the DOM) but
+     visually places the copy first so readers see the section title
+     and paragraph before the animation. */
   .product-block-wide {
-    display: block;
+    display: flex;
+    flex-direction: column-reverse;
     padding: 28px 0 26px;
     border-top: 1px solid #FBEAF2;
   }
@@ -1021,7 +1023,7 @@ type: website
     padding-top: 10px;
   }
   .product-block-illo-wide {
-    margin: 0 0 20px;
+    margin: 20px 0 0;
   }
   .product-block-illo-wide svg {
     display: block;
@@ -1554,7 +1556,7 @@ type: website
     align-items: center;
     justify-content: flex-end;
     transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
-    animation: ll-node-pulse 10s ease-in-out infinite;
+    animation: ll-node-pulse 8s ease-in-out infinite;
     animation-delay: 0s;
   }
   /* 10s cycle with a two-notification narrative:
@@ -1675,13 +1677,13 @@ type: website
   /* All arrow-dot animations share the 10s master cycle and use absolute
      keyframe percentages (no animation-delay), so they lock to the node
      pulses and queue indicators. */
-  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-1     { animation: arrow1a-fwd 10s linear infinite; }
-  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-2     { animation: arrow1b-fwd 10s linear infinite; }
-  .remote-flow .ll-arrow.arrow-2 .arrow-dot.fetch     { animation: arrow2-fetch-rev 10s linear infinite; }
-  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-1 { animation: arrow2a-response-fwd 10s linear infinite; }
-  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-2 { animation: arrow2b-response-fwd 10s linear infinite; }
-  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-1     { animation: arrow3a-fwd 10s linear infinite; }
-  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-2     { animation: arrow3b-fwd 10s linear infinite; }
+  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-1     { animation: arrow1a-fwd 8s linear infinite; }
+  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-2     { animation: arrow1b-fwd 8s linear infinite; }
+  .remote-flow .ll-arrow.arrow-2 .arrow-dot.fetch     { animation: arrow2-fetch-rev 8s linear infinite; }
+  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-1 { animation: arrow2a-response-fwd 8s linear infinite; }
+  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-2 { animation: arrow2b-response-fwd 8s linear infinite; }
+  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-1     { animation: arrow3a-fwd 8s linear infinite; }
+  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-2     { animation: arrow3b-fwd 8s linear infinite; }
 
   /* Dot 1 (first notification): webhook → neuromast, visible 8–14% */
   @keyframes arrow1a-fwd {
@@ -1763,8 +1765,8 @@ type: website
   }
   /* Neuromast queue — fills as each notification lands, empties as each
      response dot carries it back down. */
-  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-neu-1 10s ease-in-out infinite; }
-  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-neu-2 10s ease-in-out infinite; }
+  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-neu-1 8s ease-in-out infinite; }
+  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-neu-2 8s ease-in-out infinite; }
   @keyframes ll-queue-neu-1 {
     0%, 13%   { opacity: 0; transform: scale(0.4); }
     15%       { opacity: 1; transform: scale(1); }
@@ -1783,8 +1785,8 @@ type: website
   /* Lateral-line queue — fills as each response arrives, empties as each
      delivery dot heads out to Axol. Mirrors the real at-least-once buffer
      that Axol's own throttling then paces out into bubbles. */
-  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(1) { animation: ll-queue-lat-1 10s ease-in-out infinite; }
-  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(2) { animation: ll-queue-lat-2 10s ease-in-out infinite; }
+  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(1) { animation: ll-queue-lat-1 8s ease-in-out infinite; }
+  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(2) { animation: ll-queue-lat-2 8s ease-in-out infinite; }
   @keyframes ll-queue-lat-1 {
     /* response 1 arrives at 51%; delivery 1 departs at 62% */
     0%, 51%   { opacity: 0; transform: scale(0.4); }
@@ -1826,7 +1828,7 @@ type: website
     color: var(--ink);
     white-space: nowrap;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-    animation-duration: 10s;
+    animation-duration: 8s;
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
     animation-delay: 0s;
@@ -1872,13 +1874,13 @@ type: website
        the paragraph above and the <pre> below it. */
     margin: 26px 0 28px;
   }
-  .local-flow .ll-node { animation-duration: 5s; }
+  .local-flow .ll-node { animation-duration: 8s; }
   .local-flow .ll-node:nth-child(1) { animation-name: ll-local-source-pulse; }
   .local-flow .ll-node:nth-child(3) { animation-name: ll-local-axol-pulse; }
-  .local-flow .ll-arrow .arrow-dot { animation: arrow-loc-fwd 5s linear infinite; }
+  .local-flow .ll-arrow .arrow-dot { animation: arrow-loc-fwd 8s linear infinite; }
   .local-flow .ll-bubble.bubble-loc {
     animation-name: ll-bubble-pop-loc;
-    animation-duration: 5s;
+    animation-duration: 8s;
   }
 
   @keyframes ll-local-source-pulse {
@@ -1915,21 +1917,26 @@ type: website
      keychain PAT, shown as queue dots) → axol. Arrow-1 is
      bidirectional: a faint fetch dot reaches LEFT (gill → github) then
      a strong response dot returns RIGHT. Arrow-2 forwards to Axol. */
-  .poll-flow .ll-node { animation-duration: 6s; }
+  .poll-flow .ll-node { animation-duration: 8s; }
   .poll-flow .ll-node:nth-child(1) { animation-name: ll-poll-github-pulse; }
   .poll-flow .ll-node:nth-child(3) { animation-name: ll-poll-gill-pulse; }
   .poll-flow .ll-node:nth-child(5) { animation-name: ll-poll-axol-pulse; }
 
-  .poll-flow .ll-arrow.arrow-1 .arrow-dot.fetch    { animation: arrow-poll-fetch-rev 6s linear infinite; }
-  .poll-flow .ll-arrow.arrow-1 .arrow-dot.response { animation: arrow-poll-response-fwd 6s linear infinite; }
-  .poll-flow .ll-arrow.arrow-2 .arrow-dot.forward  { animation: arrow-poll-forward-fwd 6s linear infinite; }
+  .poll-flow .ll-arrow.arrow-1 .arrow-dot.fetch    { animation: arrow-poll-fetch-rev 8s linear infinite; }
+  .poll-flow .ll-arrow.arrow-1 .arrow-dot.response { animation: arrow-poll-response-fwd 8s linear infinite; }
+  .poll-flow .ll-arrow.arrow-2 .arrow-dot.forward-1 { animation: arrow-poll-forward-1-fwd 8s linear infinite; }
+  .poll-flow .ll-arrow.arrow-2 .arrow-dot.forward-2 { animation: arrow-poll-forward-2-fwd 8s linear infinite; }
 
-  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-poll-1 6s ease-in-out infinite; }
-  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-poll-2 6s ease-in-out infinite; }
+  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-poll-1 8s ease-in-out infinite; }
+  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-poll-2 8s ease-in-out infinite; }
 
-  .poll-flow .ll-bubble.bubble-poll {
-    animation-name: ll-bubble-pop-poll;
-    animation-duration: 6s;
+  .poll-flow .ll-bubble.bubble-poll-1 {
+    animation-name: ll-bubble-pop-poll-1;
+    animation-duration: 8s;
+  }
+  .poll-flow .ll-bubble.bubble-poll-2 {
+    animation-name: ll-bubble-pop-poll-2;
+    animation-duration: 8s;
   }
 
   /* Gill wakes ~0s → fetch goes out t≈1s → github responds t≈2.5s →
@@ -1948,9 +1955,11 @@ type: website
     50%, 52% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
   }
   @keyframes ll-poll-axol-pulse {
-    0%, 75%, 82%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
-    /* delivery lands */
-    77%, 80% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    0%, 66%, 72%, 85%, 91%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* first delivery lands */
+    68%, 70% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    /* second delivery lands */
+    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
   }
 
   /* Fetch: gill's cx center → github's cx center — travels RIGHT-to-LEFT,
@@ -1970,44 +1979,59 @@ type: website
     48%      { left: calc(100% + 80px); opacity: 0; }
     100%     { left: calc(100% + 80px); opacity: 0; }
   }
-  /* Forward: gill → axol, splashes at axol's center (~62–75%). Mirrors
-     arrow3a-fwd's splash-on-arrival behavior. */
-  @keyframes arrow-poll-forward-fwd {
-    0%, 60%  { left: -80px;             opacity: 0;   transform: scale(1); }
-    62%      { left: -60px;             opacity: 1;   transform: scale(1); }
-    73%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
-    75%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
-    77%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+  /* Forward 1: gill → axol, splashes at axol's center (~62–70%).
+     Mirrors arrow3a-fwd's splash-on-arrival behavior. */
+  @keyframes arrow-poll-forward-1-fwd {
+    0%, 58%  { left: -80px;             opacity: 0;   transform: scale(1); }
+    60%      { left: -60px;             opacity: 1;   transform: scale(1); }
+    68%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
+    70%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
+    72%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+  }
+  /* Forward 2: same path, staggered to arrive at axol ~87–89%. */
+  @keyframes arrow-poll-forward-2-fwd {
+    0%, 77%  { left: -80px;             opacity: 0;   transform: scale(1); }
+    79%      { left: -60px;             opacity: 1;   transform: scale(1); }
+    87%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
+    89%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
+    91%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
     100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
   }
 
   /* Queue dots on the gill — represent items waiting to be forwarded.
-     Both appear when the response lands, first one empties when the
-     forward leaves, second one empties at the cycle's tail. */
+     Both appear when the response lands (~50%); first drains when
+     forward-1 leaves (~60%), second drains when forward-2 leaves (~79%). */
   @keyframes ll-queue-poll-1 {
     0%, 48%  { opacity: 0; transform: scale(0.75); }
     50%      { opacity: 0.85; transform: scale(1); }
-    60%      { opacity: 0.85; transform: scale(1); }
-    64%      { opacity: 0; transform: scale(0.75); }
+    58%      { opacity: 0.85; transform: scale(1); }
+    62%      { opacity: 0; transform: scale(0.75); }
     100%     { opacity: 0; transform: scale(0.75); }
   }
   @keyframes ll-queue-poll-2 {
     0%, 49%  { opacity: 0; transform: scale(0.75); }
     51%      { opacity: 0.65; transform: scale(1); }
-    74%      { opacity: 0.65; transform: scale(1); }
-    78%      { opacity: 0; transform: scale(0.75); }
+    77%      { opacity: 0.65; transform: scale(1); }
+    81%      { opacity: 0; transform: scale(0.75); }
     100%     { opacity: 0; transform: scale(0.75); }
   }
 
-  /* Bubble: pops just after Axol pulses, holds through the tail of the
-     cycle. Shares the same translate-y and scale choreography as
-     bubble-loc so the two Alerts bubbles feel like siblings. */
-  @keyframes ll-bubble-pop-poll {
-    0%, 80%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-    83%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    96%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    98%      { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
+  /* Bubble 1 — pops when forward-1 lands (~72%), holds briefly, fades
+     before bubble 2 takes over. Bubble 2 — pops when forward-2 lands
+     (~91%), holds through the cycle's tail. */
+  @keyframes ll-bubble-pop-poll-1 {
+    0%, 70%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+    73%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    84%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    87%      { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
     100%     { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+  }
+  @keyframes ll-bubble-pop-poll-2 {
+    0%, 89%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+    91%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    98%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    100%     { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
   }
 
   @media (max-width: 520px) {
@@ -2021,7 +2045,8 @@ type: website
     .ll-bubble.bubble-1 { opacity: 1; transform: translate(-50%, 0) scale(1); }
     .ll-bubble.bubble-2 { opacity: 0; }
     .ll-bubble.bubble-loc { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    .ll-bubble.bubble-poll { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .ll-bubble.bubble-poll-1 { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .ll-bubble.bubble-poll-2 { opacity: 0; }
     .arrow-dot { opacity: 0.55; left: 50%; margin-left: -4.5px; transform: none; }
     .ll-queue-dot { opacity: 0.8; transform: scale(1); }
   }
@@ -2453,10 +2478,12 @@ type: website
             <span class="ll-sub">keychain PAT</span>
           </div>
           <span class="ll-arrow arrow-2" aria-hidden="true">
-            <span class="arrow-dot forward"></span>
+            <span class="arrow-dot forward forward-1"></span>
+            <span class="arrow-dot forward forward-2"></span>
           </span>
           <div class="ll-node ll-axol">
-            <div class="ll-bubble bubble-poll">github · @mention</div>
+            <div class="ll-bubble bubble-poll bubble-poll-1">github · @mention</div>
+            <div class="ll-bubble bubble-poll bubble-poll-2">github · review req</div>
             <span class="ll-icon" aria-hidden="true">
               <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px;">
                 <defs>
