@@ -1899,6 +1899,106 @@ type: website
     100%     { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
   }
 
+  /* Poll flow — a 6s cycle showing a gill polling an upstream on a
+     schedule. Three nodes: github (polled) → gill (local poller with
+     keychain PAT, shown as queue dots) → axol. Arrow-1 is
+     bidirectional: a faint fetch dot reaches LEFT (gill → github) then
+     a strong response dot returns RIGHT. Arrow-2 forwards to Axol. */
+  .poll-flow .ll-node { animation-duration: 6s; }
+  .poll-flow .ll-node:nth-child(1) { animation-name: ll-poll-github-pulse; }
+  .poll-flow .ll-node:nth-child(3) { animation-name: ll-poll-gill-pulse; }
+  .poll-flow .ll-node:nth-child(5) { animation-name: ll-poll-axol-pulse; }
+
+  .poll-flow .ll-arrow.arrow-1 .arrow-dot.fetch    { animation: arrow-poll-fetch-rev 6s linear infinite; }
+  .poll-flow .ll-arrow.arrow-1 .arrow-dot.response { animation: arrow-poll-response-fwd 6s linear infinite; }
+  .poll-flow .ll-arrow.arrow-2 .arrow-dot.forward  { animation: arrow-poll-forward-fwd 6s linear infinite; }
+
+  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-poll-1 6s ease-in-out infinite; }
+  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-poll-2 6s ease-in-out infinite; }
+
+  .poll-flow .ll-bubble.bubble-poll {
+    animation-name: ll-bubble-pop-poll;
+    animation-duration: 6s;
+  }
+
+  /* Gill wakes ~0s → fetch goes out t≈1s → github responds t≈2.5s →
+     gill pulses receiving t≈3s → forward t≈4s → axol pulses t≈4.5s →
+     bubble visible 5–5.6s. */
+  @keyframes ll-poll-github-pulse {
+    0%, 27%, 34%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* gill's fetch arrives */
+    29%, 32% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  @keyframes ll-poll-gill-pulse {
+    0%, 3%, 8%, 48%, 54%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* gill wakes, reads keychain */
+    5%, 7% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    /* gill receives response, queues item */
+    50%, 52% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+  @keyframes ll-poll-axol-pulse {
+    0%, 75%, 82%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    /* delivery lands */
+    77%, 80% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+  }
+
+  /* Fetch: gill's cx center → github's cx center — travels RIGHT-to-LEFT,
+     faint, visible ~15–27%. Reuses arrow2-fetch-rev's pattern. */
+  @keyframes arrow-poll-fetch-rev {
+    0%, 14%  { left: calc(100% + 80px); opacity: 0; }
+    16%      { left: calc(100% + 60px); opacity: 0.35; }
+    26%      { left: -60px;             opacity: 0.35; }
+    28%      { left: -80px;             opacity: 0; }
+    100%     { left: -80px;             opacity: 0; }
+  }
+  /* Response: github → gill, full opacity, visible ~34–48%. Forward (L→R). */
+  @keyframes arrow-poll-response-fwd {
+    0%, 33%  { left: -80px;             opacity: 0; }
+    35%      { left: -60px;             opacity: 1; }
+    46%      { left: calc(100% + 60px); opacity: 1; }
+    48%      { left: calc(100% + 80px); opacity: 0; }
+    100%     { left: calc(100% + 80px); opacity: 0; }
+  }
+  /* Forward: gill → axol, splashes at axol's center (~62–75%). Mirrors
+     arrow3a-fwd's splash-on-arrival behavior. */
+  @keyframes arrow-poll-forward-fwd {
+    0%, 60%  { left: -80px;             opacity: 0;   transform: scale(1); }
+    62%      { left: -60px;             opacity: 1;   transform: scale(1); }
+    73%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
+    75%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
+    77%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
+  }
+
+  /* Queue dots on the gill — represent items waiting to be forwarded.
+     Both appear when the response lands, first one empties when the
+     forward leaves, second one empties at the cycle's tail. */
+  @keyframes ll-queue-poll-1 {
+    0%, 48%  { opacity: 0; transform: scale(0.75); }
+    50%      { opacity: 0.85; transform: scale(1); }
+    60%      { opacity: 0.85; transform: scale(1); }
+    64%      { opacity: 0; transform: scale(0.75); }
+    100%     { opacity: 0; transform: scale(0.75); }
+  }
+  @keyframes ll-queue-poll-2 {
+    0%, 49%  { opacity: 0; transform: scale(0.75); }
+    51%      { opacity: 0.65; transform: scale(1); }
+    74%      { opacity: 0.65; transform: scale(1); }
+    78%      { opacity: 0; transform: scale(0.75); }
+    100%     { opacity: 0; transform: scale(0.75); }
+  }
+
+  /* Bubble: pops just after Axol pulses, holds through the tail of the
+     cycle. Shares the same translate-y and scale choreography as
+     bubble-loc so the two Alerts bubbles feel like siblings. */
+  @keyframes ll-bubble-pop-poll {
+    0%, 80%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+    83%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    96%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    98%      { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
+    100%     { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
+  }
+
   @media (max-width: 520px) {
     .ll-flow { flex-direction: column; gap: 6px; }
     .ll-node { max-width: none; }
@@ -1910,6 +2010,7 @@ type: website
     .ll-bubble.bubble-1 { opacity: 1; transform: translate(-50%, 0) scale(1); }
     .ll-bubble.bubble-2 { opacity: 0; }
     .ll-bubble.bubble-loc { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .ll-bubble.bubble-poll { opacity: 1; transform: translate(-50%, 0) scale(1); }
     .arrow-dot { opacity: 0.55; left: 50%; margin-left: -4.5px; transform: none; }
     .ll-queue-dot { opacity: 0.8; transform: scale(1); }
   }
@@ -2312,10 +2413,61 @@ type: website
       </div>
     </div>
 
-    <!-- Polling (gills) — reuses the gill-sample-diagram partial from gills.html -->
+    <!-- Polling — 3-node ll-flow matching Local and Webhook:
+         github (upstream, polled) ← fetch / response → gill (local poller
+         with keychain-PAT queue dots) → axol. 6s master cycle. -->
     <div class="product-block-wide">
       <div class="product-block-illo-wide">
-        {% include gill-sample-diagram.html %}
+        <div class="ll-flow poll-flow" aria-label="Polling flow: gill reads keychain PAT, queries upstream, forwards new items to Axol">
+          <div class="ll-node">
+            <span class="ll-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+            </span>
+            <span class="ll-label">github</span>
+            <span class="ll-sub">/notifications</span>
+          </div>
+          <span class="ll-arrow arrow-1" aria-hidden="true">
+            <span class="arrow-dot fetch"></span>
+            <span class="arrow-dot response"></span>
+          </span>
+          <div class="ll-node">
+            <span class="ll-queue" aria-hidden="true">
+              <span class="ll-queue-dot"></span>
+              <span class="ll-queue-dot"></span>
+            </span>
+            <span class="ll-icon" aria-hidden="true">
+              <svg><use href="#icon-gills"/></svg>
+            </span>
+            <span class="ll-label">gill</span>
+            <span class="ll-sub">keychain PAT</span>
+          </div>
+          <span class="ll-arrow arrow-2" aria-hidden="true">
+            <span class="arrow-dot forward"></span>
+          </span>
+          <div class="ll-node ll-axol">
+            <div class="ll-bubble bubble-poll">github · @mention</div>
+            <span class="ll-icon" aria-hidden="true">
+              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+                <defs>
+                  <radialGradient id="llBodyPoll" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#FFC9E2" />
+                    <stop offset="100%" stop-color="#FFA6CF" />
+                  </radialGradient>
+                </defs>
+                <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+                <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+                <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+                <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+                <circle cx="132" cy="105" r="7" fill="#2D2533" />
+                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="ll-label">axol</span>
+            <span class="ll-sub">loopback :47329</span>
+          </div>
+        </div>
       </div>
       <div class="product-block-body">
         <h3>Polling</h3>
