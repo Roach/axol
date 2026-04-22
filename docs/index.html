@@ -979,6 +979,28 @@ type: website
     text-underline-offset: 2px;
   }
 
+  /* Wide variant — illustration spans the full block width on top,
+     copy flows below. Used for the reused subpage partials
+     (envelope-flow-mini, gill-sample-diagram) that are too wide for
+     the 260px illustration column. */
+  .product-block-wide {
+    display: block;
+    padding: 28px 0 26px;
+    border-top: 1px solid #FBEAF2;
+  }
+  .product-block-wide:first-of-type {
+    border-top: none;
+    padding-top: 10px;
+  }
+  .product-block-illo-wide {
+    margin: 0 0 20px;
+  }
+  .product-block-illo-wide svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   /* Sub-block — a smaller inset card for features nested inside a
      larger one (e.g. Claude Code nested under Local alerts). Same
      visual grammar as the parent block at two-thirds the scale. */
@@ -1090,30 +1112,6 @@ type: website
     50%      { transform: rotate(3deg);  }
   }
 
-  /* Local-alerts bubble stack — each bubble fades in, then the front one
-     gives a small bob. Loop starts fresh every 6s so the "new alert
-     arriving" rhythm is clear. */
-  .alerts-bub {
-    opacity: 0;
-    animation: alerts-bub-in 6s ease-out infinite;
-  }
-  .alerts-bub-a { animation-delay: 0s; }
-  .alerts-bub-b { animation-delay: 0.5s; }
-  .alerts-bub-c {
-    animation: alerts-bub-in 6s ease-out infinite, alerts-bub-bob 2.6s ease-in-out infinite 1.3s;
-    animation-delay: 1s, 1.3s;
-  }
-  @keyframes alerts-bub-in {
-    0%   { opacity: 0; transform: translateY(6px); }
-    8%   { opacity: 1; transform: translateY(0); }
-    82%  { opacity: 1; transform: translateY(0); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes alerts-bub-bob {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-2px); }
-  }
-
   /* Claude section: soft pulse on the Allow button + a subtle bob on
      the whole permission bubble so it feels "alive" in waiting state. */
   .claude-btn-allow {
@@ -1133,31 +1131,6 @@ type: website
   @keyframes claude-bub-bob {
     0%, 100% { transform: translateY(0); }
     50%      { transform: translateY(-3px); }
-  }
-
-  /* Polling illustration: gill plume sways (reuses gill-plume-sway
-     keyframes), a dot rides the return path from the service back
-     through the plume and into the delivered bubble, which gives a
-     small pulse when the dot arrives. */
-  .alerts-poll-gill {
-    transform-box: view-box;
-    animation: gill-plume-sway 3.4s ease-in-out infinite;
-  }
-  .alerts-poll-dot {
-    animation: alerts-poll-dot 3.2s ease-in-out infinite;
-  }
-  @keyframes alerts-poll-dot {
-    0%   { transform: translate(0, 0);       opacity: 0; }
-    10%  { opacity: 1; }
-    45%  { transform: translate(56px, -8px); opacity: 1; }
-    55%  { transform: translate(56px, -8px); opacity: 1; }
-    88%  { transform: translate(126px, -8px); opacity: 1; }
-    100% { transform: translate(126px, -8px); opacity: 0; }
-  }
-  .alerts-poll-bub {
-    transform-origin: 218px 96px;
-    transform-box: view-box;
-    animation: alerts-remote-bub 3.2s ease-in-out infinite;
   }
 
   /* Remote-alerts illustration: pulse rings around the neuromast + a
@@ -1199,23 +1172,19 @@ type: website
 
   @media (prefers-reduced-motion: reduce) {
     .neuro-ring, .neuro-ring-2, .neuro-ring-3, .gill-plume-sway,
-    .alerts-bub, .alerts-bub-c,
     .claude-btn-allow, .claude-bub,
     .alerts-remote-ring, .alerts-remote-ring-2, .alerts-remote-ring-3,
-    .alerts-remote-dot, .alerts-remote-bub,
-    .alerts-poll-gill, .alerts-poll-dot, .alerts-poll-bub {
+    .alerts-remote-dot, .alerts-remote-bub {
       animation: none !important;
     }
     .neuro-ring  { transform: scale(1.5); opacity: 0; }
     .neuro-ring-2 { transform: scale(1.1); opacity: 0.25; }
     .neuro-ring-3 { transform: scale(0.75); opacity: 0.6; }
     .gill-plume-sway { transform: rotate(0deg); }
-    .alerts-bub { opacity: 1; }
     .alerts-remote-ring  { transform: scale(1.3); opacity: 0; }
     .alerts-remote-ring-2 { transform: scale(1); opacity: 0.35; }
     .alerts-remote-ring-3 { transform: scale(0.7); opacity: 0.7; }
     .alerts-remote-dot { opacity: 0; }
-    .alerts-poll-dot { opacity: 0; }
   }
   .feature-card:hover .feature-card-cta {
     text-decoration: underline;
@@ -2163,47 +2132,14 @@ type: website
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>alerts</h2>
     <p>Anything worth your attention arrives as a speech bubble above Axol — urgent ones pin open, the rest fade on their own. Three paths in: a loopback listener on your Mac, a signed cloud bridge for webhook-capable services, and keychain-backed polling for services that can't push.</p>
 
-    <!-- Local loopback -->
-    <div class="product-block">
-      <div class="product-block-illo alerts-local-illo" aria-hidden="true">
-        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <filter id="alertBubShadow" x="-10%" y="-10%" width="120%" height="140%">
-              <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#C8508C" flood-opacity="0.18"/>
-            </filter>
-          </defs>
-          <!-- Back bubble: success (green) -->
-          <g class="alerts-bub alerts-bub-a">
-            <path d="M 22 12 H 198 A 10 10 0 0 1 208 22 V 48 A 10 10 0 0 1 198 58 L 132 58 L 124 68 L 116 58 L 22 58 A 10 10 0 0 1 12 48 V 22 A 10 10 0 0 1 22 12 Z"
-                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.4" filter="url(#alertBubShadow)"/>
-            <circle cx="32" cy="35" r="7.5" fill="#2E8B57"/>
-            <path d="M 28 35 L 30.5 37.5 L 36 32.5" stroke="#FFFFFF" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            <text x="46" y="32" font-size="11" font-weight="700" fill="#2D2533">ci-bot</text>
-            <text x="46" y="46" font-size="10" fill="#6E5F6B">build passed on main</text>
-          </g>
-          <!-- Middle bubble: sentry alert (amber) -->
-          <g class="alerts-bub alerts-bub-b">
-            <path d="M 48 64 H 224 A 10 10 0 0 1 234 74 V 100 A 10 10 0 0 1 224 110 L 158 110 L 150 120 L 142 110 L 48 110 A 10 10 0 0 1 38 100 V 74 A 10 10 0 0 1 48 64 Z"
-                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.4" filter="url(#alertBubShadow)"/>
-            <circle cx="58" cy="87" r="7.5" fill="#E08A2E"/>
-            <path d="M 58 83 V 89 M 58 92.5 V 93" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
-            <text x="72" y="84" font-size="11" font-weight="700" fill="#2D2533">sentry</text>
-            <text x="72" y="98" font-size="10" fill="#6E5F6B">new issue: null pointer</text>
-          </g>
-          <!-- Front bubble: urgent mention (pink) -->
-          <g class="alerts-bub alerts-bub-c">
-            <path d="M 30 116 H 238 A 10 10 0 0 1 248 126 V 158 A 10 10 0 0 1 238 168 L 172 168 L 164 178 L 156 168 L 30 168 A 10 10 0 0 1 20 158 V 126 A 10 10 0 0 1 30 116 Z"
-                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5" filter="url(#alertBubShadow)"/>
-            <circle cx="40" cy="141" r="8" fill="#D6457A"/>
-            <text x="40" y="145" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">@</text>
-            <text x="54" y="138" font-size="11" font-weight="700" fill="#2D2533">review requested</text>
-            <text x="54" y="152" font-size="10" fill="#6E5F6B">Roach/axol · #421</text>
-          </g>
-        </svg>
+    <!-- Local loopback — reuses the envelope-flow-mini partial from plugins.html -->
+    <div class="product-block-wide">
+      <div class="product-block-illo-wide">
+        {% include envelope-flow-mini.html %}
       </div>
       <div class="product-block-body">
         <h3>Local</h3>
-        <p>A tiny loopback listener on <code>127.0.0.1:47329</code>. Any script that can <code>curl</code> can pop a bubble — <b>title</b>, <b>body</b>, <b>priority</b>, and actions like <i>focus a terminal</i>, <i>open a URL</i>, <i>reveal a file</i>. Nothing ever leaves your Mac.</p>
+        <p>A tiny loopback listener on <code>127.0.0.1:47329</code>. Any script that can <code>curl</code> can pop a bubble — whatever shape the payload arrives in, an adapter translates it into Axol's envelope (<b>title</b>, <b>body</b>, <b>priority</b>, optional <b>actions</b>) before she renders it. Nothing ever leaves your Mac.</p>
         <div class="product-block-ctas">
           <a class="product-block-cta" href="plugins.html">Envelope reference →</a>
         </div>
@@ -2268,63 +2204,10 @@ type: website
       </div>
     </div>
 
-    <!-- Polling (gills) -->
-    <div class="product-block">
-      <div class="product-block-illo" aria-hidden="true">
-        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <filter id="alertPollShadow" x="-10%" y="-10%" width="120%" height="140%">
-              <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#C8508C" flood-opacity="0.18"/>
-            </filter>
-            <marker id="alertPollArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A"/>
-            </marker>
-            <marker id="alertPollArrowRev" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-              <path d="M 10 0 L 0 5 L 10 10 z" fill="#D6457A"/>
-            </marker>
-          </defs>
-          <!-- Upstream service tile (GitHub, polled) -->
-          <g>
-            <rect x="14" y="74" width="56" height="44" rx="8" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.4"/>
-            <circle cx="42" cy="90" r="7" fill="#24292E"/>
-            <path d="M 42 85 C 39.5 85 38 86.8 38 89.2 C 38 91.1 39.1 92.6 40.7 93.1 C 40.9 93.1 40.9 93 40.9 92.9 L 40.9 92.1 C 39.6 92.3 39.3 91.6 39.3 91.6 C 39.1 91.1 38.8 91 38.8 91 C 38.4 90.7 38.9 90.7 38.9 90.7 C 39.3 90.7 39.5 91.1 39.5 91.1 C 39.9 91.8 40.5 91.6 40.9 91.5 C 40.9 91.2 41.1 91 41.2 90.9 C 40.1 90.8 39 90.4 39 88.9 C 39 88.4 39.2 88 39.5 87.7 C 39.4 87.6 39.3 87.2 39.5 86.6 C 39.5 86.6 39.9 86.5 40.9 87.1 C 41.2 87 41.6 87 42 87 C 42.4 87 42.8 87 43.1 87.1 C 44.1 86.5 44.5 86.6 44.5 86.6 C 44.7 87.2 44.6 87.6 44.5 87.7 C 44.8 88 45 88.4 45 88.9 C 45 90.4 43.9 90.8 42.8 90.9 C 43 91 43.2 91.4 43.2 91.9 L 43.2 92.9 C 43.2 93 43.2 93.1 43.4 93.1 C 44.9 92.6 46 91.1 46 89.2 C 46 86.8 44.5 85 42 85 Z"
-                  fill="#FFFFFF"/>
-            <text x="42" y="112" text-anchor="middle" font-size="9" font-weight="600" fill="#6E5F6B">github</text>
-          </g>
-          <!-- Poll-out (fetch request going to the service) -->
-          <path d="M 108 88 L 74 88"
-                stroke="#D6457A" stroke-width="1.4" fill="none" stroke-dasharray="3 3" opacity="0.55"
-                marker-end="url(#alertPollArrowRev)"/>
-          <!-- Poll-back (data returning) — dashed line the dot rides -->
-          <path d="M 74 104 L 108 104"
-                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-dasharray="4 4" opacity="0.75"
-                marker-end="url(#alertPollArrow)"/>
-          <!-- Central gill plume, representing the rhythmic sampler.
-               Swaying matches the gill-plume-sway keyframes already defined. -->
-          <g class="alerts-poll-gill" style="transform-origin: 130px 144px;">
-            <path d="M 130 144 V 58" stroke="#D6457A" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-            <path d="M 130 128 C 112 124, 104 112, 104 92" stroke="#D6457A" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.78"/>
-            <path d="M 130 128 C 148 124, 156 112, 156 92" stroke="#D6457A" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.78"/>
-            <path d="M 130 104 C 116 100, 110 88, 110 70" stroke="#D6457A" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.62"/>
-            <path d="M 130 104 C 144 100, 150 88, 150 70" stroke="#D6457A" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.62"/>
-            <circle cx="130" cy="58" r="2.6" fill="#D6457A" opacity="0.8"/>
-          </g>
-          <text x="130" y="162" text-anchor="middle" font-size="9" font-weight="600" fill="#6E5F6B">gill</text>
-          <!-- Signal path out from gill to bubble -->
-          <path d="M 152 96 L 176 96"
-                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-dasharray="4 4" opacity="0.75"
-                marker-end="url(#alertPollArrow)"/>
-          <!-- Resulting bubble (same geometry as webhook bubble for visual parity) -->
-          <g class="alerts-poll-bub">
-            <path d="M 194 74 H 242 A 8 8 0 0 1 250 82 V 110 A 8 8 0 0 1 242 118 L 194 118 A 8 8 0 0 1 186 110 V 100 L 180 96 L 186 92 V 82 A 8 8 0 0 1 194 74 Z"
-                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.4" filter="url(#alertPollShadow)"/>
-            <circle cx="202" cy="90" r="6" fill="#24292E"/>
-            <text x="213" y="93" font-size="10" font-weight="700" fill="#2D2533">@</text>
-            <text x="194" y="110" font-size="8.5" fill="#6E5F6B">mentioned</text>
-          </g>
-          <!-- Traveling dot: from the service back through the gill into the bubble -->
-          <circle class="alerts-poll-dot" cx="74" cy="104" r="3.2" fill="#D6457A"/>
-        </svg>
+    <!-- Polling (gills) — reuses the gill-sample-diagram partial from gills.html -->
+    <div class="product-block-wide">
+      <div class="product-block-illo-wide">
+        {% include gill-sample-diagram.html %}
       </div>
       <div class="product-block-body">
         <h3>Polling</h3>
