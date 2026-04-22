@@ -1837,16 +1837,16 @@ type: website
           }
           .lfd-bubble { opacity: 0; animation: lfd-bubble 8s ease-in-out infinite; }
           @keyframes lfd-bubble {
-            0%, 42%  { opacity: 0; transform: translate(260px, 44px); }
-            46%      { opacity: 1; transform: translate(260px, 40px); }
-            88%      { opacity: 1; transform: translate(260px, 40px); }
-            92%      { opacity: 0; transform: translate(260px, 44px); }
-            100%     { opacity: 0; transform: translate(260px, 44px); }
+            0%, 42%  { opacity: 0; transform: translate(260px, 52px); }
+            46%      { opacity: 1; transform: translate(260px, 48px); }
+            88%      { opacity: 1; transform: translate(260px, 48px); }
+            92%      { opacity: 0; transform: translate(260px, 52px); }
+            100%     { opacity: 0; transform: translate(260px, 52px); }
           }
           @media (prefers-reduced-motion: reduce) {
             .lfd-s-tool .lfd-stage-bg, .lfd-s-axol .lfd-stage-bg,
             .lfd-dot, .lfd-bubble { animation: none !important; }
-            .lfd-bubble { opacity: 1; transform: translate(260px, 40px); }
+            .lfd-bubble { opacity: 1; transform: translate(260px, 48px); }
             .lfd-dot { opacity: 0; }
           }
         </style>
@@ -1894,13 +1894,12 @@ type: website
               <text class="lfd-label" dy="52">axol</text>
               <text class="lfd-sublabel" dy="65">loopback :47329</text>
             </g>
-            <!-- Bubble above axol. -->
+            <!-- Bubble above axol. Single-path outline so the stroke
+                 doesn't cross the tail's throat. -->
             <g class="lfd-bubble">
-              <rect x="-58" y="-56" width="116" height="48" rx="10"
+              <path d="M -48 -56 H 48 A 10 10 0 0 1 58 -46 V -18 A 10 10 0 0 1 48 -8 H 6 L 0 0 L -6 -8 H -48 A 10 10 0 0 1 -58 -18 V -46 A 10 10 0 0 1 -48 -56 Z"
                     fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5"
                     filter="drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10))" />
-              <path d="M -6 -8 L 0 0 L 6 -8 Z"
-                    fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5" />
               <circle cx="-40" cy="-32" r="6.5" fill="#2E8B57" />
               <path d="M -44 -32 L -41 -29 L -36 -35" stroke="#FFFFFF" stroke-width="1.7"
                     fill="none" stroke-linecap="round" stroke-linejoin="round" />
@@ -2009,17 +2008,17 @@ type: website
           }
           .wfd-bubble { opacity: 0; animation: wfd-bubble 8s ease-in-out infinite; }
           @keyframes wfd-bubble {
-            0%, 64%  { opacity: 0; transform: translate(490px, 44px); }
-            68%      { opacity: 1; transform: translate(490px, 40px); }
-            92%      { opacity: 1; transform: translate(490px, 40px); }
-            96%      { opacity: 0; transform: translate(490px, 44px); }
-            100%     { opacity: 0; transform: translate(490px, 44px); }
+            0%, 64%  { opacity: 0; transform: translate(490px, 52px); }
+            68%      { opacity: 1; transform: translate(490px, 48px); }
+            92%      { opacity: 1; transform: translate(490px, 48px); }
+            96%      { opacity: 0; transform: translate(490px, 52px); }
+            100%     { opacity: 0; transform: translate(490px, 52px); }
           }
           @media (prefers-reduced-motion: reduce) {
             .wfd-s-webhook .wfd-stage-bg, .wfd-s-neuromast .wfd-stage-bg,
             .wfd-s-lateral .wfd-stage-bg, .wfd-s-axol .wfd-stage-bg,
             .wfd-dot-1, .wfd-dot-2, .wfd-dot-3, .wfd-bubble { animation: none !important; }
-            .wfd-bubble { opacity: 1; transform: translate(490px, 40px); }
+            .wfd-bubble { opacity: 1; transform: translate(490px, 48px); }
             .wfd-dot-1, .wfd-dot-2, .wfd-dot-3 { opacity: 0; }
           }
         </style>
@@ -2089,13 +2088,13 @@ type: website
               <text class="wfd-label" dy="52">axol</text>
               <text class="wfd-sublabel" dy="65">speech bubble</text>
             </g>
-            <!-- Bubble above axol — delivered after dot-3 arrives. -->
+            <!-- Bubble above axol — delivered after dot-3 arrives.
+                 Single-path outline so the stroke doesn't cross the
+                 tail's throat. -->
             <g class="wfd-bubble">
-              <rect x="-58" y="-56" width="116" height="48" rx="10"
+              <path d="M -48 -56 H 48 A 10 10 0 0 1 58 -46 V -18 A 10 10 0 0 1 48 -8 H 6 L 0 0 L -6 -8 H -48 A 10 10 0 0 1 -58 -18 V -46 A 10 10 0 0 1 -48 -56 Z"
                     fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5"
                     filter="drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10))" />
-              <path d="M -6 -8 L 0 0 L 6 -8 Z"
-                    fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5" />
               <circle cx="-42" cy="-32" r="6.5" fill="#24292E" />
               <text x="-26" y="-35" font-size="10" font-weight="700" fill="#2D2533">main</text>
               <text x="-26" y="-22" font-size="9" fill="#6E5F6B">CI passed</text>

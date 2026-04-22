@@ -283,14 +283,12 @@
       <text class="afd-sublabel" dy="65">bubble · click</text>
     </g>
 
-    <!-- Permission bubble above Axol. Rect is tall enough to fully
-         contain the Allow/Deny button row with ~4px padding below —
-         previous 48u height stopped at y=-8 while buttons extended to
-         y=-4, leaving them poking out of the bottom. -->
+    <!-- Permission bubble above Axol. Single-path outline (rect + tail
+         notch as one closed shape) so the stroke doesn't paint across
+         the tail's throat. Rect area -56 → 0 tall, buttons fit inside
+         with ~4px padding below the button row. -->
     <g class="afd-bubble">
-      <rect x="-54" y="-56" width="108" height="56" rx="10"
-            fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
-      <path d="M -6 0 L 0 8 L 6 0 Z"
+      <path d="M -44 -56 H 44 A 10 10 0 0 1 54 -46 V -10 A 10 10 0 0 1 44 0 H 6 L 0 8 L -6 0 H -44 A 10 10 0 0 1 -54 -10 V -46 A 10 10 0 0 1 -44 -56 Z"
             fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
       <text y="-41" text-anchor="middle" font-size="11" font-weight="700"
             fill="#2D2533">Claude</text>
