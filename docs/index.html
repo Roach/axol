@@ -1545,6 +1545,12 @@ type: website
   <symbol id="icon-plugins" viewBox="0 0 16 16" fill="currentColor">
     <path d="M6 0a.5.5 0 0 1 .5.5V3h3V.5a.5.5 0 0 1 1 0V3h1a.5.5 0 0 1 .5.5v3A3.5 3.5 0 0 1 8.5 10c-.002 0 .002 2.486 0 2.5V15.5a.5.5 0 0 1-1 0V13h-.002L7.5 15.5a.5.5 0 0 1-1 0v-3h-.002L6.5 10A3.5 3.5 0 0 1 3 6.5v-3a.5.5 0 0 1 .5-.5h1V.5A.5.5 0 0 1 5 0zM4 4v2.5A2.5 2.5 0 0 0 6.5 9h3A2.5 2.5 0 0 0 12 6.5V4z"/>
   </symbol>
+  <!-- Claude Code section — a terminal-window glyph. CC is a terminal
+       tool, so the glyph reads "developer command line". -->
+  <symbol id="icon-claude" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M6 9a.5.5 0 0 1-.146.354l-3 3a.5.5 0 0 1-.708-.708L4.793 9 2.146 6.354a.5.5 0 1 1 .708-.708l3 3A.5.5 0 0 1 6 9m2 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5"/>
+    <path d="M14 3a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+  </symbol>
   <!-- Gills — a feathery plume glyph. Filled tip, branching strokes fanning
        outward, echoing the axolotl's external-gill silhouette. -->
   <symbol id="icon-gills" viewBox="0 0 16 16" fill="currentColor">
@@ -1674,9 +1680,10 @@ type: website
     <a href="#install"><svg aria-hidden="true"><use href="#icon-install"/></svg>install</a>
     <a href="#modes"><svg aria-hidden="true"><use href="#icon-modes"/></svg>modes</a>
     <a href="#alerts"><svg aria-hidden="true"><use href="#icon-alerts"/></svg>alerts</a>
+    <a href="#claude"><svg aria-hidden="true"><use href="#icon-claude"/></svg>claude code</a>
     <a href="#remote"><svg aria-hidden="true"><use href="#icon-remote"/></svg>remote</a>
+    <a href="#gills"><svg aria-hidden="true"><use href="#icon-gills"/></svg>gills</a>
     <a href="#plugins"><svg aria-hidden="true"><use href="#icon-plugins"/></svg>plugins</a>
-    <a href="gills.html"><svg aria-hidden="true"><use href="#icon-gills"/></svg>gills</a>
     <a href="changelog.html"><svg aria-hidden="true"><use href="#icon-changelog"/></svg>changelog</a>
   </nav>
 
@@ -1698,8 +1705,10 @@ cd axol/axol
     <p>Pick a thread:</p>
     <ul style="margin: 6px 0 14px; padding-left: 20px;">
       <li><a href="#alerts">Send her alerts</a> from your own scripts with a <code>curl</code> one-liner.</li>
-      <li><a href="#remote">Set up the remote-alerts bridge</a> so GitHub, Stripe, and Sentry can reach her too.</li>
-      <li><a href="#plugins">Write a plugin</a> for any webhook source — or use one of the five that ship with her.</li>
+      <li><a href="#claude">Wire up Claude Code</a> — permission bubbles and a git-aware stop enricher, two drop-in hook scripts.</li>
+      <li><a href="#remote">Set up the remote-alerts bridge</a> so GitHub, Stripe, and Sentry can reach her too. <a href="remote-alerts.html">Deploy guides</a> for Webflow Cloud, Railway, Fly.io, Render, and Cloudflare direct.</li>
+      <li><a href="#gills">Install a gill</a> for services that don't webhook — <a href="gills.html">GitHub @mentions across any repo you're subscribed to</a> as the first concrete example.</li>
+      <li><a href="#plugins">Write a plugin</a> for any webhook source — or use one of the <a href="plugins.html">five adapters</a> that ship with her.</li>
     </ul>
 
     <p style="margin-top: 18px;">
@@ -1860,6 +1869,35 @@ cd axol/axol
     <p>Required field: <code>title</code>. Priority <code>high</code> / <code>urgent</code> floats worry bubbles above her head; <code>urgent</code> also pins the speech bubble open until you handle it. Actions are a closed set — <code>focus-pid</code>, <code>open-url</code>, <code>reveal-file</code>, <code>noop</code> — so there's no shell execution path.</p>
   </section>
 
+  <section id="claude">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-claude"/></svg></span>claude code</h2>
+    <p>A bundled <code>claude-code.json</code> adapter plus two drop-in hook scripts turn Claude Code from "blocking prompt in the terminal" into "tappable bubble on your desktop". <code>SessionStart</code>, <code>PermissionRequest</code>, and <code>Stop</code> each get a shaped bubble; CC's own "waiting for your input" noise is silently dropped.</p>
+
+    <h3 style="margin-top: 18px;">Two hook scripts</h3>
+    <ul style="margin: 6px 0 14px; padding-left: 20px;">
+      <li><b><code>claude-permission.sh</code></b> — bridges CC's <code>PermissionRequest</code> hook into Axol's <code>/permission</code> endpoint. CC holds while an <b>Allow</b>/<b>Deny</b> bubble pops above Axol; your click is what she waits on. If Axol's closed the script returns empty so CC falls through to its own in-terminal prompt — the bridge degrades gracefully.</li>
+      <li><b><code>claude-stop.sh</code></b> — enriches CC's <code>Stop</code> event with a short git-aware note ("<code>main · 3 files changed</code>" on a dirty repo, "<code>main · Tighten hero demo bubble dwell times</code>" on a clean one). Safe on non-git cwds, missing <code>jq</code>, or Axol offline — never fails the hook.</li>
+    </ul>
+
+    <p>Paste into <code>~/.claude/settings.json</code>, pointing at wherever you cloned the repo:</p>
+<pre><code class="lang-json">{
+  "hooks": {
+    "PermissionRequest": [
+      { "hooks": [
+        { "type": "command", "command": "/path/to/axol/axol/hooks/claude-permission.sh" }
+      ] }
+    ],
+    "Stop": [
+      { "hooks": [
+        { "type": "command", "command": "/path/to/axol/axol/hooks/claude-stop.sh" }
+      ] }
+    ]
+  }
+}</code></pre>
+
+    <p>The <code>X-Claude-PID</code> header (auto-populated via <code>$PPID</code> in each hook) is what lets clicking the bubble focus the right terminal on completion. You'll need macOS <b>Accessibility</b> permission for your terminal emulator — once for the life of the install. Full walkthrough + verification steps in the <a href="https://github.com/Roach/axol#claude-code-integration">root README</a>.</p>
+  </section>
+
   <section id="remote">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-remote"/></svg></span>remote alerts <span class="pill">optional</span></h2>
     <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she picks up alerts through a two-part bridge: a signed webhook endpoint in the cloud (the <b>neuromast</b>) and a local 60-line bash forwarder (the <b>lateral line</b>) that drains its queue into the loopback port every 30 seconds.</p>
@@ -1953,9 +1991,22 @@ cd axol/axol
     <p style="margin-top:32px; text-align:center;">
       <a class="cta" href="remote-alerts.html">Set up remote alerts →</a>
     </p>
+  </section>
 
-    <p style="margin: 22px auto 0; max-width: 640px; text-align: center; color: var(--ink-soft); font-size: 14px;">
-      Want alerts from a service that can't webhook out to you — GitHub <code>@mentions</code>, review requests, that sort of thing? <a href="gills.html">Gills</a> are the local-only, keychain-backed inverse: Axol polls the upstream on her own, no cloud credential required.
+  <section id="gills">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-gills"/></svg></span>gills</h2>
+    <p>Remote-alerts work for services you own a webhook on. <b>Gills</b> cover the inverse: alerts from services that don't push — GitHub <code>@mentions</code> across repos you don't own, review requests from every org you belong to, security advisories on your watch list. Axol polls the upstream on your behalf; the token lives in macOS Keychain and never leaves your Mac.</p>
+
+    <p>Named after the feathery external gills axolotls wave to sample water — same rhythmic reach, same "stick out and catch what's passing through" role. A gill is one short bash script on a <code>launchd</code> job: read token, call API, forward new items to her loopback port. Ships with one concrete gill today:</p>
+
+    <ul style="margin: 6px 0 14px; padding-left: 20px;">
+      <li><b><code>github-notifications</code></b> — polls GitHub's <code>/notifications</code> every 30 s. <code>review_requested</code> / <code>mention</code> / <code>team_mention</code> / <code>assign</code> / <code>security_alert</code> render as <b>urgent</b> bubbles; everything else rides the normal lane. API URLs are rewritten to human-facing <code>github.com</code> links so clicking opens the PR in the browser.</li>
+    </ul>
+
+    <p>New gills are ~20 lines of bash against a six-helper <code>lib.sh</code> (init, axol-up probe, keychain read, cursor I/O, envelope POST, log). <code>install.sh &lt;name&gt;</code> verifies the Keychain item exists and writes the launchd plist automatically.</p>
+
+    <p style="margin-top:32px; text-align:center;">
+      <a class="cta" href="gills.html">Gill reference →</a>
     </p>
   </section>
 
