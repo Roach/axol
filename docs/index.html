@@ -648,11 +648,30 @@ type: website
   section {
     background: white;
     border-radius: 20px;
-    padding: 28px 32px;
+    padding: 34px 38px 30px;
     margin-top: 24px;
     box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
     border: 1px solid #FBEAF2;
     scroll-margin-top: 24px;
+    position: relative;
+  }
+  /* Chapter-style tinted backgrounds so sections read as distinct acts
+     on scroll rather than an undifferentiated stack of white cards. */
+  section#claude      { background: linear-gradient(180deg, #FFF6EC 0%, #FFFFFF 62%); border-color: #F7E4CC; }
+  section#sizes       { background: linear-gradient(180deg, #F6F2FF 0%, #FFFFFF 62%); border-color: #E3DAF5; }
+  section#expandable  { background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 62%); border-color: #CFE2F5; }
+  section#alerts      { background: linear-gradient(180deg, #FFF2F8 0%, #FFFFFF 62%); border-color: #F9D8E6; }
+  /* Small uppercase eyebrow that sits above each section h2 so scroll
+     reads like chapter headings, not a list. */
+  .section-eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pink-accent);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.82;
+    margin: 0 0 6px;
   }
 
   .section-nav {
@@ -701,9 +720,18 @@ type: website
   .heading-icon svg { width: 100%; height: 100%; display: block; }
 
   section h2 {
-    font-size: 22px;
+    font-size: 34px;
+    line-height: 1.1;
     margin: 0 0 14px;
-    color: var(--pink-accent);
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  section h2 .heading-icon {
+    width: 28px;
+    height: 28px;
+    vertical-align: -5px;
+    margin-right: 12px;
   }
   section a {
     color: var(--pink-accent);
@@ -2088,7 +2116,7 @@ type: website
       </div>
     </div>
     <h1>Axol</h1>
-    <p class="tagline">A tiny axolotl that lives in the corner of your screen, surfaces alerts from any tool that can POST JSON, and cheers you on.</p>
+    <p class="tagline"><b>A tiny axolotl who answers your alerts.</b> She sits in the corner of your screen, pops a speech bubble when something needs you — a CI build, a Claude permission, a GitHub mention — and waves it off when you tap.</p>
 
     <div class="hero-ctas">
       <a class="hero-cta-primary" href="#install">
@@ -2185,7 +2213,8 @@ type: website
   </svg>
 
   <section id="alerts">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>alerts</h2>
+    <span class="section-eyebrow">01 · How alerts arrive</span>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>Three paths to a bubble</h2>
     <p>Anything worth your attention arrives as a speech bubble above Axol — urgent ones pin open, the rest fade on their own. Three paths in: a loopback listener on your Mac, a signed cloud bridge for webhook-capable services, and keychain-backed polling for services that can't push.</p>
 
     <!-- Local loopback — reuses the envelope-flow-mini partial from plugins.html -->
@@ -2276,7 +2305,8 @@ type: website
   </section>
 
   <section id="claude">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-claude"/></svg></span>claude code</h2>
+    <span class="section-eyebrow">02 · The assistant</span>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-claude"/></svg></span>Claude Code, answered</h2>
     <p>Axol handles Claude Code's permission prompts — from the terminal in front of you, from a GitHub Actions run, or from a Slack slash command. Wherever Claude needs a human to say <b>Allow</b> or <b>Deny</b>, the question pops above her and your tap flows back to the caller.</p>
 
     <div class="product-block-wide">
@@ -2296,7 +2326,8 @@ type: website
   </section>
 
   <section id="sizes">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-modes"/></svg></span>sizes</h2>
+    <span class="section-eyebrow">03 · Fit your screen</span>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-modes"/></svg></span>Three sizes, on tap</h2>
     <p>⌘-click her to cycle through three sizes: <b>full → mini → micro → full</b>. The current mode persists across launches.</p>
     <div class="modes-row">
       <!-- All three previews share the same scale (1 svg unit = 0.5 px of
@@ -2359,7 +2390,8 @@ type: website
   </section>
 
   <section id="expandable">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-plugins"/></svg></span>expandable</h2>
+    <span class="section-eyebrow">04 · Extend her</span>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-plugins"/></svg></span>Adapters and gills</h2>
     <p>Two drop-in extension points for adding new sources without touching Axol's binary. Adapters translate shapes you don't control; gills fetch from services that can't push.</p>
 
     <!-- Adapters -->
@@ -2472,7 +2504,8 @@ type: website
   </aside>
 
   <section id="install">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>install &amp; deploy</h2>
+    <span class="section-eyebrow">05 · Put her on your Mac</span>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>Install &amp; deploy</h2>
     <p>macOS 13+, with Xcode command-line tools (<code>xcode-select --install</code>).</p>
 
 <pre><code class="lang-sh">git clone https://github.com/Roach/axol.git
