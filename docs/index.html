@@ -84,12 +84,12 @@ type: website
   .wrap {
     max-width: 960px;
     margin: 0 auto;
-    padding: 48px 32px 80px;
+    padding: 16px 32px 28px;
   }
 
   .hero {
     text-align: center;
-    padding: 225px 0 12px;
+    padding: 88px 0 4px;
   }
 
   .stage-wrap {
@@ -558,7 +558,7 @@ type: website
 
   h1 {
     font-size: 52px;
-    margin: -32px 0 6px;
+    margin: -32px 0 4px;
     letter-spacing: -0.01em;
     color: #1F3A56;
   }
@@ -566,7 +566,7 @@ type: website
   .tagline {
     font-size: 18px;
     color: rgba(31, 58, 86, 0.75);
-    margin: 0 auto 22px;
+    margin: 0 auto 12px;
     max-width: 460px;
   }
 
@@ -578,7 +578,7 @@ type: website
     gap: 12px;
     justify-content: center;
     align-items: center;
-    margin: 0 auto 28px;
+    margin: 0 auto 14px;
     flex-wrap: wrap;
   }
   .hero-cta-primary {
@@ -648,11 +648,11 @@ type: website
   section {
     background: white;
     border-radius: 20px;
-    padding: 34px 38px 30px;
-    margin-top: 24px;
+    padding: 22px 30px 20px;
+    margin-top: 14px;
     box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
     border: 1px solid #FBEAF2;
-    scroll-margin-top: 24px;
+    scroll-margin-top: 20px;
     position: relative;
   }
   /* Chapter-style tinted backgrounds so sections read as distinct acts
@@ -671,18 +671,15 @@ type: website
     letter-spacing: 0.14em;
     text-transform: uppercase;
     opacity: 0.82;
-    margin: 0 0 6px;
+    margin: 0 0 3px;
   }
 
   .section-nav {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 32px;
-    /* Hero now has 12px bottom padding; pair it with 20px nav top margin
-       for ≈ 32px above. Nav bottom wins the collapse with the next
-       section's 24px top margin for ≈ 32px below. */
-    margin: 20px auto 32px;
+    gap: 26px;
+    margin: 6px auto 10px;
   }
   .section-nav a {
     display: inline-flex;
@@ -720,9 +717,9 @@ type: website
   .heading-icon svg { width: 100%; height: 100%; display: block; }
 
   section h2 {
-    font-size: 34px;
-    line-height: 1.1;
-    margin: 0 0 14px;
+    font-size: 30px;
+    line-height: 1.06;
+    margin: 0 0 6px;
     color: var(--ink);
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -802,14 +799,14 @@ type: website
   .pitch {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: 12px;
     max-width: 880px;
-    margin: 32px auto 0;
+    margin: 10px auto 0;
     text-align: left;
   }
   .pitch-card {
     position: relative;
-    padding: 24px 22px 22px;
+    padding: 14px 18px 14px;
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -830,9 +827,9 @@ type: website
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    margin-bottom: 14px;
+    width: 36px;
+    height: 36px;
+    margin-bottom: 10px;
     border-radius: 12px;
     color: var(--pink-accent);
     background: linear-gradient(135deg, #FFE5F0 0%, #FFC9E2 100%);
@@ -952,31 +949,10 @@ type: website
   }
 
 
-  /* Larger product-tour blocks — each top-level section (alerts /
-     expandable / install) uses these for its sub-rows. Illustration on
-     the left (240px on desktop), copy + CTAs on the right. */
-  .product-block {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 26px;
-    align-items: start;
-    padding: 28px 0 26px;
-    border-top: 1px solid #FBEAF2;
-  }
-  .product-block:first-of-type { border-top: none; padding-top: 10px; }
-  .product-block-illo {
-    height: 190px;
-    background: linear-gradient(135deg, #FFF7FB 0%, #FFE5F0 100%);
-    border: 1px solid #FBEAF2;
-    border-radius: 14px;
-    position: relative;
-    overflow: hidden;
-  }
-  .product-block-illo svg {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    display: block;
-  }
+  /* Product-tour blocks — each top-level section uses these for its
+     sub-rows. Only the wide variant (below) is in use; the narrow
+     2-column variant was fully replaced when all illustrations moved
+     to the SVG circle-stage grammar. */
   .product-block-body h3 {
     font-size: 20px;
     margin: 0 0 6px;
@@ -987,7 +963,7 @@ type: website
   .product-block-body > p {
     font-size: 14.5px;
     color: var(--ink-soft);
-    margin: 0 0 14px;
+    margin: 0 0 10px;
     line-height: 1.55;
   }
   .product-block-ctas {
@@ -1015,15 +991,15 @@ type: website
   .product-block-wide {
     display: flex;
     flex-direction: column-reverse;
-    padding: 28px 0 26px;
+    padding: 18px 0 16px;
     border-top: 1px solid #FBEAF2;
   }
   .product-block-wide:first-of-type {
     border-top: none;
-    padding-top: 10px;
+    padding-top: 4px;
   }
   .product-block-illo-wide {
-    margin: 20px 0 0;
+    margin: 10px 0 0;
   }
   .product-block-illo-wide svg {
     display: block;
@@ -1031,56 +1007,16 @@ type: website
     height: auto;
   }
 
-  /* Sub-block — a smaller inset card for features nested inside a
-     larger one (e.g. Claude Code nested under Local alerts). Same
-     visual grammar as the parent block at two-thirds the scale. */
-  .product-subblock {
-    margin-top: 18px;
-    padding: 14px;
-    background: #FFF9FC;
-    border: 1px solid #FBEAF2;
-    border-radius: 11px;
-    display: grid;
-    grid-template-columns: 130px 1fr;
-    gap: 14px;
-    align-items: center;
-  }
-  .product-subblock-illo {
-    height: 96px;
-    background: linear-gradient(135deg, #FFF0F8 0%, #FFDEEE 100%);
-    border-radius: 8px;
-    position: relative;
-    overflow: hidden;
-  }
-  .product-subblock-illo svg {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    display: block;
-  }
-  .product-subblock h4 {
-    font-size: 15px;
-    margin: 0 0 4px;
-    color: var(--ink);
-    font-weight: 700;
-    letter-spacing: -0.005em;
-  }
-  .product-subblock > div > p {
-    font-size: 13px;
-    color: var(--ink-soft);
-    margin: 0 0 6px;
-    line-height: 1.5;
-  }
-
   /* Molts card — personality callout that sits between the feature
      surface and the install steps. Pink-washed band with a small
      axol looking up as confetti tumbles past her. */
   .molts-card {
     display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 22px;
+    grid-template-columns: 130px 1fr;
+    gap: 20px;
     align-items: center;
-    margin: 34px 0 28px;
-    padding: 22px 26px;
+    margin: 14px 0 14px;
+    padding: 14px 20px;
     background: linear-gradient(135deg, #FFF7FB 0%, #FFE9F3 100%);
     border: 1px solid #FBEAF2;
     border-radius: 16px;
@@ -1179,21 +1115,6 @@ type: website
     color: var(--pink-accent);
   }
 
-  @media (max-width: 640px) {
-    .product-block {
-      grid-template-columns: 1fr;
-      gap: 14px;
-    }
-    .product-block-illo { height: 150px; }
-    .product-subblock {
-      grid-template-columns: 1fr;
-      padding: 12px;
-    }
-    .product-subblock-illo { height: 88px; }
-  }
-
-  /* Neuromast pulse rings — three concentric rings expand outward from
-     the sensor dot, staggered so one is always visible at each radius. */
   /* Neuromast pulse rings — three concentric rings expand outward from
      the sensor dot, staggered so one is always visible at each radius. */
   .neuro-ring {
