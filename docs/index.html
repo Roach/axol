@@ -624,22 +624,6 @@ type: website
   }
   .hero-cta-secondary svg { width: 15px; height: 15px; fill: currentColor; }
 
-  /* Credibility strip — one-sentence quantification of the "nothing
-     heavy" pitch. Sits under the hero CTAs, visible but unassuming. */
-  .hero-stats {
-    margin: 0 auto 30px;
-    font-size: 13.5px;
-    color: var(--ink-soft);
-    text-align: center;
-    letter-spacing: 0.005em;
-  }
-  .hero-stats b {
-    color: var(--ink);
-    font-weight: 700;
-    letter-spacing: -0.005em;
-    font-variant-numeric: tabular-nums;
-  }
-
   .cta {
     display: inline-flex;
     align-items: center;
@@ -939,6 +923,148 @@ type: website
     letter-spacing: 0.005em;
   }
 
+
+  /* Larger product-tour blocks — each top-level section (alerts /
+     expandable / install) uses these for its sub-rows. Illustration on
+     the left (240px on desktop), copy + CTAs on the right. */
+  .product-block {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 26px;
+    align-items: start;
+    padding: 28px 0 26px;
+    border-top: 1px solid #FBEAF2;
+  }
+  .product-block:first-of-type { border-top: none; padding-top: 10px; }
+  .product-block-illo {
+    height: 190px;
+    background: linear-gradient(135deg, #FFF7FB 0%, #FFE5F0 100%);
+    border: 1px solid #FBEAF2;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .product-block-illo svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .product-block-body h3 {
+    font-size: 20px;
+    margin: 0 0 6px;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .product-block-body > p {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+    line-height: 1.55;
+  }
+  .product-block-ctas {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .product-block-cta {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--pink-accent);
+    text-decoration: none;
+    letter-spacing: 0.005em;
+  }
+  .product-block-cta:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Sub-block — a smaller inset card for features nested inside a
+     larger one (e.g. Claude Code nested under Local alerts). Same
+     visual grammar as the parent block at two-thirds the scale. */
+  .product-subblock {
+    margin-top: 18px;
+    padding: 14px;
+    background: #FFF9FC;
+    border: 1px solid #FBEAF2;
+    border-radius: 11px;
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .product-subblock-illo {
+    height: 96px;
+    background: linear-gradient(135deg, #FFF0F8 0%, #FFDEEE 100%);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .product-subblock-illo svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .product-subblock h4 {
+    font-size: 15px;
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  .product-subblock > div > p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+    line-height: 1.5;
+  }
+
+  /* Deploy target link tiles — compact pills for the 5 platforms
+     under Install & Deploy. */
+  .deploy-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0 8px;
+  }
+  .deploy-link {
+    display: inline-flex;
+    padding: 8px 14px;
+    background: #FFFFFF;
+    border: 1px solid #FBEAF2;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 500;
+    transition: border-color 0.15s ease, transform 0.12s ease;
+  }
+  .deploy-link:hover {
+    border-color: var(--pink-accent);
+    transform: translateY(-1px);
+  }
+  .deploy-link.featured {
+    background: var(--pink-2);
+    border-color: var(--pink-3);
+    font-weight: 600;
+    color: var(--pink-accent);
+  }
+
+  @media (max-width: 640px) {
+    .product-block {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .product-block-illo { height: 150px; }
+    .product-subblock {
+      grid-template-columns: 1fr;
+      padding: 12px;
+    }
+    .product-subblock-illo { height: 88px; }
+  }
+
+  /* Neuromast pulse rings — three concentric rings expand outward from
+     the sensor dot, staggered so one is always visible at each radius. */
   /* Neuromast pulse rings — three concentric rings expand outward from
      the sensor dot, staggered so one is always visible at each radius. */
   .neuro-ring {
@@ -1835,9 +1961,6 @@ type: website
       </a>
     </div>
 
-    <p class="hero-stats" aria-label="At-a-glance stats">
-      <b>350 KB</b> binary, <b>40 MB</b> resident, zero telemetry.
-    </p>
 
     <div class="pitch">
       <article class="pitch-card">
@@ -1873,154 +1996,13 @@ type: website
   </header>
 
   <nav class="section-nav" aria-label="page sections">
-    <a href="#features"><svg aria-hidden="true"><use href="#icon-plugins"/></svg>features</a>
-    <a href="#modes"><svg aria-hidden="true"><use href="#icon-modes"/></svg>modes</a>
+    <a href="#alerts"><svg aria-hidden="true"><use href="#icon-alerts"/></svg>alerts</a>
+    <a href="#sizes"><svg aria-hidden="true"><use href="#icon-modes"/></svg>sizes</a>
+    <a href="#expandable"><svg aria-hidden="true"><use href="#icon-plugins"/></svg>expandable</a>
     <a href="#install"><svg aria-hidden="true"><use href="#icon-install"/></svg>install</a>
     <a href="changelog.html"><svg aria-hidden="true"><use href="#icon-changelog"/></svg>changelog</a>
   </nav>
 
-  <section id="features">
-    <h2><span class="heading-icon" aria-hidden="true"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M 11 5 C 8 5 8 8 8 11 C 8 14 7 15 5 16 C 7 17 8 18 8 21 C 8 24 8 27 11 27"/>
-              <path d="M 21 5 C 24 5 24 8 24 11 C 24 14 25 15 27 16 C 25 17 24 18 24 21 C 24 24 24 27 21 27"/>
-              <circle cx="13" cy="16" r="1.1" fill="currentColor" stroke="none" opacity="0.6"/>
-              <circle cx="19" cy="16" r="1.1" fill="currentColor" stroke="none" opacity="0.6"/>
-            </svg></span>what she does</h2>
-    <p>Five threads, each with a deep-dive page for setup and reference.</p>
-
-    <div class="features-grid">
-      <a class="feature-card" href="plugins.html">
-        <div class="feature-card-illo" aria-hidden="true">
-          <svg viewBox="0 0 200 98" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <!-- Success-tinted speech bubble with a real-looking alert -->
-            <path d="M 24 24 H 176 A 10 10 0 0 1 186 34 V 58 A 10 10 0 0 1 176 68 L 118 68 L 110 78 L 102 68 L 24 68 A 10 10 0 0 1 14 58 V 34 A 10 10 0 0 1 24 24 Z"
-                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5"
-                  filter="drop-shadow(0 3px 6px rgba(200, 80, 140, 0.16))"/>
-            <!-- Green check pill left of text -->
-            <circle cx="34" cy="46" r="8.5" fill="#2E8B57"/>
-            <path d="M 30 46 L 33 49 L 38 44" stroke="#FFFFFF" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- Title + body -->
-            <text x="50" y="42" font-size="11" font-weight="700" fill="#2D2533">ci-bot</text>
-            <text x="50" y="56" font-size="10" fill="#6E5F6B">build passed on main</text>
-          </svg>
-        </div>
-        <div class="feature-card-body">
-          <h3>Local alerts</h3>
-          <p>Any tool that can <code>curl</code> can pop a bubble. The envelope is title + body + priority + optional actions — focus a terminal, open a URL, reveal a file.</p>
-          <span class="feature-card-cta">Envelope reference →</span>
-        </div>
-      </a>
-
-      <a class="feature-card" href="https://github.com/Roach/axol#claude-code-integration">
-        <div class="feature-card-illo" aria-hidden="true">
-          <svg viewBox="0 0 200 98" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <!-- Urgent permission bubble with real Allow/Deny buttons -->
-            <path d="M 16 12 H 184 A 10 10 0 0 1 194 22 V 72 A 10 10 0 0 1 184 82 L 118 82 L 110 90 L 102 82 L 16 82 A 10 10 0 0 1 6 72 V 22 A 10 10 0 0 1 16 12 Z"
-                  fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5"
-                  filter="drop-shadow(0 3px 6px rgba(214, 69, 122, 0.20))"/>
-            <!-- Header -->
-            <text x="100" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#2D2533">Claude</text>
-            <text x="100" y="44" text-anchor="middle" font-size="9" fill="#6E5F6B">needs permission</text>
-            <!-- Allow button -->
-            <rect x="40" y="54" width="54" height="20" rx="5" fill="#2E8B57"/>
-            <text x="67" y="67" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">Allow</text>
-            <!-- Deny button -->
-            <rect x="106" y="54" width="54" height="20" rx="5" fill="#FFFFFF" stroke="#6E5F6B" stroke-width="1.3"/>
-            <text x="133" y="67" text-anchor="middle" font-size="10" font-weight="700" fill="#6E5F6B">Deny</text>
-          </svg>
-        </div>
-        <div class="feature-card-body">
-          <h3>Claude Code integration</h3>
-          <p>Two drop-in hook scripts turn CC prompts into tappable bubbles — <b>Allow</b>/<b>Deny</b> above Axol instead of blocking the terminal, plus git-aware notes on every <code>Stop</code>.</p>
-          <span class="feature-card-cta">Hook setup →</span>
-        </div>
-      </a>
-
-      <a class="feature-card" href="remote-alerts.html">
-        <div class="feature-card-illo" aria-hidden="true">
-          <svg viewBox="0 0 200 98" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <!-- Three expanding pulse rings over a sensor dot — a live
-                 neuromast picking up incoming webhooks. -->
-            <circle class="neuro-ring"   cx="100" cy="48" r="14" fill="none" stroke="#D6457A" stroke-width="1.4"/>
-            <circle class="neuro-ring neuro-ring-2" cx="100" cy="48" r="14" fill="none" stroke="#D6457A" stroke-width="1.4"/>
-            <circle class="neuro-ring neuro-ring-3" cx="100" cy="48" r="14" fill="none" stroke="#D6457A" stroke-width="1.4"/>
-            <!-- Center sensor -->
-            <circle cx="100" cy="48" r="8" fill="#D6457A"/>
-            <circle cx="100" cy="48" r="4" fill="#FFEEF5"/>
-          </svg>
-        </div>
-        <div class="feature-card-body">
-          <h3>Remote webhooks</h3>
-          <p>GitHub, Stripe, Sentry — anything with a webhook. Signed cloud intake plus a local forwarder, across five supported deploy targets.</p>
-          <span class="feature-card-cta">Deploy guides →</span>
-        </div>
-      </a>
-
-      <a class="feature-card" href="gills.html">
-        <div class="feature-card-illo" aria-hidden="true">
-          <svg viewBox="0 0 200 98" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <!-- Large feathered gill plume with a gentle sampling sway.
-                 Four tiers of branching filaments + tip dot. -->
-            <g class="gill-plume-sway" fill="none" stroke="#D6457A" stroke-linecap="round">
-              <path d="M100 82 V 14" stroke-width="2.2"/>
-              <path d="M100 68 C 86 64, 78 56, 78 42" stroke-width="1.8" opacity="0.78"/>
-              <path d="M100 68 C 114 64, 122 56, 122 42" stroke-width="1.8" opacity="0.78"/>
-              <path d="M100 52 C 88 48, 82 40, 82 28" stroke-width="1.6" opacity="0.62"/>
-              <path d="M100 52 C 112 48, 118 40, 118 28" stroke-width="1.6" opacity="0.62"/>
-              <path d="M100 36 C 92 32, 88 26, 88 16" stroke-width="1.4" opacity="0.46"/>
-              <path d="M100 36 C 108 32, 112 26, 112 16" stroke-width="1.4" opacity="0.46"/>
-              <circle cx="100" cy="13" r="2.4" fill="#D6457A" stroke="none" opacity="0.72"/>
-            </g>
-          </svg>
-        </div>
-        <div class="feature-card-body">
-          <h3>Pull-style integrations</h3>
-          <p>For services that can't webhook out — <code>@mentions</code>, review requests, security advisories. Axol polls for you; the token stays in macOS Keychain.</p>
-          <span class="feature-card-cta">Gill reference →</span>
-        </div>
-      </a>
-
-      <a class="feature-card" href="plugins.html">
-        <div class="feature-card-illo" aria-hidden="true">
-          <svg viewBox="0 0 200 98" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <marker id="fcArrowAdapt" viewBox="0 0 10 10" refX="8" refY="5"
-                      markerWidth="5" markerHeight="5" orient="auto">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A"/>
-              </marker>
-            </defs>
-            <!-- Raw payload tile (left) -->
-            <rect x="16" y="32" width="42" height="34" rx="5" fill="#FFFFFF" stroke="#C8A6BC" stroke-width="1.2"/>
-            <circle cx="30" cy="44" r="2.2" fill="#C8A6BC"/>
-            <line x1="36" y1="44" x2="52" y2="44" stroke="#C8A6BC" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
-            <line x1="24" y1="52" x2="50" y2="52" stroke="#C8A6BC" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
-            <line x1="24" y1="58" x2="44" y2="58" stroke="#C8A6BC" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
-            <!-- Arrow 1 -->
-            <path d="M 62 49 L 78 49" stroke="#D6457A" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.7" marker-end="url(#fcArrowAdapt)"/>
-            <!-- Adapter tile (center) with drawn braces -->
-            <rect x="80" y="32" width="42" height="34" rx="5" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.6"/>
-            <path d="M 92 40 C 89 40 90 43 90 46 C 90 49 88 49.5 87 49.5 C 88 49.5 90 50 90 53 C 90 56 89 59 92 59"
-                  stroke="#D6457A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            <path d="M 110 40 C 113 40 112 43 112 46 C 112 49 114 49.5 115 49.5 C 114 49.5 112 50 112 53 C 112 56 113 59 110 59"
-                  stroke="#D6457A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            <!-- Arrow 2 -->
-            <path d="M 126 49 L 142 49" stroke="#D6457A" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.7" marker-end="url(#fcArrowAdapt)"/>
-            <!-- Envelope tile (right) -->
-            <g transform="translate(144, 32)">
-              <rect width="40" height="34" rx="4" fill="#FFF5FA" stroke="#D6457A" stroke-width="1.4"/>
-              <path d="M 2 2 L 20 18 L 38 2" fill="none" stroke="#D6457A" stroke-width="1.1" opacity="0.55"/>
-              <circle cx="20" cy="24" r="5" fill="#D6457A"/>
-            </g>
-          </svg>
-        </div>
-        <div class="feature-card-body">
-          <h3>Custom adapters</h3>
-          <p>Drop a JSON file into <code>~/Library/Application Support/Axol/adapters/</code> to translate any payload shape into the envelope. Match rules + template language + closed action vocab.</p>
-          <span class="feature-card-cta">Plugin reference →</span>
-        </div>
-      </a>
-    </div>
-  </section>
 
 
   <!-- Reusable miniature axolotl for the size-mode previews. Shapes + colors
@@ -2058,8 +2040,79 @@ type: website
     </symbol>
   </svg>
 
-  <section id="modes">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-modes"/></svg></span>size modes</h2>
+  <section id="alerts">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>alerts</h2>
+    <p>Every alert renders as a speech bubble above Axol. Two paths in: a loopback listener on your Mac for anything your tools can POST, and a signed cloud bridge for webhooks + keychain-backed PAT polling for sources that can't loopback.</p>
+
+    <!-- Local alerts (with Claude Code nested inside) -->
+    <div class="product-block">
+      <div class="product-block-illo" aria-hidden="true">
+        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <!-- Real-looking success bubble -->
+          <path d="M 30 58 H 230 A 12 12 0 0 1 242 70 V 104 A 12 12 0 0 1 230 116 L 154 116 L 144 128 L 134 116 L 30 116 A 12 12 0 0 1 18 104 V 70 A 12 12 0 0 1 30 58 Z"
+                fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.6"
+                filter="drop-shadow(0 4px 8px rgba(200, 80, 140, 0.16))"/>
+          <circle cx="42" cy="87" r="10" fill="#2E8B57"/>
+          <path d="M 37 87 L 40.5 90.5 L 46 85" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="60" y="82" font-size="14" font-weight="700" fill="#2D2533">ci-bot</text>
+          <text x="60" y="100" font-size="12" fill="#6E5F6B">build passed on main</text>
+        </svg>
+      </div>
+      <div class="product-block-body">
+        <h3>Local</h3>
+        <p>Axol listens on <code>127.0.0.1:47329</code>. Any tool that can <code>curl</code> can pop a bubble. The envelope is <b>title</b> + <b>body</b> + <b>priority</b> + optional <b>actions</b> — focus a terminal, open a URL, reveal a file. Loopback only; no network exposure.</p>
+        <div class="product-block-ctas">
+          <a class="product-block-cta" href="plugins.html">Envelope reference →</a>
+        </div>
+
+        <!-- Nested: Claude Code as a sub-item of Local -->
+        <div class="product-subblock">
+          <div class="product-subblock-illo" aria-hidden="true">
+            <svg viewBox="0 0 130 96" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <path d="M 10 10 H 120 A 8 8 0 0 1 128 18 V 66 A 8 8 0 0 1 120 74 L 74 74 L 68 82 L 62 74 L 10 74 A 8 8 0 0 1 2 66 V 18 A 8 8 0 0 1 10 10 Z"
+                    fill="#FFEEF5" stroke="#D6457A" stroke-width="1.3"/>
+              <text x="65" y="26" text-anchor="middle" font-size="10" font-weight="700" fill="#2D2533">Claude</text>
+              <text x="65" y="38" text-anchor="middle" font-size="8" fill="#6E5F6B">needs permission</text>
+              <rect x="16" y="48" width="44" height="18" rx="4" fill="#2E8B57"/>
+              <text x="38" y="60" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">Allow</text>
+              <rect x="70" y="48" width="44" height="18" rx="4" fill="#FFFFFF" stroke="#6E5F6B" stroke-width="1.2"/>
+              <text x="92" y="60" text-anchor="middle" font-size="9" font-weight="700" fill="#6E5F6B">Deny</text>
+            </svg>
+          </div>
+          <div>
+            <h4>Claude Code</h4>
+            <p>Two drop-in hook scripts turn CC's in-terminal prompts into tappable bubbles — <b>Allow</b>/<b>Deny</b> above Axol, plus git-aware notes on every <code>Stop</code>.</p>
+            <a class="product-block-cta" href="https://github.com/Roach/axol#claude-code-integration">Hook setup →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Remote polling + webhooks -->
+    <div class="product-block">
+      <div class="product-block-illo" aria-hidden="true">
+        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <!-- Large neuromast with expanding pulse rings -->
+          <circle class="neuro-ring"   cx="130" cy="95" r="24" fill="none" stroke="#D6457A" stroke-width="1.6" style="transform-origin: 130px 95px;"/>
+          <circle class="neuro-ring neuro-ring-2" cx="130" cy="95" r="24" fill="none" stroke="#D6457A" stroke-width="1.6" style="transform-origin: 130px 95px;"/>
+          <circle class="neuro-ring neuro-ring-3" cx="130" cy="95" r="24" fill="none" stroke="#D6457A" stroke-width="1.6" style="transform-origin: 130px 95px;"/>
+          <circle cx="130" cy="95" r="14" fill="#D6457A"/>
+          <circle cx="130" cy="95" r="7"  fill="#FFEEF5"/>
+        </svg>
+      </div>
+      <div class="product-block-body">
+        <h3>Remote polling & webhooks</h3>
+        <p>For sources that live off-machine — GitHub, Stripe, Sentry, CI systems, or services that don't webhook out at all. <b>Webhooks</b> land on a signed cloud intake and forward locally via a 60-line bash forwarder. <b>Polling</b> uses keychain-backed PATs to pull sources that can't push (GitHub mentions, review requests, notifications).</p>
+        <div class="product-block-ctas">
+          <a class="product-block-cta" href="remote-alerts.html">Webhook setup →</a>
+          <a class="product-block-cta" href="gills.html">Polling (gills) →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sizes">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-modes"/></svg></span>sizes</h2>
     <p>⌘-click her to cycle through three sizes: <b>full → mini → micro → full</b>. The current mode persists across launches.</p>
     <div class="modes-row">
       <!-- All three previews share the same scale (1 svg unit = 0.5 px of
@@ -2121,9 +2174,80 @@ type: website
     </div>
   </section>
 
+  <section id="expandable">
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-plugins"/></svg></span>expandable</h2>
+    <p>Two drop-in extension points for adding new sources without touching Axol's binary. Adapters translate shapes you don't control; gills fetch from services that can't push.</p>
+
+    <!-- Adapters -->
+    <div class="product-block">
+      <div class="product-block-illo" aria-hidden="true">
+        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="exAdaptArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A"/>
+            </marker>
+          </defs>
+          <!-- Raw JSON tile -->
+          <rect x="22" y="68" width="52" height="54" rx="6" fill="#FFFFFF" stroke="#C8A6BC" stroke-width="1.3"/>
+          <circle cx="38" cy="84" r="2.6" fill="#C8A6BC"/>
+          <line x1="45" y1="84" x2="66" y2="84" stroke="#C8A6BC" stroke-width="1.3" stroke-linecap="round" opacity="0.65"/>
+          <line x1="30" y1="96" x2="66" y2="96" stroke="#C8A6BC" stroke-width="1.3" stroke-linecap="round" opacity="0.6"/>
+          <line x1="30" y1="106" x2="58" y2="106" stroke="#C8A6BC" stroke-width="1.3" stroke-linecap="round" opacity="0.6"/>
+          <path d="M 82 95 L 100 95" stroke="#D6457A" stroke-width="1.4" stroke-dasharray="4 4" opacity="0.7" marker-end="url(#exAdaptArrow)"/>
+          <!-- Adapter tile with braces -->
+          <rect x="104" y="68" width="52" height="54" rx="6" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.8"/>
+          <path d="M 118 78 C 114 78 116 82 116 87 C 116 92 114 93 112 93 C 114 93 116 94 116 99 C 116 104 114 108 118 108"
+                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M 142 78 C 146 78 144 82 144 87 C 144 92 146 93 148 93 C 146 93 144 94 144 99 C 144 104 146 108 142 108"
+                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M 164 95 L 182 95" stroke="#D6457A" stroke-width="1.4" stroke-dasharray="4 4" opacity="0.7" marker-end="url(#exAdaptArrow)"/>
+          <!-- Envelope -->
+          <g transform="translate(186, 68)">
+            <rect width="52" height="44" rx="5" fill="#FFF5FA" stroke="#D6457A" stroke-width="1.5"/>
+            <path d="M 2 2 L 26 22 L 50 2" fill="none" stroke="#D6457A" stroke-width="1.2" opacity="0.55"/>
+            <circle cx="26" cy="34" r="6" fill="#D6457A"/>
+          </g>
+        </svg>
+      </div>
+      <div class="product-block-body">
+        <h3>Adapters</h3>
+        <p>A JSON file in <code>~/Library/Application Support/Axol/adapters/</code> translates any third-party payload shape into Axol's envelope. Match rules, a tiny template language, and a closed action vocab — no code required. Five bundled: claude-code, github-actions, sentry, stripe, generic.</p>
+        <div class="product-block-ctas">
+          <a class="product-block-cta" href="plugins.html">Plugin reference →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gills -->
+    <div class="product-block">
+      <div class="product-block-illo" aria-hidden="true">
+        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <!-- Large feathered gill plume, swaying gently -->
+          <g class="gill-plume-sway" fill="none" stroke="#D6457A" stroke-linecap="round" style="transform-origin: 130px 168px;">
+            <path d="M130 168 V 22" stroke-width="3"/>
+            <path d="M130 142 C 102 134, 90 118, 90 92" stroke-width="2.2" opacity="0.78"/>
+            <path d="M130 142 C 158 134, 170 118, 170 92" stroke-width="2.2" opacity="0.78"/>
+            <path d="M130 108 C 108 100, 98 84, 98 58" stroke-width="2" opacity="0.62"/>
+            <path d="M130 108 C 152 100, 162 84, 162 58" stroke-width="2" opacity="0.62"/>
+            <path d="M130 74 C 114 66, 108 52, 108 30" stroke-width="1.8" opacity="0.46"/>
+            <path d="M130 74 C 146 66, 152 52, 152 30" stroke-width="1.8" opacity="0.46"/>
+            <circle cx="130" cy="22" r="3.2" fill="#D6457A" stroke="none" opacity="0.72"/>
+          </g>
+        </svg>
+      </div>
+      <div class="product-block-body">
+        <h3>Gills</h3>
+        <p>A ~20-line bash script + <code>launchd</code> job that polls an upstream API on a 30-second schedule and POSTs each new item to Axol's loopback. Named for the axolotl's feathery external gills — same rhythmic sampling. Built in: <code>github-notifications</code>. Adding more is one file + one shared helper lib.</p>
+        <div class="product-block-ctas">
+          <a class="product-block-cta" href="gills.html">Gill reference →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="install">
-    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>install</h2>
-    <p>macOS only, for now. You'll need the Xcode command-line tools — if <code>xcode-select -p</code> returns a path, you're good; otherwise run <code>xcode-select --install</code> first.</p>
+    <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>install &amp; deploy</h2>
+    <p>macOS 13+, with Xcode command-line tools (<code>xcode-select --install</code>).</p>
 
 <pre><code class="lang-sh">git clone https://github.com/Roach/axol.git
 cd axol/axol
@@ -2132,7 +2256,18 @@ cd axol/axol
 
     <p>Compiles to a single ~350&nbsp;KB stripped binary — no Xcode project, no package manager, no code signing. To keep her around past reboot, drag the binary into <b>System Settings → General → Login Items</b>. Window position + alert history persist to <code>~/Library/Application Support/Axol/</code>.</p>
 
-    <p style="margin-top: 18px;">
+    <h3 style="margin-top: 22px;">Deploy the remote bridge <span style="color: var(--ink-soft); font-weight: 500; font-size: 13px;">(optional)</span></h3>
+    <p>Only needed if you want GitHub / Stripe / Sentry webhooks. Pick a target — Webflow Cloud is the shortest path since it doesn't need a separate Cloudflare account:</p>
+    <div class="deploy-links">
+      <a class="deploy-link featured" href="deploy-webflow.html">Webflow Cloud</a>
+      <a class="deploy-link" href="deploy-railway.html">Railway</a>
+      <a class="deploy-link" href="deploy-fly.html">Fly.io</a>
+      <a class="deploy-link" href="deploy-render.html">Render</a>
+      <a class="deploy-link" href="deploy-cloudflare.html">Cloudflare direct</a>
+    </div>
+    <p style="font-size: 13px; color: var(--ink-soft); margin-top: 6px;">All five guides end at the same outcome — an HTTPS endpoint hosting <code>/app/api/hooks/{source}</code>. See the <a href="remote-alerts.html#deploy-guides">comparison table</a> for tradeoffs.</p>
+
+    <p style="margin-top: 22px;">
       <a class="cta" href="https://github.com/Roach/axol">
         <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
         View source on GitHub
