@@ -21,9 +21,14 @@ Three deployable components sit side-by-side at the root:
 
 `neuromast/` and `lateral-line/` are optional — Axol works fine on its own for anything that can POST to `127.0.0.1:47329`. They exist so webhook senders that can't reach loopback (GitHub, Stripe, CI) can still talk to her.
 
-## Running
+## Prerequisites
 
-Requires the Xcode command line tools (`xcode-select --install`).
+- **macOS 13 (Ventura) or later.** The `claude` and `github` bundled icons use Bootstrap Icons SVGs loaded via `NSImage` in a code path that exists on 12.x but hasn't been smoke-tested there; SF Symbol fallbacks require 13+.
+- **Xcode command-line tools** — `xcode-select --install` (needed to compile the Swift sources).
+- **`jq`** (`brew install jq`) — required by the `lateral-line` forwarder and the `claude-stop.sh` enricher. The app itself doesn't need it, but both optional features silently degrade without it.
+- **Accessibility permission** — needed for click-to-focus to actually focus a terminal window. On first click after launch, macOS may prompt; otherwise grant it manually at **System Settings → Privacy & Security → Accessibility**, adding your terminal emulator (Terminal, iTerm, Ghostty, etc). Without this, clicking a bubble surfaces it but can't activate the target window.
+
+## Running
 
 ```sh
 cd axol
@@ -181,7 +186,7 @@ Adapters are loaded on startup in filename order. First match wins. Adapter outp
 
 ## Remote alerts (lateral line)
 
-Axol's receiver binds to `127.0.0.1:47329` — loopback only. For services that live off-machine (GitHub, Stripe, Sentry, anything with a webhook), she grows a dangling antenna: a signed endpoint in the cloud that parks inbound alerts in a queue, plus a 60-line local forwarder that fetches them and posts them to the loopback port on a 15-second tick. Named after the row of sensory neuromasts down a fish's flank.
+Axol's receiver binds to `127.0.0.1:47329` — loopback only. For services that live off-machine (GitHub, Stripe, Sentry, anything with a webhook), she grows a dangling antenna: a signed endpoint in the cloud that parks inbound alerts in a queue, plus a 60-line local forwarder that fetches them and posts them to the loopback port on a 30-second sample. Named after the row of sensory neuromasts down a fish's flank.
 
 Two sibling directories in this repo:
 
@@ -194,29 +199,75 @@ No Axol-side changes: the forwarder posts raw webhook bodies and the existing ad
 
 Platform-specific setup lives per target:
 
-- **Webflow Cloud** — [`docs/deploy-webflow.html`](https://roach.github.io/axol/deploy-webflow.html)
+- **Webflow Cloud** — [`docs/deploy-webflow.html`](https://roach.github.io/axol/deploy-webflow.html) (recommended — no Cloudflare account needed)
+- **Railway** — [`docs/deploy-railway.html`](https://roach.github.io/axol/deploy-railway.html)
+- **Fly.io** — [`docs/deploy-fly.html`](https://roach.github.io/axol/deploy-fly.html)
+- **Render** — [`docs/deploy-render.html`](https://roach.github.io/axol/deploy-render.html)
+- **Cloudflare (direct)** — [`docs/deploy-cloudflare.html`](https://roach.github.io/axol/deploy-cloudflare.html)
 
 ### Quickstart (after following a deploy guide)
 
 ```sh
-AXOL_CLOUD_URL=https://<your-cloud-url> \
-AXOL_POLL_TOKEN=<the-bearer-you-just-set> \
-./lateral-line/install.sh
+# Export your secrets once. Each of these is the *same value* you set on
+# the cloud side — renamed on the local side to avoid colliding with the
+# generic name (see the vars table below).
+export AXOL_CLOUD_URL=https://<your-cloud-url>
+export AXOL_POLL_TOKEN=<same-value-as-POLL_TOKEN-on-the-cloud>
+export SHARED_SECRET=<same-value-as-SHARED_SECRET-on-the-cloud>
+
+./lateral-line/install.sh     # preflights the bearer, writes the plist,
+                              # and loads the launchd agent
 
 curl -X POST "$AXOL_CLOUD_URL/app/api/hooks/test?key=$SHARED_SECRET" \
      -H 'content-type: application/json' \
      -d '{"title":"hello","body":"from the cloud"}'
 ```
 
-Within a minute a bubble should pop. Overview: [remote-alerts docs page](https://roach.github.io/axol/remote-alerts.html). Details: [`neuromast/README.md`](./neuromast/README.md), [`lateral-line/README.md`](./lateral-line/README.md).
+Within 30 seconds a bubble should pop. Overview: [remote-alerts docs page](https://roach.github.io/axol/remote-alerts.html). Details: [`neuromast/README.md`](./neuromast/README.md), [`lateral-line/README.md`](./lateral-line/README.md).
+
+### Env var mapping
+
+The cloud side and the local forwarder use different names for the same secret — the cloud-side name is generic (`POLL_TOKEN`), the local-side name is namespaced (`AXOL_POLL_TOKEN`) so it doesn't clash with whatever else you have exported. They hold **the same value**.
+
+| Cloud (neuromast env vars) | Local (forwarder env vars) | What it is |
+|---|---|---|
+| `POLL_TOKEN` | `AXOL_POLL_TOKEN` | Bearer for `GET /app/api/pull` + `POST /app/api/ack`. Generate with `openssl rand -hex 32`. |
+| `SHARED_SECRET` | `SHARED_SECRET` | Optional query-key fallback for unsigned webhook senders. Used in `?key=...` on both sides. |
+| `HOOK_SECRET_<SOURCE>` | — (cloud-only) | HMAC secret per signed source, e.g. `HOOK_SECRET_GITHUB`. Local forwarder never sees it. |
+| — | `AXOL_CLOUD_URL` | Base URL of your neuromast deploy, without the `/app` suffix. Local-only. |
 
 ## Claude Code integration
 
-Claude Code support is provided by the bundled `axol/adapters/claude-code.json`. It recognizes `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until you handle them), and `Stop` (normal). The internal "waiting for your input" chatter is dropped via a `skip_if`.
+Claude Code support is provided by the bundled `axol/adapters/claude-code.json` plus two helper scripts in `axol/hooks/` that add the features you actually want. Recognized events: `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until handled), `PermissionRequest` (bridges to Axol's Allow/Deny bubble), and `Stop` (normal, with an optional git-enriched "what just happened" note). The internal "waiting for your input" chatter is dropped via a `skip_if`.
 
-Include an `X-Claude-PID` header with the Claude Code process ID (`$PPID` works) so clicking the speech bubble focuses the right terminal.
+Settings file: `~/.claude/settings.json` (user-wide) or `.claude/settings.json` in a project root. The snippet below uses absolute paths to `axol/hooks/*.sh`; point them at wherever you cloned the Axol repo.
 
-Example hook configuration (in your Claude Code `settings.json`):
+```json
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/path/to/axol/axol/hooks/claude-permission.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/path/to/axol/axol/hooks/claude-stop.sh" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+What each hook does:
+- **`claude-permission.sh`** — intercepts CC's permission prompts, posts them to Axol's `/permission` endpoint, and forwards Axol's Allow/Deny decision back to CC verbatim. Hangs open up to 5 minutes waiting for you to click. If Axol is unreachable, the script returns an empty response so CC's built-in prompt takes over — the bridge degrades gracefully.
+- **`claude-stop.sh`** — reads the Stop-hook payload, enriches it with a short note based on the repo at `cwd` (`"main · 3 files changed"` on a dirty repo, `"main · Tighten hero demo bubble dwell times"` on a clean one), then POSTs to Axol. Safe on non-git cwds, missing `jq`, or Axol offline — never fails the hook. The `X-Claude-PID` header (auto-populated via `$PPID`) is what lets clicking the bubble focus the right terminal on click.
+
+Minimal inline alternative if you don't want the enricher or permission bridge:
 
 ```json
 {
@@ -224,16 +275,17 @@ Example hook configuration (in your Claude Code `settings.json`):
     "Stop": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "curl -s -X POST -H 'Content-Type: application/json' -H \"X-Claude-PID: $PPID\" --data @- http://127.0.0.1:47329/"
-          }
+          { "type": "command", "command": "curl -s -X POST -H 'Content-Type: application/json' -H \"X-Claude-PID: $PPID\" --data @- http://127.0.0.1:47329/" }
         ]
       }
     ]
   }
 }
 ```
+
+**Verify it works:** run any Claude Code session, let it stop, and a bubble should pop titled with your branch name. For the permission bridge, trigger a tool that would normally prompt — you should see Axol's Allow / Deny buttons above her head instead of (or alongside) CC's own prompt.
+
+**Required for `focus-pid` to work on click:** macOS System Settings → Privacy & Security → **Accessibility** → add (or allow) your terminal emulator (Terminal, iTerm, Ghostty, etc). Without this, clicking the bubble will surface the bubble but can't actually focus the terminal window.
 
 ## Interactions
 

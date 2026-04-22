@@ -74,6 +74,10 @@ type: article
     height: 160px;
     margin: 6px 0 4px;
   }
+  /* Subway scene is static — the car interior doesn't bob along with
+     its passenger. The hero-axol class here only positions the SVG;
+     the floating rhythm is applied to Axol alone via `.subway-axol-float`
+     below, so she bobs independently of the train. */
   .hero-axol {
     position: absolute;
     left: 50%;
@@ -81,46 +85,46 @@ type: article
     transform: translateX(-50%);
     width: 110px;
     height: auto;
-    animation: hero-bob 3.2s ease-in-out infinite;
-    transform-origin: center bottom;
     filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
   }
-  @keyframes hero-bob {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50%      { transform: translateX(-50%) translateY(-5px); }
+
+  /* Axol-only float — a slower, slightly deeper rhythm than the
+     site-wide hero-bob, so she reads as buoyant rather than jostled. */
+  .subway-axol-float {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: subway-axol-float 3.4s ease-in-out infinite;
   }
-  /* Railway-themed signal: three small track-ties falling toward the
-     axolotl, riffing on Railway's rail-line logo motif. Dark, because
-     Railway's brand reads as monochrome + minimal. */
-  .hero-sparks {
-    position: absolute;
-    left: 50%;
-    top: 0;
-    width: 80px;
-    height: 96px;
-    transform: translateX(-50%);
-    pointer-events: none;
+  @keyframes subway-axol-float {
+    0%, 100% { transform: translateY(0);    }
+    50%      { transform: translateY(-8px); }
   }
-  .hero-spark {
-    position: absolute;
-    top: 0;
-    width: 16px;
-    height: 4px;
-    border-radius: 1px;
-    background: #1F2937;
-    box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.12);
-    opacity: 0;
-    animation: hero-spark-drop 3.8s ease-in infinite;
+  /* Subway-interior hero animations. Two loops animate the "moving
+     train" feeling: (1) horizontal motion streaks inside the window
+     shift leftward, as if the landscape is blurring past; (2) hanging
+     straps sway gently from the ceiling bar as the car jostles. */
+  .subway-motion {
+    animation: subway-motion-shift 1.4s linear infinite;
   }
-  .hero-spark-1 { left: 26%; animation-delay: 0s; }
-  .hero-spark-2 { left: 66%; animation-delay: 1.25s; }
-  .hero-spark-3 { left: 48%; animation-delay: 2.5s; }
-  @keyframes hero-spark-drop {
-    0%   { opacity: 0;    transform: translateY(-10px) scale(0.6); }
-    15%  { opacity: 1;    transform: translateY(0)     scale(1); }
-    70%  { opacity: 0.85; transform: translateY(78px)  scale(0.95); }
-    88%  { opacity: 0;    transform: translateY(96px)  scale(0.4); }
-    100% { opacity: 0;    transform: translateY(96px)  scale(0.4); }
+  @keyframes subway-motion-shift {
+    0%   { transform: translateX(26px); opacity: 0; }
+    20%  { opacity: 0.55;                            }
+    82%  { opacity: 0.55;                            }
+    100% { transform: translateX(-22px); opacity: 0; }
+  }
+  /* Straps pivot from their ceiling attachment point. Three straps,
+     staggered so they don't all lean the same way at the same beat
+     — reads as a livelier car than a single synchronized sway. */
+  .subway-strap {
+    transform-box: fill-box;
+    transform-origin: 50% 0%;
+    animation: subway-sway 3.4s ease-in-out infinite;
+  }
+  .subway-strap-2 { animation-delay: -0.9s; }
+  .subway-strap-3 { animation-delay: -1.8s; }
+  @keyframes subway-sway {
+    0%, 100% { transform: rotate(-4deg); }
+    50%      { transform: rotate(4deg); }
   }
 
   h1 {
@@ -144,8 +148,12 @@ type: article
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
     }
-    .hero-axol, .hero-spark { animation: none !important; }
-    .hero-spark { opacity: 0.7; }
+    .hero-axol, .subway-motion, .subway-strap, .subway-axol-float {
+      animation: none !important;
+    }
+    .subway-motion { opacity: 0.55; transform: none; }
+    .subway-strap  { transform: rotate(0deg); }
+    .subway-axol-float { transform: none; }
   }
 
   .pill {
@@ -349,41 +357,136 @@ type: article
 
   <header class="hero">
     <div class="hero-stage" aria-hidden="true">
-      <div class="hero-sparks">
-        <span class="hero-spark hero-spark-1"></span>
-        <span class="hero-spark hero-spark-2"></span>
-        <span class="hero-spark hero-spark-3"></span>
-      </div>
-      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- Hero illustration: Axol riding the subway. Interior view — we're
+           looking at the inside back wall of the car. Large window at
+           top with motion streaks shifting by, a route-map strip
+           running beneath the window (current-station highlighted in
+           Railway purple), three hanging handhold straps swaying from
+           the ceiling bar, and a coral bench with Axol seated on it. -->
+      <svg class="hero-axol" viewBox="0 0 220 235" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="heroBodyRail" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="0%"   stop-color="#FFC9E2" />
             <stop offset="100%" stop-color="#FFA6CF" />
           </radialGradient>
-          <radialGradient id="heroBellyRail" cx="50%" cy="60%" r="50%">
-            <stop offset="0%" stop-color="#FFE5F0" />
-            <stop offset="100%" stop-color="#FFCCE2" />
-          </radialGradient>
         </defs>
-        <g>
-          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
-          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
-          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
-          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
-          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
-          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+
+        <!-- Car interior — back wall fills the viewBox, rounded corners
+             suggest we're seeing through a car-shaped frame. -->
+        <rect x="2" y="8" width="216" height="220" rx="20" fill="#B7D2E3" />
+
+        <!-- Inner wall panel — slightly lighter shade inset from the
+             outer frame, creates the "window unit + trim" feel. -->
+        <rect x="12" y="16" width="196" height="156" rx="14" fill="#CEDEEA" />
+
+        <!-- Ceiling rail — thin horizontal handhold bar that runs above
+             the window. Straps hang down from it into the cabin,
+             visually overlapping the window. -->
+        <rect x="20" y="24" width="180" height="2.5" rx="1" fill="#2D2533" opacity="0.7" />
+
+        <!-- Window: one wide tinted pane showing the tunnel/landscape
+             blurring past. Mint-green tint reads as tinted safety glass.
+             Drawn AFTER the ceiling bar but BEFORE the straps so the
+             straps dangle in front of the window, as in the reference. -->
+        <rect x="22" y="30" width="176" height="72" rx="6" fill="#BFD9D0" />
+        <!-- Motion streaks inside the window — animated horizontal
+             dashes that shift leftward on a 1.4s loop. -->
+        <g class="subway-motion">
+          <line x1="34"  y1="46" x2="66"  y2="46" stroke="#8BAFA3" stroke-width="2.5" stroke-linecap="round" />
+          <line x1="96"  y1="54" x2="138" y2="54" stroke="#8BAFA3" stroke-width="2.5" stroke-linecap="round" />
+          <line x1="158" y1="70" x2="188" y2="70" stroke="#8BAFA3" stroke-width="2.5" stroke-linecap="round" />
+          <line x1="50"  y1="82" x2="82"  y2="82" stroke="#8BAFA3" stroke-width="2.5" stroke-linecap="round" />
+          <line x1="128" y1="90" x2="172" y2="90" stroke="#8BAFA3" stroke-width="2.5" stroke-linecap="round" />
         </g>
-        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
-        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
-        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
-        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
-        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
-        <circle cx="132" cy="105" r="7" fill="#2D2533" />
-        <circle cx="90"  cy="102" r="2.2" fill="white" />
-        <circle cx="134" cy="102" r="2.2" fill="white" />
-        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
-        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
-        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+
+        <!-- Three handhold straps hanging from the ceiling bar (y=24)
+             down into the cabin. Handle ovals sit around y=66, in the
+             middle of the window vertically. Each strap sways on a
+             staggered phase for lived-in motion. -->
+        <g class="subway-strap">
+          <line x1="50" y1="26" x2="50" y2="62" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" />
+          <ellipse cx="50" cy="66" rx="5.5" ry="4.5" fill="none" stroke="#A78BFA" stroke-width="2" />
+        </g>
+        <g class="subway-strap subway-strap-2">
+          <line x1="110" y1="26" x2="110" y2="62" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" />
+          <ellipse cx="110" cy="66" rx="5.5" ry="4.5" fill="none" stroke="#A78BFA" stroke-width="2" />
+        </g>
+        <g class="subway-strap subway-strap-3">
+          <line x1="170" y1="26" x2="170" y2="62" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" />
+          <ellipse cx="170" cy="66" rx="5.5" ry="4.5" fill="none" stroke="#A78BFA" stroke-width="2" />
+        </g>
+
+        <!-- Route map strip running beneath the window — iconic subway
+             line diagram, stations as small circles. Railway purple for
+             the line (the brand tie-in); current station is the larger
+             filled circle in the middle. -->
+        <line x1="28" y1="117" x2="192" y2="117" stroke="#6B3EFA" stroke-width="2" />
+        <circle cx="40"  cy="117" r="3.5" fill="#FFFFFF" stroke="#6B3EFA" stroke-width="1.5" />
+        <circle cx="74"  cy="117" r="3.5" fill="#FFFFFF" stroke="#6B3EFA" stroke-width="1.5" />
+        <circle cx="110" cy="117" r="5"   fill="#6B3EFA" stroke="#6B3EFA" stroke-width="1.5" />
+        <circle cx="146" cy="117" r="3.5" fill="#FFFFFF" stroke="#6B3EFA" stroke-width="1.5" />
+        <circle cx="180" cy="117" r="3.5" fill="#FFFFFF" stroke="#6B3EFA" stroke-width="1.5" />
+
+        <!-- Seat back — tall coral panel that Axol leans against. Runs
+             from just under the route map down to meet the cushion,
+             forming the vertical "lean" surface. Her head will extend
+             above the top of the back, so the back reads as "shoulder
+             height" rather than "full height". -->
+        <rect x="16" y="133" width="188" height="56" rx="5" fill="#FF8659" />
+        <!-- Top edge highlight — a thin lighter strip so the back
+             reads as curved / upholstered rather than flat. -->
+        <rect x="16" y="133" width="188" height="3" rx="1.5" fill="#FFA080" />
+        <!-- Seat-back shadow strip where it meets the cushion below. -->
+        <rect x="16" y="185" width="188" height="4" fill="#E06F48" />
+
+        <!-- Bench cushion — horizontal seat below the back. -->
+        <rect x="16" y="189" width="188" height="18" rx="4" fill="#FF8659" />
+        <!-- Cushion top highlight -->
+        <rect x="16" y="189" width="188" height="3" rx="1.5" fill="#FF9F77" />
+        <!-- Front rim (darker) -->
+        <rect x="16" y="202" width="188" height="5" rx="1" fill="#E06F48" />
+        <!-- Bench legs -->
+        <rect x="26"  y="207" width="5" height="10" fill="#2D2533" opacity="0.55" />
+        <rect x="107" y="207" width="6" height="10" fill="#2D2533" opacity="0.55" />
+        <rect x="189" y="207" width="5" height="10" fill="#2D2533" opacity="0.55" />
+
+        <!-- Floor tint below the bench, completes the interior. -->
+        <rect x="2" y="215" width="216" height="13" rx="0" fill="#8EAFCE" />
+
+        <!-- Axol seated on the bench, drawn AFTER the seat back + cushion
+             so she appears in front of both. Scale 0.38 with
+             translate(68, 123) lands her bottom at y≈189 (cushion top)
+             and her head at y≈139, peeking above the seat-back rim
+             (y=133) — just like sitting on a subway bench where your
+             shoulders are above the back rest.
+
+             Outer <g class="subway-axol-float"> holds the floating
+             animation so Axol bobs independently of the otherwise-
+             static train interior. The inner <g> holds the static
+             translate + scale; separating the two stops the CSS
+             animation's transform from clobbering the positioning
+             attribute. -->
+        <g class="subway-axol-float">
+          <g transform="translate(68, 123) scale(0.38)">
+            <g>
+              <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+              <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+              <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+              <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+              <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+              <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+            </g>
+            <ellipse cx="110" cy="110" rx="72" ry="62" fill="url(#heroBodyRail)" />
+            <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+            <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+            <circle cx="132" cy="105" r="7" fill="#2D2533" />
+            <circle cx="90"  cy="102" r="2.2" fill="white" />
+            <circle cx="134" cy="102" r="2.2" fill="white" />
+            <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+            <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+            <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          </g>
+        </g>
       </svg>
     </div>
     <div><span class="pill">deploy guide</span></div>

@@ -1,0 +1,285 @@
+{%- comment -%}
+  Animated diagram showing one full sample cycle of a gill:
+  keychain token → request to GitHub → item returns → envelope forward →
+  bubble above Axol. Self-contained: CSS + required #glyph-gill symbol +
+  the SVG markup all ship in the include so the diagram can drop into any
+  page (currently: gills.html's "the sample" section and the v2.2 entry
+  on changelog.html) without repeating ~150 lines of markup.
+
+  Reduced-motion preference is respected via a scoped @media block inside
+  the style tag; the site-wide layout rule neutralizes `scroll-behavior`
+  separately.
+{%- endcomment -%}
+<style>
+  .gfd-wrap {
+    margin: 14px auto 2px;
+    max-width: 620px;
+  }
+  .gfd-wrap svg {
+    display: block;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
+
+  /* Tracks — dashed pink for the outgoing request, dashed green for
+     items flowing back, solid-fade pink for the local envelope hop. */
+  .gfd-track {
+    fill: none; stroke: #D6457A; stroke-width: 1.5;
+    stroke-dasharray: 4 5; opacity: 0.55;
+  }
+  .gfd-track-return { stroke: #2E8B57; opacity: 0.48; }
+  .gfd-track-fwd   { stroke: #D6457A; opacity: 0.55; stroke-dasharray: 3 4; }
+
+  /* Stage tiles — white pill with soft pink border. Per-stage pulse
+     animations override stroke + filter at the exact moments a dot
+     lands on each tile. */
+  .gfd-stage-bg {
+    fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+    filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10));
+  }
+
+  /* Stage pulses — keyframed on the same 8s cycle as the dots so they
+     stay mechanically in sync without needing JS. */
+  .gfd-s-gill   .gfd-stage-bg { animation: gfd-pulse-gill   8s ease-in-out infinite; }
+  .gfd-s-github .gfd-stage-bg { animation: gfd-pulse-github 8s ease-in-out infinite; }
+  .gfd-s-axol   .gfd-stage-bg { animation: gfd-pulse-axol   8s ease-in-out infinite; }
+
+  @keyframes gfd-pulse-gill {
+    0%, 5%    { stroke: #D6457A; stroke-width: 2.4;
+                filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    10%, 53%  { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    56%, 60%  { stroke: #D6457A; stroke-width: 2.4;
+                filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    65%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+  }
+  @keyframes gfd-pulse-github {
+    0%, 22%   { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    24%, 28%  { stroke: #2D2533; stroke-width: 2.4;
+                filter: drop-shadow(0 0 5px rgba(45, 37, 51, 0.45))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    32%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+  }
+  @keyframes gfd-pulse-axol {
+    0%, 72%   { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    74%, 80%  { stroke: #D6457A; stroke-width: 2.4;
+                filter: drop-shadow(0 0 7px rgba(214, 69, 122, 0.6))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    84%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+  }
+
+  .gfd-label {
+    text-anchor: middle; font-size: 12px; font-weight: 700;
+    fill: #2D2533; letter-spacing: -0.005em;
+  }
+  .gfd-sublabel {
+    text-anchor: middle; font-size: 10px; font-weight: 500;
+    fill: #6E5F6B; letter-spacing: 0.02em;
+  }
+
+  /* Traveling dots. Dots are painted BEFORE stages so the stage tile's
+     white fill hides the endpoints of each trip — no opacity fade
+     needed at arrival. */
+  .gfd-req, .gfd-item, .gfd-fwd {
+    transform-box: fill-box; transform-origin: center;
+    opacity: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  }
+  .gfd-req  { fill: #D6457A; }
+  .gfd-item { fill: #2E8B57; }
+  .gfd-fwd  { fill: #D6457A; }
+
+  .gfd-req   { animation: gfd-req   8s ease-in-out infinite; }
+  .gfd-item  { animation: gfd-item  8s ease-in-out infinite; }
+  .gfd-fwd   { animation: gfd-fwd   8s ease-in-out infinite; }
+
+  @keyframes gfd-req {
+    0%, 4%    { transform: translateX(0);     opacity: 0; }
+    7%        { opacity: 1; }
+    24%       { transform: translateX(210px); opacity: 1; }
+    26%, 100% { transform: translateX(210px); opacity: 0; }
+  }
+  @keyframes gfd-item {
+    0%, 38%   { transform: translateX(0);      opacity: 0; }
+    41%       { opacity: 1; }
+    56%       { transform: translateX(-210px); opacity: 1; }
+    58%, 100% { transform: translateX(-210px); opacity: 0; }
+  }
+  @keyframes gfd-fwd {
+    0%, 60%   { transform: translateX(0);      opacity: 0; }
+    63%       { opacity: 1; }
+    74%       { transform: translateX(-210px); opacity: 1; }
+    76%, 100% { transform: translateX(-210px); opacity: 0; }
+  }
+
+  /* Keychain token indicator — scale-only pulse so opacity stays
+     consistent with the rest of the gill node's elements. */
+  .gfd-keychain {
+    transform-box: fill-box; transform-origin: center;
+    animation: gfd-keychain 8s ease-in-out infinite;
+  }
+  @keyframes gfd-keychain {
+    0%, 100% { transform: scale(1); }
+    3%       { transform: scale(1.28); }
+    8%       { transform: scale(1); }
+  }
+
+  /* Speech bubble above axol — fades in after the envelope arrives,
+     holds through the end of the cycle, fades before reset. */
+  .gfd-bubble {
+    transform-box: fill-box; transform-origin: 50% 100%;
+    opacity: 0; animation: gfd-bubble 8s ease-in-out infinite;
+  }
+  @keyframes gfd-bubble {
+    0%, 72%   { opacity: 0; transform: scale(0.85) translateY(3px); }
+    76%       { opacity: 1; transform: scale(1)    translateY(0); }
+    93%       { opacity: 1; transform: scale(1)    translateY(0); }
+    97%, 100% { opacity: 0; transform: scale(0.96) translateY(-2px); }
+  }
+
+  /* Axol-mini's external gills wave at ~2.8s period throughout. */
+  .gfd-axol-gill-l, .gfd-axol-gill-r {
+    transform-box: fill-box; transform-origin: 50% 100%;
+    animation: gfd-axol-gill-wave 2.8s ease-in-out infinite;
+  }
+  .gfd-axol-gill-r { animation-delay: -1.4s; }
+  @keyframes gfd-axol-gill-wave {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(-4deg); }
+  }
+
+  /* Honor reduced-motion — freeze every animated element in its idle
+     state and hold the bubble visible so the end-state is still legible. */
+  @media (prefers-reduced-motion: reduce) {
+    .gfd-req, .gfd-item, .gfd-fwd,
+    .gfd-keychain, .gfd-bubble,
+    .gfd-axol-gill-l, .gfd-axol-gill-r,
+    .gfd-s-gill .gfd-stage-bg,
+    .gfd-s-github .gfd-stage-bg,
+    .gfd-s-axol .gfd-stage-bg {
+      animation: none !important;
+    }
+    .gfd-bubble { opacity: 1; transform: none; }
+  }
+</style>
+
+<!-- Sprite for the feathered gill glyph used in the middle stage. Self-
+     contained so the include can drop into any page (the sprite may be
+     re-declared elsewhere on the same page — duplicate symbol ids are
+     harmless, both definitions are identical). -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="glyph-gill" viewBox="0 0 24 24">
+    <path d="M12 22 V 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <path d="M12 18 C 8 17, 6 15, 6 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M12 18 C 16 17, 18 15, 18 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M12 14 C 8.5 13, 7 11, 7 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M12 14 C 15.5 13, 17 11, 17 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M12 10 C 9.5 9, 8.5 7.5, 8.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <path d="M12 10 C 14.5 9, 15.5 7.5, 15.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <circle cx="12" cy="5" r="1.3" fill="currentColor" opacity="0.6"/>
+  </symbol>
+</svg>
+
+<div class="gfd-wrap" role="img" aria-label="Gill sample animation: token read from Keychain, request out to GitHub, item returns, envelope forwarded to Axol, speech bubble pops.">
+  <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="gfdBody" cx="50%" cy="40%" r="60%">
+        <stop offset="0%"   stop-color="#FFC9E2" />
+        <stop offset="100%" stop-color="#FFA6CF" />
+      </radialGradient>
+      <marker id="gfdArrow" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+      </marker>
+      <marker id="gfdArrowGreen" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#2E8B57" />
+      </marker>
+    </defs>
+
+    <!-- Top lane: request going out gill → github. -->
+    <path class="gfd-track" d="M 340 102 L 490 102" marker-end="url(#gfdArrow)" />
+    <!-- Bottom lane: items flowing back github → gill. -->
+    <path class="gfd-track gfd-track-return" d="M 490 118 L 340 118" marker-end="url(#gfdArrowGreen)" />
+    <!-- Forward hop gill → axol along the stages' vertical center. -->
+    <path class="gfd-track gfd-track-fwd" d="M 278 110 L 132 110" marker-end="url(#gfdArrow)" />
+
+    <!-- Dots painted BEFORE stages so the tiles hide endpoints. -->
+    <circle class="gfd-req"  cx="310" cy="102" r="5" />
+    <circle class="gfd-item" cx="520" cy="118" r="5" />
+    <circle class="gfd-fwd"  cx="310" cy="110" r="5" />
+
+    <!-- Stage 1: axol (left). Full miniature with waving external gills. -->
+    <g class="gfd-stage gfd-s-axol" transform="translate(100,110)">
+      <circle class="gfd-stage-bg" r="32" />
+      <g transform="translate(-20,-20) scale(0.182)" aria-hidden="true">
+        <g class="gfd-axol-gill-l">
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#C94F89" transform="rotate(22 50 122)" />
+        </g>
+        <g class="gfd-axol-gill-r">
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#C94F89" transform="rotate(-22 170 122)" />
+        </g>
+        <ellipse cx="110" cy="114" rx="74" ry="62" fill="url(#gfdBody)" />
+        <ellipse cx="110" cy="135" rx="40" ry="22" fill="#FFE5F0" opacity="0.9" />
+        <circle cx="86"  cy="104" r="8"   fill="#2D2533" />
+        <circle cx="134" cy="104" r="8"   fill="#2D2533" />
+        <circle cx="88"  cy="101" r="2.4" fill="#FFFFFF" />
+        <circle cx="136" cy="101" r="2.4" fill="#FFFFFF" />
+        <circle cx="72"  cy="122" r="7"   fill="#F89AC0" opacity="0.7" />
+        <circle cx="148" cy="122" r="7"   fill="#F89AC0" opacity="0.7" />
+        <path d="M 98 132 Q 110 142 122 132" stroke="#7A2D4D" stroke-width="3" fill="none" stroke-linecap="round" />
+      </g>
+      <text class="gfd-label" dy="52">axol</text>
+      <text class="gfd-sublabel" dy="65">bubble</text>
+    </g>
+
+    <!-- Stage 2: gill (middle). -->
+    <g class="gfd-stage gfd-s-gill" transform="translate(310,110)">
+      <circle class="gfd-stage-bg" r="32" />
+      <svg x="-14" y="-14" width="28" height="28" color="#D6457A" overflow="visible">
+        <use href="#glyph-gill" />
+      </svg>
+      <g transform="translate(12,-12)">
+        <g class="gfd-keychain">
+          <path d="M -3.2 0.5 V -2.5 A 3.2 3.2 0 0 1 3.2 -2.5 V 0.5"
+                fill="none" stroke="#D6457A" stroke-width="1.2" stroke-linecap="round" />
+          <rect x="-4" y="0" width="8" height="6" rx="1.2" fill="#D6457A" />
+        </g>
+      </g>
+      <text class="gfd-label" dy="52">gill</text>
+      <text class="gfd-sublabel" dy="65">30s sample + keychain</text>
+    </g>
+
+    <!-- Stage 3: github (right). -->
+    <g class="gfd-stage gfd-s-github" transform="translate(520,110)">
+      <circle class="gfd-stage-bg" r="32" />
+      <svg x="-12" y="-12" width="24" height="24" fill="#2D2533" viewBox="0 0 16 16" overflow="visible">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8" />
+      </svg>
+      <text class="gfd-label" dy="52">github</text>
+      <text class="gfd-sublabel" dy="65">/notifications</text>
+    </g>
+
+    <!-- Speech bubble above axol. Tail tip renders at (100,78), exactly axol's stage top edge. -->
+    <g transform="translate(100,50)">
+      <g class="gfd-bubble">
+        <path d="M -58 -20 H 58 A 8 8 0 0 1 66 -12 V 12 A 8 8 0 0 1 58 20 L 8 20 L 0 28 L -8 20 L -58 20 A 8 8 0 0 1 -66 12 V -12 A 8 8 0 0 1 -58 -20 Z"
+              fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25"
+              filter="drop-shadow(0 2px 4px rgba(200,80,140,0.18))" />
+        <text y="-3" text-anchor="middle" font-size="10.5" font-weight="700" fill="#2D2533">Roach/axol</text>
+        <text y="11" text-anchor="middle" font-size="9" fill="#6E5F6B">mention: Fix the widget</text>
+      </g>
+    </g>
+  </svg>
+</div>

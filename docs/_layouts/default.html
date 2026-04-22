@@ -19,8 +19,79 @@
 <meta property="og:image:alt" content="{{ img_alt }}" />
 {%- endif %}
 <meta name="twitter:image" content="{{ img }}" />
+<style>
+  /* Site-wide smooth-scroll so section-nav jumps and the back-to-top
+     button both glide. Every content page already has a
+     prefers-reduced-motion block that overrides this to `auto`. */
+  html { scroll-behavior: smooth; }
+
+  /* Back-to-top button — fixed bottom-right, fades in once the user has
+     scrolled past the fold. Sized to match the hero CTA buttons on the
+     content pages (pink-accent bg, 4px soft shadow). */
+  .back-to-top {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #D6457A;
+    color: #FFFFFF;
+    border-radius: 50%;
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 4px 14px -4px rgba(214, 69, 122, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease;
+    z-index: 100;
+  }
+  .back-to-top.is-visible {
+    opacity: 0.92;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .back-to-top:hover,
+  .back-to-top:focus-visible {
+    opacity: 1;
+    background: #B8355F;
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .back-to-top:focus-visible {
+    box-shadow: 0 4px 14px -4px rgba(214, 69, 122, 0.55),
+                0 0 0 3px rgba(214, 69, 122, 0.35);
+  }
+  /* Visually-hide the arrow's text on mobile if it would crowd the
+     small screen layout — keep the tap target at 44×44 regardless. */
+  @media (max-width: 520px) {
+    .back-to-top { right: 16px; bottom: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .back-to-top { transition: opacity 0.001ms; transform: none; }
+    .back-to-top.is-visible { transform: none; }
+  }
+</style>
 </head>
-<body>
+<body id="top">
 {{ content }}
+<a href="#top" class="back-to-top" aria-label="Back to top">↑</a>
+<script>
+  (function () {
+    var btn = document.querySelector('.back-to-top');
+    if (!btn) return;
+    var toggle = function () {
+      btn.classList.toggle('is-visible', window.scrollY > 400);
+    };
+    window.addEventListener('scroll', toggle, { passive: true });
+    toggle();
+  })();
+</script>
 </body>
 </html>

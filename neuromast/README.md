@@ -58,7 +58,7 @@ All env vars and secrets are set per-platform (in the Webflow Cloud dashboard fo
 
 ## Deploy
 
-See the platform-specific guide linked at the top of this README (currently: Webflow Cloud). All targets end at the same outcome — an HTTPS URL hosting the three routes under `/app/api/` and env vars set for `POLL_TOKEN`, `SHARED_SECRET`, and any `HOOK_SECRET_<SOURCE>` pairs you need.
+See the platform-specific guides linked at the top of this README (Webflow Cloud / Railway / Fly.io / Render / Cloudflare direct). All targets end at the same outcome — an HTTPS URL hosting the three routes under `/app/api/` and env vars set for `POLL_TOKEN`, `SHARED_SECRET`, and any `HOOK_SECRET_<SOURCE>` pairs you need.
 
 Feed the deployed base URL (without the `/app` suffix) to `AXOL_CLOUD_URL` in the forwarder's environment — routes below are relative to it.
 

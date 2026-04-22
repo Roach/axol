@@ -111,11 +111,12 @@ type: article
     padding: 3px 10px; border-radius: 999px;
   }
 
-  /* Each release is a "card" with a sticker version tag in the corner. */
+  /* Each release is a "card" with a sticker version tag in the corner.
+     Matches the sub-page section card spec (padding/margin/shadow). */
   .release {
     position: relative;
     background: white; border-radius: 20px;
-    padding: 28px 32px 30px; margin-top: 26px;
+    padding: 26px 30px 28px; margin-top: 22px;
     box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
     border: 1px solid #FBEAF2;
   }
@@ -435,11 +436,46 @@ type: article
   </header>
 
   <nav class="section-nav" aria-label="page sections">
+    <a href="#v2-2">v2.2 · she stretches her gills</a>
     <a href="#v2-1-1">v2.1.1 · bubble polish</a>
     <a href="#v2-1">v2.1 · she holds the door</a>
     <a href="#v2-0">v2.0 · she grew up</a>
     <a href="#v1-0">v1.0 · she hatched!</a>
   </nav>
+
+  <article id="v2-2" class="release">
+    <span class="release-tag"><span class="spark" aria-hidden="true">🪶</span>v2.2</span>
+    <div style="height:6px"></div>
+    <span class="release-date">April 22, 2026</span>
+    <h2>she stretches her gills</h2>
+    <p class="release-lede">Axol can now reach out to services she can't webhook. <b>Gills</b> are small local scripts that poll an API on a <code>launchd</code> schedule, read their token from Keychain, and drop each new item straight into her bubble — no neuromast hop, no cloud credential. First one in the box: <code>github-notifications</code>, so @mentions and review requests from every repo you're subscribed to show up as bubbles automatically.</p>
+
+    {% include gill-sample-diagram.html %}
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>pull-style alerts via gills</h3>
+      <ul>
+        <li><b>A new companion pattern to <a href="remote-alerts.html">lateral-line</a>.</b> Where lateral-line drains the neuromast queue for push-style webhooks, gills go out and fetch. Same loopback target, same 30-second cadence, fully local — the credential never leaves the Mac.</li>
+        <li><b><code>github-notifications</code> gill bundled.</b> Polls <code>GET /notifications</code> every 30s. <code>review_requested</code> / <code>mention</code> / <code>team_mention</code> / <code>assign</code> / <code>security_alert</code> render urgent (pinned until clicked); everything else rides the normal lane. API URLs are rewritten to human-facing <code>github.com</code> links so the View button opens the PR in the browser.</li>
+        <li><b>Secrets in Keychain, not env vars.</b> <code>security add-generic-password -s axol-github-pat -w &lt;token&gt;</code> is the only install-time secret step. Rotation is a one-liner; no redeploy.</li>
+        <li><b>Six-helper mini-framework.</b> <code>lib.sh</code> exposes <code>gill_init</code>, <code>gill_axol_up</code>, <code>gill_keychain_secret</code>, <code>gill_cursor_read</code>/<code>write</code>, <code>gill_post_envelope</code>, and <code>gill_log</code> — enough to write a new gill in ~20 lines of bash. <code>./install.sh &lt;name&gt;</code> scaffolds the launchd plist automatically; no registry file.</li>
+        <li><b>Graceful failure everywhere.</b> Axol closed? Skip the API call before spending rate-limit budget. Token missing? Log once and exit 0. Mid-batch POST failure? Hold the cursor, retry next sample. Stale <code>launchd</code>-double-fire? File lock silently drops the second run.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>also in this release</h3>
+      <ul>
+        <li><b>github-actions adapter</b> now renders with the GitHub mark icon for both <code>success</code> and <code>failure</code> cases — the pass/fail distinction reads from the body copy and bubble priority instead of a separate glyph.</li>
+        <li><b>Scheme inference for signed webhooks.</b> Setting <code>HOOK_SECRET_GITHUB</code> is now enough on its own — <code>HOOK_SCHEME_GITHUB</code> defaults to the source name when it matches a known scheme (<code>github</code> / <code>stripe</code> / <code>generic</code>). Closes a papercut where forgetting the scheme var silently fell through to the shared-key tier.</li>
+      </ul>
+    </div>
+
+    <div class="quip" aria-label="Axol's take">
+      <svg class="quip-axol" viewBox="0 0 80 80" aria-hidden="true"><use href="#cl-mode-axol"/></svg>
+      <div class="quip-bubble">"Not every alert comes knocking. Sometimes I go looking."</div>
+    </div>
+  </article>
 
   <article id="v2-1-1" class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">🫧</span>v2.1.1</span>

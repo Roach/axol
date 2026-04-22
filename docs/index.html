@@ -1545,6 +1545,18 @@ type: website
   <symbol id="icon-plugins" viewBox="0 0 16 16" fill="currentColor">
     <path d="M6 0a.5.5 0 0 1 .5.5V3h3V.5a.5.5 0 0 1 1 0V3h1a.5.5 0 0 1 .5.5v3A3.5 3.5 0 0 1 8.5 10c-.002 0 .002 2.486 0 2.5V15.5a.5.5 0 0 1-1 0V13h-.002L7.5 15.5a.5.5 0 0 1-1 0v-3h-.002L6.5 10A3.5 3.5 0 0 1 3 6.5v-3a.5.5 0 0 1 .5-.5h1V.5A.5.5 0 0 1 5 0zM4 4v2.5A2.5 2.5 0 0 0 6.5 9h3A2.5 2.5 0 0 0 12 6.5V4z"/>
   </symbol>
+  <!-- Gills — a feathery plume glyph. Filled tip, branching strokes fanning
+       outward, echoing the axolotl's external-gill silhouette. -->
+  <symbol id="icon-gills" viewBox="0 0 16 16" fill="currentColor">
+    <circle cx="8" cy="3" r="1"/>
+    <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+      <path d="M8 14 L 8 4"/>
+      <path d="M8 11.5 C 5.5 11, 4.5 9.5, 4.5 7.5"/>
+      <path d="M8 11.5 C 10.5 11, 11.5 9.5, 11.5 7.5"/>
+      <path d="M8 9 C 6 8.5, 5.5 7, 5.5 5"/>
+      <path d="M8 9 C 10 8.5, 10.5 7, 10.5 5"/>
+    </g>
+  </symbol>
   <symbol id="icon-modes" viewBox="0 0 16 16" fill="currentColor">
     <!-- Three rectangles, baseline-aligned and decreasing in size, to
          telegraph "three window sizes". Matches full → mini → micro. -->
@@ -1664,6 +1676,7 @@ type: website
     <a href="#alerts"><svg aria-hidden="true"><use href="#icon-alerts"/></svg>alerts</a>
     <a href="#remote"><svg aria-hidden="true"><use href="#icon-remote"/></svg>remote</a>
     <a href="#plugins"><svg aria-hidden="true"><use href="#icon-plugins"/></svg>plugins</a>
+    <a href="gills.html"><svg aria-hidden="true"><use href="#icon-gills"/></svg>gills</a>
     <a href="changelog.html"><svg aria-hidden="true"><use href="#icon-changelog"/></svg>changelog</a>
   </nav>
 
@@ -1849,7 +1862,7 @@ cd axol/axol
 
   <section id="remote">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-remote"/></svg></span>remote alerts <span class="pill">optional</span></h2>
-    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she picks up alerts through a two-part bridge: a signed webhook endpoint in the cloud (the <b>neuromast</b>) and a local 60-line bash forwarder (the <b>lateral line</b>) that drains its queue into the loopback port every minute.</p>
+    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she picks up alerts through a two-part bridge: a signed webhook endpoint in the cloud (the <b>neuromast</b>) and a local 60-line bash forwarder (the <b>lateral line</b>) that drains its queue into the loopback port every 30 seconds.</p>
 
     <div class="ll-flow remote-flow" aria-label="Lateral-line data flow">
       <div class="ll-node">
@@ -1932,13 +1945,17 @@ cd axol/axol
         <span class="gloss-icon" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>
         <div class="gloss-body">
           <b>lateral line</b>
-          <span>The local half. A bash script on your Mac that polls the neuromast every minute and posts each queued body into Axol's loopback port. Named after the nerve running along a fish's flank that wires those sensors back to her brain.</span>
+          <span>The local half. A bash script on your Mac that polls the neuromast every 30 seconds and posts each queued body into Axol's loopback port. Named after the nerve running along a fish's flank that wires those sensors back to her brain.</span>
         </div>
       </div>
     </div>
 
     <p style="margin-top:32px; text-align:center;">
       <a class="cta" href="remote-alerts.html">Set up remote alerts →</a>
+    </p>
+
+    <p style="margin: 22px auto 0; max-width: 640px; text-align: center; color: var(--ink-soft); font-size: 14px;">
+      Want alerts from a service that can't webhook out to you — GitHub <code>@mentions</code>, review requests, that sort of thing? <a href="gills.html">Gills</a> are the local-only, keychain-backed inverse: Axol polls the upstream on her own, no cloud credential required.
     </p>
   </section>
 

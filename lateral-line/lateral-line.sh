@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # lateral-line — pull queued webhooks from neuromast and forward each one
 # to the local Axol receiver. Intended to run on launchd with
-# StartInterval: 60. One pass per invocation; failures are no-ops so the
-# next tick retries.
+# StartInterval: 30. One sample per invocation; failures are no-ops so the
+# next sample retries.
 #
 # Required env:
 #   AXOL_CLOUD_URL   e.g. https://neuromast.example.webflow.app
@@ -27,7 +27,7 @@ mkdir -p "$STATE_DIR"
 # Serialize runs via a coarse file lock. launchd can fire a second invocation
 # while the first is still polling; without this, both can write the cursor
 # and clobber each other. `flock -n` bails silently when already held —
-# the next tick will pick up.
+# the next sample will pick up.
 exec 9>"$LOCK_FILE"
 if command -v flock >/dev/null 2>&1; then
     flock -n 9 || exit 0
@@ -50,7 +50,7 @@ SINCE="$(cat "$CURSOR_FILE" 2>/dev/null || printf '')"
 
 # Quick liveness probe on the local receiver via bare TCP connect. If Axol
 # is down we can skip the cloud round-trip entirely — items stay queued in
-# neuromast and the next tick retries once she's back up. We check TCP
+# neuromast and the next sample retries once she's back up. We check TCP
 # reachability (not HTTP response) because Axol returns 400 for any probe
 # payload that lacks a title.
 LOCAL_HOST="$(printf '%s' "$LOCAL_URL" | sed -E 's|^https?://||' | cut -d/ -f1 | cut -d: -f1)"
@@ -65,7 +65,7 @@ exec 3>&- 3<&- 2>/dev/null || true
 if ! resp=$(curl -fsS --max-time 10 \
                 -H "Authorization: Bearer $AXOL_POLL_TOKEN" \
                 "$AXOL_CLOUD_URL/app/api/pull?since=$SINCE"); then
-    echo "[$(date -u +%FT%TZ)] pull failed; will retry next tick" >&2
+    echo "[$(date -u +%FT%TZ)] pull failed; will retry next sample" >&2
     exit 0
 fi
 
@@ -83,7 +83,7 @@ fi
 # shape — and relay the decision back to neuromast so the original
 # caller can pick it up via GET /api/decision/<request_id>.
 PERMISSION_URL="$(printf '%s' "$LOCAL_URL" | sed -E 's|/?$|/permission|')"
-PERMISSION_MAX_TIME=300   # 5 min — caps how long one tick can block
+PERMISSION_MAX_TIME=300   # 5 min — caps how long one sample can block
 ids_json='[]'
 while IFS= read -r row; do
     id=$(jq -r '.id' <<<"$row")
@@ -98,7 +98,7 @@ while IFS= read -r row; do
         fi
         # Blocks until the user clicks, or curl times out. On timeout,
         # don't ack — neuromast's expiry sweep handles eventual cleanup
-        # and the next tick can retry if the bubble is still needed.
+        # and the next sample can retry if the bubble is still needed.
         if axol_resp=$(curl -fsS --max-time "$PERMISSION_MAX_TIME" \
                             -X POST -H 'Content-Type: application/json' \
                             --data "$body" "$PERMISSION_URL"); then
@@ -144,7 +144,7 @@ curl -fsS --max-time 10 -o /dev/null \
 
 # Extract + validate the next cursor before writing. Neuromast guarantees
 # `nextCursor` is a string; anything else (null, missing, malformed JSON)
-# means we should hold the previous cursor and retry next tick.
+# means we should hold the previous cursor and retry next sample.
 next_cursor=$(jq -r 'if .nextCursor and (.nextCursor | type == "string")
                      then .nextCursor else empty end' <<<"$resp")
 if [[ -n "$next_cursor" ]]; then

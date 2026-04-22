@@ -1,0 +1,810 @@
+---
+title: "Axol — gills (pull-style integrations)"
+description: "Gills are small local scripts that poll APIs Axol can't webhook, read their credentials from macOS Keychain, and post each new item straight into her loopback receiver. Named for the axolotl's feathery external gills."
+type: article
+---
+<style>
+  :root {
+    --pink-1: #FFF4FA;
+    --pink-2: #FFE5F0;
+    --pink-3: #FFC9E2;
+    --pink-4: #FFA6CF;
+    --pink-accent: #D6457A;
+    --ink: #2D2533;
+    --ink-soft: #6E5F6B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, #EAF4FC 0%, #C7DEF0 50%, #9AC0DD 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    line-height: 1.55;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 80px,
+      rgba(60, 100, 150, 0.035) 80px, rgba(60, 100, 150, 0.035) 160px,
+      transparent 160px, transparent 240px,
+      rgba(60, 100, 150, 0.02) 240px, rgba(60, 100, 150, 0.02) 320px
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.9;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+  .breadcrumbs {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-size: 14px; margin-bottom: 8px;
+    color: rgba(31, 58, 86, 0.75);
+  }
+  .breadcrumbs a {
+    color: #1F3A56; text-decoration: none;
+    opacity: 0.72; font-weight: 500;
+    transition: opacity 0.15s ease;
+  }
+  .breadcrumbs a:hover { opacity: 1; }
+  .breadcrumbs .crumb-sep { opacity: 0.35; font-weight: 400; }
+  .breadcrumbs .crumb-current { color: #1F3A56; font-weight: 500; opacity: 0.95; }
+
+  .hero {
+    padding: 28px 0 18px;
+    text-align: center;
+  }
+  .hero-stage {
+    position: relative;
+    display: inline-block;
+    width: 130px;
+    height: 160px;
+    margin: 6px 0 4px;
+  }
+  .hero-axol {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 110px;
+    height: auto;
+    animation: hero-bob 3.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 10px 18px rgba(200, 80, 140, 0.22));
+  }
+  @keyframes hero-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-5px); }
+  }
+  /* Hero gills wave — three pink plume pairs that gently sway behind the
+     axolotl's head to reinforce the name. Pure CSS on already-drawn SVG
+     gills baked into the hero-axol SVG below (via <g class="hero-gill">). */
+  .hero-axol .hero-gill-l,
+  .hero-axol .hero-gill-r {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: hero-gill-wave 2.8s ease-in-out infinite;
+  }
+  .hero-axol .hero-gill-r { animation-delay: -1.4s; }
+  @keyframes hero-gill-wave {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(-4deg); }
+  }
+
+  /* Hero signal dots — the active-sampling cousin of remote-alerts' drop
+     animation. Three small pink dots drift inward from the hero-stage
+     edges toward the axolotl's gill plumes on a 3.6s staggered loop,
+     representing "items pulled in by the gills." Each dot absorbs when
+     it reaches the plume area (scale + opacity fall to 0). */
+  .hero-signals-in {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .hero-signal-in {
+    position: absolute;
+    width: 7px; height: 7px;
+    margin-left: -3.5px; margin-top: -3.5px;
+    border-radius: 50%;
+    background: var(--pink-accent);
+    box-shadow: 0 0 0 3px rgba(214, 69, 122, 0.15);
+    opacity: 0;
+  }
+  /* Three paths, each into one of the axolotl's gill plumes. Origin is
+     an edge of the stage, target is the corresponding plume tip. */
+  .hero-signal-in-1 {
+    left: 6%; top: 22%;
+    animation: hero-signal-in-left 3.6s ease-in infinite;
+    animation-delay: 0s;
+  }
+  .hero-signal-in-2 {
+    left: 94%; top: 30%;
+    animation: hero-signal-in-right 3.6s ease-in infinite;
+    animation-delay: 1.2s;
+  }
+  .hero-signal-in-3 {
+    left: 2%; top: 56%;
+    animation: hero-signal-in-left-lower 3.6s ease-in infinite;
+    animation-delay: 2.4s;
+  }
+  @keyframes hero-signal-in-left {
+    0%   { opacity: 0;    transform: translate(0, 0)      scale(0.6); }
+    15%  { opacity: 1;    transform: translate(10px, 4px) scale(0.9); }
+    70%  { opacity: 0.9;  transform: translate(42px, 20px) scale(1); }
+    88%  { opacity: 0;    transform: translate(52px, 26px) scale(0.4); }
+    100% { opacity: 0;    transform: translate(52px, 26px) scale(0.4); }
+  }
+  @keyframes hero-signal-in-right {
+    0%   { opacity: 0;    transform: translate(0, 0)       scale(0.6); }
+    15%  { opacity: 1;    transform: translate(-10px, 4px) scale(0.9); }
+    70%  { opacity: 0.9;  transform: translate(-42px, 18px) scale(1); }
+    88%  { opacity: 0;    transform: translate(-52px, 24px) scale(0.4); }
+    100% { opacity: 0;    transform: translate(-52px, 24px) scale(0.4); }
+  }
+  @keyframes hero-signal-in-left-lower {
+    0%   { opacity: 0;    transform: translate(0, 0)      scale(0.6); }
+    15%  { opacity: 1;    transform: translate(12px, -2px) scale(0.9); }
+    70%  { opacity: 0.9;  transform: translate(44px, -12px) scale(1); }
+    88%  { opacity: 0;    transform: translate(54px, -18px) scale(0.4); }
+    100% { opacity: 0;    transform: translate(54px, -18px) scale(0.4); }
+  }
+
+  h1 {
+    font-size: 48px;
+    margin: 10px 0 10px;
+    letter-spacing: -0.01em;
+    color: #1F3A56;
+    line-height: 1.05;
+  }
+  .tagline {
+    font-size: 17px;
+    color: rgba(31, 58, 86, 0.78);
+    margin: 0 auto 18px;
+    max-width: 620px;
+  }
+  .pill {
+    display: inline-block;
+    background: var(--pink-2);
+    color: var(--pink-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .hero .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--pink-accent);
+    color: white;
+    padding: 11px 22px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 14px -4px rgba(214, 69, 122, 0.45);
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .hero .cta:hover {
+    background: #B8355F;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px -4px rgba(214, 69, 122, 0.55);
+  }
+
+  section {
+    background: white;
+    border-radius: 20px;
+    padding: 26px 30px 28px;
+    margin-top: 22px;
+    box-shadow: 0 4px 20px rgba(200, 80, 140, 0.08);
+    border: 1px solid #FBEAF2;
+  }
+  section h2 {
+    font-size: 21px;
+    margin: 0 0 10px;
+    color: var(--pink-accent);
+  }
+  section h3 {
+    font-size: 15px;
+    margin: 18px 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  section p { margin: 0 0 10px; }
+  section a { color: var(--pink-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(214, 69, 122, 0.35); }
+  section a:hover { text-decoration-color: var(--pink-accent); }
+
+  pre {
+    background: #FAF2F7;
+    border: 1px solid #F3DDE9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 8px 0 16px;
+    color: var(--ink);
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  p code, li code, td code, th code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+  .tok-flag   { color: #B33A7A; }
+  .tok-cmd    { color: #3A4A7A; font-weight: 600; }
+  .tok-str    { color: #3A6E4A; }
+  .tok-key    { color: #B33A7A; }
+  .tok-punct  { color: #9A8E95; }
+
+  /* Biology-then-role card (single-column variant of the anatomy layout
+     on remote-alerts.html). The axolotl fact on top, the Axol mapping
+     below — same visual vocabulary, narrower footprint so the page
+     stays focused. */
+  .bio-card {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-top: 8px;
+    padding: 14px 0 0;
+  }
+  .bio-card .glyph-xl {
+    width: 64px; height: 64px;
+    color: var(--pink-accent);
+  }
+  .bio-card .glyph-xl svg { width: 100%; height: 100%; display: block; }
+  .bio-card p { margin: 0 0 6px; font-size: 14px; color: var(--ink-soft); }
+  .bio-card p b { color: var(--ink); }
+
+  /* The numbered sample flow — each step is one beat of a gill's cycle.
+     Numbered circles align with short lede + body copy. Styled to echo
+     the .setup-steps pattern from the deploy guides without pulling in
+     the heavier full CSS. */
+  .sample-steps {
+    list-style: none;
+    counter-reset: sample;
+    padding: 0; margin: 8px 0 0;
+  }
+  .sample-steps > li {
+    counter-increment: sample;
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    column-gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid #F3DDE9;
+  }
+  .sample-steps > li:last-child { border-bottom: none; }
+  .sample-steps > li::before {
+    content: counter(sample);
+    grid-row: 1 / span 2;
+    background: var(--pink-accent);
+    color: white;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    margin-top: 1px;
+  }
+  .sample-steps > li > b {
+    font-size: 14px; color: var(--ink);
+    display: block;
+  }
+  .sample-steps > li > span {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  /* Bundled-gill table */
+  table.gills {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 6px;
+    font-size: 13.5px;
+  }
+  table.gills th, table.gills td {
+    border-bottom: 1px solid #F3DDE9;
+    padding: 9px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.gills th {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pink-accent);
+    font-weight: 700;
+  }
+  table.gills tr:last-child td { border-bottom: none; }
+  table.gills td code {
+    background: #FAF2F7;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.92em;
+    white-space: nowrap;
+  }
+
+  /* Callout box — same pattern as plugins.html for an "either / or" note. */
+  .callout {
+    border-left: 3px solid var(--pink-accent);
+    background: #FFF7FB;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin: 14px 0 4px;
+    font-size: 13.5px;
+  }
+  .callout b { color: var(--ink); }
+
+  footer {
+    text-align: center;
+    color: rgba(31, 58, 86, 0.75);
+    font-size: 13px;
+    padding: 40px 0 16px;
+  }
+  footer a { color: #1F3A56; text-decoration: underline; text-underline-offset: 3px; }
+  .gh-mark { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 36px; }
+    section { padding: 22px; }
+    .wrap { padding: 24px 16px 60px; }
+    .bio-card { grid-template-columns: 1fr; }
+    .bio-card .glyph-xl { width: 48px; height: 48px; }
+  }
+
+  /* Section nav — same pattern as the homepage, text-only so sub-pages
+     don't each need their own icon sprite. */
+  .section-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    margin: 18px auto 30px;
+    font-size: 15px;
+  }
+  .section-nav a {
+    color: var(--pink-accent);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.82;
+    padding: 2px 0;
+    transition: opacity 0.15s ease;
+  }
+  .section-nav a:hover { opacity: 1; }
+  section[id] { scroll-margin-top: 24px; }
+
+  /* Sample diagram — 8-second loop showing one full cycle of a gill:
+     keychain token read → request out to GitHub → items returning →
+     envelope forward → bubble above Axol. Same visual vocabulary as
+     the approval-flow diagram on remote-alerts.html (pink dashed
+     tracks, arrowheads, white stage pills, green return dots) so the
+     two pages feel like siblings. */
+  .gfd-wrap {
+    margin: 14px auto 2px;
+    max-width: 620px;
+  }
+  .gfd-wrap svg {
+    display: block;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
+
+  /* Tracks — dashed pink for the outgoing request, dashed green for
+     items flowing back, solid-fade pink for the local envelope hop. */
+  .gfd-track {
+    fill: none; stroke: #D6457A; stroke-width: 1.5;
+    stroke-dasharray: 4 5; opacity: 0.55;
+  }
+  .gfd-track-return { stroke: #2E8B57; opacity: 0.48; }
+  .gfd-track-fwd   { stroke: #D6457A; opacity: 0.55; stroke-dasharray: 3 4; }
+
+  /* Stage tiles — white pill with soft pink border. Axol's stage uses
+     the stronger accent ring so she reads as the terminal node. The
+     per-stage pulse animations below override stroke + filter at the
+     exact moments a dot lands on each tile. */
+  .gfd-stage-bg {
+    fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+    filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10));
+  }
+
+  /* Stage pulses — each stage flashes stroke + adds a glow filter at
+     the exact frame the relevant dot "arrives" or "departs". Pulses
+     are keyframed on the same 8s cycle as the dots so they stay
+     mechanically in sync without needing JS. */
+  .gfd-s-gill   .gfd-stage-bg { animation: gfd-pulse-gill   8s ease-in-out infinite; }
+  .gfd-s-github .gfd-stage-bg { animation: gfd-pulse-github 8s ease-in-out infinite; }
+  .gfd-s-axol   .gfd-stage-bg { animation: gfd-pulse-axol   8s ease-in-out infinite; }
+
+  /* Gill hits twice per cycle: once at t≈0% when the token is read and
+     the request launches, once at t≈56% when the item dot returns. */
+  @keyframes gfd-pulse-gill {
+    0%, 5%    { stroke: var(--pink-accent); stroke-width: 2.4;
+                filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    10%, 53%  { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    56%, 60%  { stroke: var(--pink-accent); stroke-width: 2.4;
+                filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    65%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+  }
+  /* GitHub hits once at t≈24–28% when the request dot arrives. Ink
+     stroke instead of pink so it reads as "this is the external
+     actor" — different identity than our own stages. */
+  @keyframes gfd-pulse-github {
+    0%, 22%   { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    24%, 28%  { stroke: #2D2533; stroke-width: 2.4;
+                filter: drop-shadow(0 0 5px rgba(45, 37, 51, 0.45))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    32%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+  }
+  /* Axol hits once at t≈74–80% when the envelope lands. Same soft-pink
+     baseline as the other stages; the accent stroke + glow only kicks
+     in for the hit, so she doesn't sit in a permanent highlight ring. */
+  @keyframes gfd-pulse-axol {
+    0%, 72%   { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    74%, 80%  { stroke: var(--pink-accent); stroke-width: 2.4;
+                filter: drop-shadow(0 0 7px rgba(214, 69, 122, 0.6))
+                        drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    84%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+                filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+  }
+
+  .gfd-label {
+    text-anchor: middle; font-size: 12px; font-weight: 700;
+    fill: var(--ink); letter-spacing: -0.005em;
+  }
+  .gfd-sublabel {
+    text-anchor: middle; font-size: 10px; font-weight: 500;
+    fill: var(--ink-soft); letter-spacing: 0.02em;
+  }
+
+  /* Traveling dots. transform-box: fill-box + transform-origin: center
+     anchors each circle's animation origin at its own midpoint, so the
+     translateX values below move it along the track without visual
+     drift. Dots are painted BEFORE stages so the stage tile's white
+     fill hides the endpoints of each trip — no opacity fade needed at
+     arrival. */
+  .gfd-req, .gfd-item, .gfd-fwd {
+    transform-box: fill-box; transform-origin: center;
+    opacity: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  }
+  .gfd-req { fill: var(--pink-accent); }
+  .gfd-item { fill: #2E8B57; }
+  .gfd-fwd { fill: var(--pink-accent); }
+
+  .gfd-req   { animation: gfd-req   8s ease-in-out infinite; }
+  .gfd-item  { animation: gfd-item  8s ease-in-out infinite; }
+  .gfd-fwd   { animation: gfd-fwd   8s ease-in-out infinite; }
+
+  /* Request dot: gill(310) → github(520). Dot starts at gill center so
+     the stage tile hides it at t=0, travels +210px along the top lane,
+     parks at github center (hidden by that stage tile), then resets. */
+  @keyframes gfd-req {
+    0%, 4%    { transform: translateX(0);     opacity: 0; }
+    7%        { opacity: 1; }
+    24%       { transform: translateX(210px); opacity: 1; }
+    26%, 100% { transform: translateX(210px); opacity: 0; }
+  }
+  /* Green item dot returning GitHub → gill. One dot per cycle so the
+     visual matches the 1 dot → 1 envelope → 1 bubble count downstream. */
+  @keyframes gfd-item {
+    0%, 38%   { transform: translateX(0);      opacity: 0; }
+    41%       { opacity: 1; }
+    56%       { transform: translateX(-210px); opacity: 1; }
+    58%, 100% { transform: translateX(-210px); opacity: 0; }
+  }
+  /* Envelope hop gill(310) → axol(100). Same 210px travel in reverse,
+     on a lower lane so it's visually distinct from the item return. */
+  @keyframes gfd-fwd {
+    0%, 60%   { transform: translateX(0);      opacity: 0; }
+    63%       { opacity: 1; }
+    74%       { transform: translateX(-210px); opacity: 1; }
+    76%, 100% { transform: translateX(-210px); opacity: 0; }
+  }
+
+  /* Keychain token indicator — a small lock shape inside the gill
+     stage. Full opacity throughout (matches the rest of the stage's
+     elements); the token-read beat at the start of each cycle is
+     expressed as a scale bump only, not an opacity fade. */
+  .gfd-keychain {
+    transform-box: fill-box; transform-origin: center;
+    animation: gfd-keychain 8s ease-in-out infinite;
+  }
+  @keyframes gfd-keychain {
+    0%, 100% { transform: scale(1); }
+    3%       { transform: scale(1.28); }
+    8%       { transform: scale(1); }
+  }
+
+  /* Speech bubble above axol. Fades in after the forward envelope
+     arrives, holds through the end of the cycle, fades before reset. */
+  .gfd-bubble {
+    transform-box: fill-box; transform-origin: 50% 100%;
+    opacity: 0; animation: gfd-bubble 8s ease-in-out infinite;
+  }
+  @keyframes gfd-bubble {
+    0%, 72%   { opacity: 0; transform: scale(0.85) translateY(3px); }
+    76%       { opacity: 1; transform: scale(1)    translateY(0); }
+    93%       { opacity: 1; transform: scale(1)    translateY(0); }
+    97%, 100% { opacity: 0; transform: scale(0.96) translateY(-2px); }
+  }
+
+  /* Axol-mini's external gills wave at ~2.8s period throughout — the
+     visual that earns the feature name. Left and right plumes are
+     offset a half-cycle apart so they don't move in lockstep. */
+  .gfd-axol-gill-l, .gfd-axol-gill-r {
+    transform-box: fill-box; transform-origin: 50% 100%;
+    animation: gfd-axol-gill-wave 2.8s ease-in-out infinite;
+  }
+  .gfd-axol-gill-r { animation-delay: -1.4s; }
+  @keyframes gfd-axol-gill-wave {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(-4deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .hero-axol, .hero-axol .hero-gill-l, .hero-axol .hero-gill-r,
+    .hero-signal-in,
+    .gfd-req, .gfd-item, .gfd-fwd, .gfd-keychain, .gfd-bubble,
+    .gfd-axol-gill-l, .gfd-axol-gill-r,
+    .gfd-s-gill .gfd-stage-bg, .gfd-s-github .gfd-stage-bg, .gfd-s-axol .gfd-stage-bg {
+      animation: none !important;
+    }
+    .hero-signal-in { opacity: 0.55; }
+    .gfd-bubble { opacity: 1; transform: none; }
+  }
+</style>
+<!-- Concept glyph — a single feathered gill plume. Used inline at section
+     heads and in the "the name" bio card. Three pairs of branching
+     filaments rising from a common stem, matching the silhouette the
+     axolotl wears on either side of its head. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="glyph-gill" viewBox="0 0 24 24">
+    <path d="M12 22 V 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <path d="M12 18 C 8 17, 6 15, 6 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M12 18 C 16 17, 18 15, 18 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M12 14 C 8.5 13, 7 11, 7 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M12 14 C 15.5 13, 17 11, 17 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M12 10 C 9.5 9, 8.5 7.5, 8.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <path d="M12 10 C 14.5 9, 15.5 7.5, 15.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <circle cx="12" cy="5" r="1.3" fill="currentColor" opacity="0.6"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Axol</a><span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-current" aria-current="page">Gills</span></nav>
+
+  <header class="hero">
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-signals-in">
+        <span class="hero-signal-in hero-signal-in-1"></span>
+        <span class="hero-signal-in hero-signal-in-2"></span>
+        <span class="hero-signal-in hero-signal-in-3"></span>
+      </div>
+      <svg class="hero-axol" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heroBodyG" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFC9E2" />
+            <stop offset="100%" stop-color="#FFA6CF" />
+          </radialGradient>
+        </defs>
+        <!-- Left gill plume: three feathery segments that wave as one. -->
+        <g class="hero-gill-l">
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+        </g>
+        <!-- Right gill plume, mirrored. Opposite phase via CSS animation-delay. -->
+        <g class="hero-gill-r">
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+        </g>
+        <!-- Body -->
+        <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+        <ellipse cx="110" cy="125" rx="50" ry="38" fill="#F0B5D3" />
+        <ellipse cx="58"  cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(-20 58 155)" />
+        <ellipse cx="162" cy="155" rx="10" ry="14" fill="#F29BC5" transform="rotate(20 162 155)" />
+        <!-- Eyes + cheeks -->
+        <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+        <circle cx="132" cy="105" r="7" fill="#2D2533" />
+        <circle cx="90"  cy="102" r="2.2" fill="white" />
+        <circle cx="134" cy="102" r="2.2" fill="white" />
+        <circle cx="78"  cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <circle cx="142" cy="125" r="7" fill="#FF7AA3" opacity="0.45" />
+        <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div>
+      <span class="pill">pull-style · local-only</span>
+    </div>
+    <h1>Gills</h1>
+    <p class="tagline">Small bash scripts on your Mac that poll the APIs Axol can't webhook, read their tokens from Keychain, and pop each new item as a bubble. Named after the feathery pink plumes axolotls wave to sample the water — same rhythmic reach, same pickup role.</p>
+    <a class="cta" href="#install">Install a gill →</a>
+  </header>
+
+  <nav class="section-nav" aria-label="page sections">
+    <a href="#why">why</a>
+    <a href="#name">the name</a>
+    <a href="#sample">the sample</a>
+    <a href="#install">install</a>
+    <a href="#bundled">bundled</a>
+    <a href="#write">write your own</a>
+    <a href="#security">security</a>
+  </nav>
+
+  <section id="why">
+    <h2>why</h2>
+    <p>Axol's <a href="remote-alerts.html">remote-alerts</a> path is push-style: a service you own a webhook on (your GitHub repo, your Stripe account, your Sentry project) signs a POST, the <a href="remote-alerts.html#anatomy">neuromast</a> queues it, <a href="remote-alerts.html#anatomy">lateral-line</a> pulls it down, Axol's bubble pops. Works cleanly when you can write the webhook URL into the sender's settings.</p>
+    <p>It doesn't cover the things you want alerts on but don't admin — repos someone else owns that <code>@mention</code> you, review requests across every org you belong to, security advisories on the long tail of repos you watch. GitHub only exposes those through your <b>notifications inbox</b>, and that inbox is poll-only with a personal-access token. Same pattern for a handful of other services (Linear PATs, Google Calendar read-only scopes, RSS feeds).</p>
+    <p>Gills fill that gap with the inverse data flow: Axol polls the upstream on your behalf and POSTs each new item to her own loopback port. No neuromast, no cloud. The credential never leaves your Mac.</p>
+  </section>
+
+  <section id="name">
+    <h2>the name</h2>
+    <div class="bio-card">
+      <span class="glyph-xl" aria-hidden="true"><svg><use href="#glyph-gill"/></svg></span>
+      <div>
+        <p><b>In an axolotl:</b> three pairs of feathery external gills fan out on either side of the head — the single most recognizable thing about the animal. They wave in slow, steady arcs, pulling fresh water past the fronds to sample oxygen and chemical signals from the surrounding column.</p>
+        <p><b>In Axol:</b> one bash script per service you want to pull from, running on its own <code>launchd</code> job. Each sample is one full cycle — grab the token, ask the upstream what's new since last time, hand any fresh items to the bubble. Same rhythmic reach, same pickup role.</p>
+        <p>A neuromast is a sensor that waits for pressure to come to it. A gill is a sensor that actively goes and gets the signal. Pairs cleanly with the existing <a href="remote-alerts.html#anatomy">neuromast / lateral-line</a> vocabulary.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="sample">
+    <h2>the sample</h2>
+    <p>Every gill follows the same shape, enforced by a handful of helpers in <code>lib.sh</code>. A single sample does six things, any one of which can bail the whole pass cleanly without burning credentials or the upstream's rate limit:</p>
+
+    {% include gill-sample-diagram.html %}
+
+    <ol class="sample-steps">
+      <li>
+        <b>Claim the lock</b>
+        <span>File-level <code>flock</code> (with a noclobber-symlink fallback for macOS's flock-less default). Overlapping samples exit silently — whoever got the lock runs alone.</span>
+      </li>
+      <li>
+        <b>Probe Axol</b>
+        <span>Bare TCP connect to <code>127.0.0.1:47329</code>. If she's closed, bail <em>before</em> calling the upstream so you don't spend rate-limit budget just to throw the result away.</span>
+      </li>
+      <li>
+        <b>Read the secret</b>
+        <span><code>security find-generic-password -s &lt;service&gt; -w</code>. Missing item → log once and exit 0; no retry storm, no stack trace in the launchd log.</span>
+      </li>
+      <li>
+        <b>Read the cursor</b>
+        <span>Poll-since value from <code>~/Library/Application Support/Axol/gills/&lt;name&gt;.cursor</code>. First-run default is the gill's call — <code>github-notifications</code> starts an hour ago so you don't backfill stale unread threads.</span>
+      </li>
+      <li>
+        <b>Fetch &amp; render</b>
+        <span>Hit the upstream with the token + cursor. For each new item, build an Axol envelope and <code>POST</code> it to the loopback receiver. Bubbles render through the same <a href="plugins.html">adapter pipeline</a> as webhook-originated alerts.</span>
+      </li>
+      <li>
+        <b>Advance the cursor</b>
+        <span>Atomic <code>.tmp</code> + <code>mv</code>, so a crash mid-write leaves either the old or the new value — never a truncated string. If any POST failed, leave the cursor alone and retry next sample.</span>
+      </li>
+    </ol>
+  </section>
+
+  <section id="install">
+    <h2>install</h2>
+    <p>Two commands, assuming you already have Axol running. First time only — stash the credential in macOS Keychain where the gill can find it:</p>
+<pre><code><span class="tok-cmd">security</span> add-generic-password <span class="tok-flag">-a</span> <span class="tok-str">"$USER"</span> <span class="tok-flag">-s</span> <span class="tok-str">axol-github-pat</span> <span class="tok-flag">-w</span> <span class="tok-str">ghp_xxxxxxxxxxxxxxxxxxxxxxxx</span></code></pre>
+    <p>Then install the <code>launchd</code> job:</p>
+<pre><code><span class="tok-cmd">cd</span> lateral-line/gills
+./install.sh github-notifications</code></pre>
+    <p>That writes <code>~/Library/LaunchAgents/com.axol.gill.github-notifications.plist</code> pointing at the script, <code>bootstrap</code>s it into your user session, and runs a first sample immediately. Default interval is 30 seconds — same cadence <a href="remote-alerts.html">lateral-line</a> uses.</p>
+    <p>Tail the log to watch the cycle:</p>
+<pre><code><span class="tok-cmd">tail</span> <span class="tok-flag">-f</span> <span class="tok-str">~/Library/Logs/Axol/gill-github-notifications.log</span></code></pre>
+    <p>Each line is one sample — <code>delivered=N/M cursor=…</code> on the happy path, a one-word reason on the sad path. Nothing noisy between.</p>
+    <div class="callout">
+      <b>Uninstall:</b> <code>./install.sh github-notifications --uninstall</code> <code>bootout</code>s the launchd job and removes the plist. Your cursor and keychain item stay put — rotation is separate from uninstall.
+    </div>
+  </section>
+
+  <section id="bundled">
+    <h2>bundled gills</h2>
+    <p>Shipping with Axol today. Each one is a ~30-line bash script in <code>lateral-line/gills/</code>.</p>
+    <table class="gills">
+      <thead><tr><th>Gill</th><th>Upstream</th><th>Keychain service</th><th>Scope required</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>github-notifications</code></td>
+          <td><a href="https://docs.github.com/en/rest/activity/notifications">GitHub <code>/notifications</code></a></td>
+          <td><code>axol-github-pat</code></td>
+          <td>Fine-grained PAT, <b>Notifications: read</b></td>
+        </tr>
+      </tbody>
+    </table>
+    <p><code>github-notifications</code> maps each thread's <code>reason</code> field to an Axol priority — <code>review_requested</code>, <code>mention</code>, <code>team_mention</code>, <code>assign</code>, and <code>security_alert</code> render as <b>urgent</b> (pinned bubble, stays until clicked); everything else (comments, subscribed threads, CI activity) rides the normal auto-dismiss lane. API URLs are rewritten to their human-facing <code>github.com</code> equivalents on the way out, so clicking the bubble opens the PR / issue in the browser, not a raw JSON blob.</p>
+  </section>
+
+  <section id="write">
+    <h2>write your own</h2>
+    <p>A gill is any bash script that sources <code>lib.sh</code>, calls <code>gill_init</code> first, and uses the six helpers the lib exposes. No registry file, no manifest — <code>install.sh &lt;name&gt;</code> just looks for <code>&lt;name&gt;.sh</code> next to it.</p>
+    <p>Minimum viable gill, end-to-end:</p>
+{% raw %}<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+. "$(cd "$(dirname "$0")" &amp;&amp; pwd)/lib.sh"
+
+gill_init "example"
+gill_axol_up || exit 0
+token=$(gill_keychain_secret "axol-example-token") || exit 0
+since=$(gill_cursor_read)
+
+resp=$(curl -fsS -H "Authorization: Bearer $token" \
+            "https://api.example.com/items?since=$since")
+
+echo "$resp" | jq -c '.items[]' | while read -r item; do
+    title=$(jq -r '.title' &lt;&lt;&lt;"$item")
+    env=$(jq -n --arg t "$title" '{title:$t, body:"new item", icon:"bell"}')
+    gill_post_envelope "$env" || exit 0
+done
+
+gill_cursor_write "$(date -u +%FT%TZ)"</code></pre>{% endraw %}
+    <p>That's it. <code>./install.sh example</code> writes a launchd plist for it automatically. The helpers you get:</p>
+    <table class="gills">
+      <thead><tr><th>Helper</th><th>Does</th></tr></thead>
+      <tbody>
+        <tr><td><code>gill_init &lt;name&gt;</code></td><td>Claims a per-gill file lock; sets up cursor + log context.</td></tr>
+        <tr><td><code>gill_axol_up</code></td><td>TCP probe of <code>127.0.0.1:47329</code>; returns non-zero if Axol's closed.</td></tr>
+        <tr><td><code>gill_keychain_secret &lt;svc&gt;</code></td><td>Prints the password for Keychain service <code>&lt;svc&gt;</code>, or returns non-zero + logs when missing.</td></tr>
+        <tr><td><code>gill_cursor_read</code> / <code>gill_cursor_write &lt;val&gt;</code></td><td>Per-gill cursor I/O, atomic on write.</td></tr>
+        <tr><td><code>gill_post_envelope &lt;json&gt;</code></td><td>POST a pre-rendered <a href="plugins.html">envelope</a> to Axol's loopback.</td></tr>
+        <tr><td><code>gill_log &lt;msg&gt;</code></td><td>Timestamped line to the gill's launchd log.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <b>The envelope spec is the same as adapters.</b> Anything Axol's <a href="plugins.html#actions">adapter pipeline</a> accepts works here — priority, icon, actions, source. The generic adapter (<code>zz-generic.json</code>) fires for anything with a <code>title</code>, so a minimal gill doesn't need its own matching JSON file. Write a dedicated adapter only if you want a different rendering per subtype inside one source.
+    </div>
+  </section>
+
+  <section id="security">
+    <h2>security</h2>
+    <p>Gills are intentionally local. That shapes the security posture:</p>
+    <ul>
+      <li><b>Token in Keychain, not env vars.</b> No plist entries, no dotfiles, no worker secrets. The gill calls <code>security(1)</code> at each sample and nothing else sees the password.</li>
+      <li><b>Never forwarded over the network except to the upstream over HTTPS.</b> No logging, no neuromast round-trip, no third-party telemetry. If Cloudflare / Webflow / Railway has a breach, your GitHub PAT isn't in scope.</li>
+      <li><b>Rate limits are per-token, per-device.</b> Each Mac you install a gill on polls independently. For GitHub's 5000/hr authenticated ceiling, 120/hr is a rounding error; for stingier APIs, bump the <code>StartInterval</code> in the plist.</li>
+      <li><b>Fine-grained scopes only.</b> <code>github-notifications</code> asks for <em>Notifications: read</em> and nothing else — if the token leaks, the blast radius is "someone can see what's in your GitHub notifications inbox," not "someone can push to your repos."</li>
+      <li><b>Rotation is a one-liner.</b> <code>security delete-generic-password -s axol-github-pat && security add-generic-password -a "$USER" -s axol-github-pat -w &lt;new-token&gt;</code>. No redeploy, no restart; the next sample picks it up.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="index.html">← back to Axol</a> · MIT licensed · <a href="https://github.com/Roach/axol"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg> source on GitHub</a>
+  </footer>
+
+</div>

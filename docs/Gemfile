@@ -1,0 +1,16 @@
+source "https://rubygems.org"
+
+# Pinned to match GitHub Pages' current stack (Jekyll 3.10.x) so a local
+# preview matches what the deployed site will render.
+gem "jekyll", "~> 3.10"
+
+# Markdown: GFM parser for kramdown (what GH Pages uses by default).
+gem "kramdown-parser-gfm", "~> 1.1"
+
+# Ruby 3.4 stopped bundling webrick; bring it back so `jekyll serve` can
+# start its dev HTTP server without ArgumentError from the standard lib.
+gem "webrick", "~> 1.8"
+
+group :jekyll_plugins do
+  gem "jekyll-seo-tag", "~> 2.8"
+end

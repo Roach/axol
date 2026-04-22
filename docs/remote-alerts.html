@@ -753,28 +753,30 @@ type: article
     .flow-animated .flow-arrow { opacity: 0.55; }
   }
 
-  /* HMAC scheme table */
-  table.schemes {
+  /* Schema tables — consistent visual for every field reference.
+     Matches plugins.html's table.schema spec so the two pages share
+     one vocabulary for tabular references. */
+  table.schema {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0 4px;
+    margin: 12px 0 6px;
     font-size: 13.5px;
   }
-  table.schemes th, table.schemes td {
+  table.schema th, table.schema td {
     border-bottom: 1px solid #F3DDE9;
-    padding: 8px 10px;
+    padding: 9px 10px;
     text-align: left;
     vertical-align: top;
   }
-  table.schemes th {
+  table.schema th {
     font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--pink-accent);
     font-weight: 700;
   }
-  table.schemes tr:last-child td { border-bottom: none; }
-  table.schemes td:first-child { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--pink-accent); white-space: nowrap; }
+  table.schema tr:last-child td { border-bottom: none; }
+  table.schema td:first-child { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--pink-accent); white-space: nowrap; }
 
   .setup-steps {
     counter-reset: step;
@@ -1081,7 +1083,7 @@ type: article
           <h3>lateral line</h3>
         </div>
         <p><b>In fish:</b> the nerve pathway running along the flank, wiring every neuromast back to the brain — the channel that carries signals home.</p>
-        <p><b>In Axol:</b> a 60-line bash script on your Mac, run by <code>launchd</code> every minute. Pulls each neuromast's queue with a bearer token, POSTs the bodies to <code>127.0.0.1:47329</code>, acks on success. Cursor lives at <code>~/Library/Application Support/Axol/lateral-line.cursor</code>.</p>
+        <p><b>In Axol:</b> a 60-line bash script on your Mac, run by <code>launchd</code> every 30 seconds. Pulls each neuromast's queue with a bearer token, POSTs the bodies to <code>127.0.0.1:47329</code>, acks on success. Cursor lives at <code>~/Library/Application Support/Axol/lateral-line.cursor</code>.</p>
         <p><b>Guarantees:</b> at-least-once. Items stay queued if Axol's offline; a crashed ack causes at most one duplicate bubble. No cloud redeploy needed when adding sources — Axol's local adapter system handles translation.</p>
       </div>
     </div>
@@ -1113,7 +1115,7 @@ type: article
       </div>
       <div class="flow-step">
         <b><span class="glyph" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>lateral-line</b>
-        <div class="desc">A 60-line bash script run by <code>launchd</code> every minute. Fetches each neuromast's queue with a bearer token, POSTs each body unchanged to <code>127.0.0.1:47329</code>, acks on success. At-least-once: if Axol is offline, items stay queued until she's back.</div>
+        <div class="desc">A 60-line bash script run by <code>launchd</code> every 30 seconds. Fetches each neuromast's queue with a bearer token, POSTs each body unchanged to <code>127.0.0.1:47329</code>, acks on success. At-least-once: if Axol is offline, items stay queued until she's back.</div>
       </div>
       <div class="flow-arrow arrow-3" aria-hidden="true"><span class="arrow-dot"></span></div>
       <div class="flow-step">
@@ -1203,7 +1205,7 @@ type: article
     </ol>
 
     <h3>HMAC schemes</h3>
-    <table class="schemes">
+    <table class="schema">
       <thead>
         <tr>
           <th>Scheme</th>
@@ -1243,7 +1245,7 @@ type: article
 
   <section id="delivery">
     <h2>delivery semantics</h2>
-    <p><b>At-least-once.</b> The forwarder only acks items after the local Axol returns <code>204</code>. If Axol is offline, items stay queued and retry on the next tick. If the forwarder crashes between POSTing to Axol and calling <code>/ack</code>, you'll see one duplicate bubble — rare, and a fair trade for not silently dropping an alert.</p>
+    <p><b>At-least-once.</b> The forwarder only acks items after the local Axol returns <code>204</code>. If Axol is offline, items stay queued and retry on the next sample. If the forwarder crashes between POSTing to Axol and calling <code>/ack</code>, you'll see one duplicate bubble — rare, and a fair trade for not silently dropping an alert.</p>
     <p><b>Bounded queue.</b> The queue index is capped at the 100 most-recent items. Older unacked entries age out of the index (though their bodies linger until the backing store's own expiration). For a single user this is effectively unlimited headroom — it's a backstop for a forwarder that's been offline for a week, not a broadcast queue.</p>
     <p><b>Body size limit.</b> <code>/app/api/hooks/{source}</code> rejects payloads larger than 1 MB with <code>HTTP 413</code>. Real-world webhooks (GitHub PR events, Stripe event objects) sit well under this ceiling.</p>
     <p><b>No dedup on Axol's side.</b> Axol today doesn't track inbound alert IDs, so the same payload POSTed twice renders two bubbles. If you care, that's a one-field addition in <code>AlertStore.push</code>.</p>
@@ -1415,7 +1417,7 @@ type: article
     <h3 style="margin-top: 22px;">flow</h3>
     <ol>
       <li><b>Caller</b> POSTs <code>/app/api/permission/{source}</code> with a <code>tool_name</code>, optional <code>tool_input</code>, and a <code>request_id</code>. Neuromast 202-accepts immediately, returns the id.</li>
-      <li><b>Lateral-line</b> pulls the envelope (<code>kind: "permission"</code>) on its next tick and POSTs it to Axol's local <code>/permission</code> endpoint, which holds the connection open while Axol renders an Allow/Deny bubble.</li>
+      <li><b>Lateral-line</b> pulls the envelope (<code>kind: "permission"</code>) on its next sample and POSTs it to Axol's local <code>/permission</code> endpoint, which holds the connection open while Axol renders an Allow/Deny bubble.</li>
       <li><b>User</b> clicks. Axol returns Claude Code's <code>hookSpecificOutput</code> shape. Lateral-line forwards the decision to <code>/app/api/decision/{request_id}</code>.</li>
       <li><b>Caller</b> discovers the answer via <code>GET /app/api/decision/{request_id}</code> (poll or optional <code>?wait=N</code> long-poll).</li>
     </ol>
@@ -1505,7 +1507,48 @@ GET /app/api/decision/{request_id}?wait=20   # optional long-poll</code></pre>
 
   <section id="deploy-guides">
     <h2>deploy guides</h2>
-    <p>Step-by-step setup for the cloud side of the lateral line, per target.</p>
+    <p>Step-by-step setup for the cloud side of the lateral line, per target. Five supported platforms; the table below summarizes the tradeoffs. <b>Webflow Cloud</b> is the recommended default for personal use — it's the only option that doesn't require a separate Cloudflare / Railway / Fly / Render account.</p>
+
+    <table class="schema" style="margin-bottom: 22px;">
+      <thead><tr><th>Target</th><th>Runtime</th><th>Storage</th><th>Free tier covers personal use</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="deploy-webflow.html">Webflow Cloud</a></td>
+          <td>Astro on Cloudflare Workers</td>
+          <td>Workers KV (auto-provisioned)</td>
+          <td>Yes</td>
+          <td>Zero-config default — no extra vendor signup.</td>
+        </tr>
+        <tr>
+          <td><a href="deploy-cloudflare.html">Cloudflare (direct)</a></td>
+          <td>Cloudflare Workers</td>
+          <td>Workers KV</td>
+          <td>Yes</td>
+          <td>Already on Cloudflare; want full wrangler control.</td>
+        </tr>
+        <tr>
+          <td><a href="deploy-railway.html">Railway</a></td>
+          <td>Node (Astro adapter)</td>
+          <td>Railway Redis plugin</td>
+          <td>Trial credit only</td>
+          <td>Already on Railway; want Node stack + Redis over KV.</td>
+        </tr>
+        <tr>
+          <td><a href="deploy-fly.html">Fly.io</a></td>
+          <td>Node (Docker)</td>
+          <td>Upstash Redis / any TCP Redis</td>
+          <td>Yes (shared-CPU machines)</td>
+          <td>Want regional placement or a dedicated VM-ish runtime.</td>
+        </tr>
+        <tr>
+          <td><a href="deploy-render.html">Render</a></td>
+          <td>Node (Astro adapter)</td>
+          <td>Render Redis add-on</td>
+          <td>Yes (with cold starts)</td>
+          <td>Already on Render; OK with occasional cold-start latency.</td>
+        </tr>
+      </tbody>
+    </table>
 
     <a class="guide-card-featured" href="deploy-webflow.html">
       <span class="guide-featured-pill">Recommended</span>
