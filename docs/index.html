@@ -1543,8 +1543,8 @@ type: website
     flex: 1 1 0;
     min-width: 104px;
     max-width: 152px;
-    background: #FAF2F7;
-    border: 1px solid #F3DDE9;
+    background: #FFFFFF;
+    border: 1.5px solid #FFC9E2;
     border-radius: 10px;
     padding: 10px 10px 8px;
     text-align: center;
@@ -1555,6 +1555,7 @@ type: website
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
+    box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10);
     transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
     animation: ll-node-pulse 8s ease-in-out infinite;
     animation-delay: 0s;
@@ -1569,33 +1570,33 @@ type: website
   .ll-flow.remote-flow .ll-node:nth-child(7) { animation-name: ll-axol-pulse; }
 
   @keyframes ll-webhook-pulse {
-    0%, 3.5%, 7.5%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 3.5%, 7.5%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* pulse once representing a burst of two notifications at t=0.5s */
-    5%, 6% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    5%, 6% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
 
   @keyframes ll-neuromast-pulse {
-    0%, 21%, 27%, 41%, 47%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 21%, 27%, 41%, 47%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* both notifications received + queued (t≈2.3s) */
-    23%, 25% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    23%, 25% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* serving response (t≈4.3s) */
-    43%, 45% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    43%, 45% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
 
   @keyframes ll-lateral-pulse {
-    0%, 31%, 37%, 54%, 60%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 31%, 37%, 54%, 60%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* fetch send (t≈3.3s) */
-    33%, 35% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    33%, 35% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* response (2 items) received (t≈5.6s) */
-    56%, 58% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    56%, 58% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
 
   @keyframes ll-axol-pulse {
-    0%, 65%, 71%, 85%, 91%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 65%, 71%, 85%, 91%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* first delivery (t≈6.7s) */
-    67%, 69% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    67%, 69% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* second delivery (t≈8.7s) */
-    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
 
   .ll-node .ll-icon {
@@ -1624,14 +1625,14 @@ type: website
 
   @keyframes ll-node-pulse {
     0%, 15%, 100% {
-      border-color: #F3DDE9;
-      background: #FAF2F7;
-      box-shadow: none;
+      border-color: #FFC9E2;
+      background: #FFFFFF;
+      box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10);
     }
     4%, 11% {
       border-color: var(--pink-accent);
       background: #FFF4FA;
-      box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12);
+      box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10);
     }
   }
 
@@ -1884,12 +1885,12 @@ type: website
   }
 
   @keyframes ll-local-source-pulse {
-    0%, 8%, 16%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
-    10%, 14% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    0%, 8%, 16%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
+    10%, 14% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
   @keyframes ll-local-axol-pulse {
-    0%, 30%, 38%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
-    32%, 36% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    0%, 30%, 38%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
+    32%, 36% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
   /* One dot — emerges from the local tool's center, crosses the gap to
      axol, splashes at axol's center (visible 18–30%). */
@@ -1943,23 +1944,23 @@ type: website
      gill pulses receiving t≈3s → forward t≈4s → axol pulses t≈4.5s →
      bubble visible 5–5.6s. */
   @keyframes ll-poll-github-pulse {
-    0%, 27%, 34%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 27%, 34%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* gill's fetch arrives */
-    29%, 32% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    29%, 32% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
   @keyframes ll-poll-gill-pulse {
-    0%, 3%, 8%, 48%, 54%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 3%, 8%, 48%, 54%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* gill wakes, reads keychain */
-    5%, 7% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    5%, 7% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* gill receives response, queues item */
-    50%, 52% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    50%, 52% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
   @keyframes ll-poll-axol-pulse {
-    0%, 66%, 72%, 85%, 91%, 100% { border-color: #F3DDE9; background: #FAF2F7; box-shadow: none; }
+    0%, 66%, 72%, 85%, 91%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* first delivery lands */
-    68%, 70% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    68%, 70% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
     /* second delivery lands */
-    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12); }
+    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
   }
 
   /* Fetch: gill's cx center → github's cx center — travels RIGHT-to-LEFT,
