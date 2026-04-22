@@ -13,7 +13,16 @@
 // Stripe-style replay resistance without breaking senders that don't sign a
 // timestamp.
 
-export type Scheme = 'github' | 'stripe' | 'generic';
+export const KNOWN_SCHEMES = ['github', 'stripe', 'generic'] as const;
+export type Scheme = (typeof KNOWN_SCHEMES)[number];
+
+/// True when `name` is one of the built-in HMAC schemes (github / stripe / generic).
+/// Used by the hooks + permission handlers to default `HOOK_SCHEME_<SOURCE>`
+/// to the source name when the operator didn't set it explicitly — so a lone
+/// `HOOK_SECRET_GITHUB` is enough to opt a `github`-named source into HMAC.
+export function isKnownScheme(name: string): name is Scheme {
+  return (KNOWN_SCHEMES as readonly string[]).includes(name);
+}
 
 export interface VerifyResult {
   ok: boolean;

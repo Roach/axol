@@ -14,7 +14,8 @@ interface Env {
   QUEUE: import('./lib/queue').KVStore;
   POLL_TOKEN: string;
   SHARED_SECRET?: string;
-  // Per-source signing config, looked up dynamically as HOOK_SCHEME_<SOURCE>
-  // and HOOK_SECRET_<SOURCE>. Indexed access below keeps TS happy.
+  // Per-source signing config, looked up dynamically as HOOK_SECRET_<SOURCE>
+  // (required per source) and optional HOOK_SCHEME_<SOURCE> (defaults to the
+  // source name when it's a known scheme). Indexed access below keeps TS happy.
   [key: string]: unknown;
 }

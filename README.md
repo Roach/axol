@@ -27,7 +27,7 @@ The implementation currently targets Astro + Cloudflare Workers (which is what W
 
 ## HMAC schemes
 
-Set two env vars per signed source, where `<SOURCE>` is the URL segment uppercased (e.g. `HOOK_SCHEME_GITHUB`).
+Set `HOOK_SECRET_<SOURCE>` per signed source, where `<SOURCE>` is the URL segment uppercased (e.g. `HOOK_SECRET_GITHUB`). The scheme is inferred from the source name when that name matches one of the built-in schemes below; if you need a different pairing (e.g. a source named `ci` using the `generic` scheme) set `HOOK_SCHEME_<SOURCE>` explicitly too.
 
 | Scheme    | Header                        | Signed input         | Notes                                     |
 | --------- | ----------------------------- | -------------------- | ----------------------------------------- |
@@ -37,7 +37,7 @@ Set two env vars per signed source, where `<SOURCE>` is the URL segment uppercas
 
 **Optional replay protection** for `github` and `generic`: if the sender also sends `X-Signature-Timestamp: <unix-seconds>`, the server verifies it's within a 300-second window and HMACs `<ts>.<body>` instead of `<body>` alone. Stripe already bakes the timestamp into `Stripe-Signature`, so this only applies to the other two schemes.
 
-If no per-source scheme is configured, the endpoint falls back to `?key=<SHARED_SECRET>`.
+If no per-source scheme can be resolved, the endpoint falls back to `?key=<SHARED_SECRET>`.
 
 ## Limits
 
@@ -53,8 +53,8 @@ All env vars and secrets are set per-platform (in the Webflow Cloud dashboard fo
 | ------------------------------ | ---------------------------------- |
 | `POLL_TOKEN`                   | always — bearer for `/pull` + `/ack` |
 | `SHARED_SECRET`                | only if you want the `?key` fallback for unsigned senders |
-| `HOOK_SCHEME_<SOURCE>`         | per signed source                  |
 | `HOOK_SECRET_<SOURCE>`         | per signed source                  |
+| `HOOK_SCHEME_<SOURCE>`         | only when the source name doesn't match the scheme (e.g. source `ci` + scheme `generic`) |
 
 ## Deploy
 
