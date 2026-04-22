@@ -1526,531 +1526,6 @@ type: website
     margin-top: 2px;
   }
 
-  /* Lateral-line mini flow — compact horizontal summary that previews
-     the full animated diagram on the dedicated page. Three stages pulse
-     in sequence, arrows flash between them, and a bubble pops at Axol. */
-  .ll-flow {
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    gap: 10px;
-    margin: 32px 0 6px;
-    flex-wrap: wrap;
-    /* Own stacking context so .ll-arrow's negative z-index stays local. */
-    isolation: isolate;
-  }
-  .ll-node {
-    flex: 1 1 0;
-    min-width: 104px;
-    max-width: 152px;
-    background: #FFFFFF;
-    border: 1.5px solid #FFC9E2;
-    border-radius: 10px;
-    padding: 10px 10px 8px;
-    text-align: center;
-    color: var(--ink);
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10);
-    transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
-    animation: ll-node-pulse 8s ease-in-out infinite;
-    animation-delay: 0s;
-  }
-  /* 10s cycle with a two-notification narrative:
-     webhook sends 2 → both ride arrow-1 → neuromast queues them (2-dot
-     indicator) → lateral fetches → neuromast returns 2 → lateral forwards
-     each to axol in sequence, with a brief pause and two bubbles. */
-  .ll-flow.remote-flow .ll-node:nth-child(1) { animation-name: ll-webhook-pulse; }
-  .ll-flow.remote-flow .ll-node:nth-child(3) { animation-name: ll-neuromast-pulse; }
-  .ll-flow.remote-flow .ll-node:nth-child(5) { animation-name: ll-lateral-pulse; }
-  .ll-flow.remote-flow .ll-node:nth-child(7) { animation-name: ll-axol-pulse; }
-
-  @keyframes ll-webhook-pulse {
-    0%, 3.5%, 7.5%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* pulse once representing a burst of two notifications at t=0.5s */
-    5%, 6% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-
-  @keyframes ll-neuromast-pulse {
-    0%, 21%, 27%, 41%, 47%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* both notifications received + queued (t≈2.3s) */
-    23%, 25% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* serving response (t≈4.3s) */
-    43%, 45% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-
-  @keyframes ll-lateral-pulse {
-    0%, 31%, 37%, 54%, 60%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* fetch send (t≈3.3s) */
-    33%, 35% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* response (2 items) received (t≈5.6s) */
-    56%, 58% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-
-  @keyframes ll-axol-pulse {
-    0%, 65%, 71%, 85%, 91%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* first delivery (t≈6.7s) */
-    67%, 69% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* second delivery (t≈8.7s) */
-    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-
-  .ll-node .ll-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--pink-accent);
-    margin-bottom: 6px;
-  }
-  .ll-node .ll-icon svg { width: 38px; height: 38px; }
-  .ll-node .ll-label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--pink-accent);
-  }
-  .ll-node .ll-sub {
-    display: block;
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin-top: 2px;
-    line-height: 1.3;
-  }
-
-  @keyframes ll-node-pulse {
-    0%, 15%, 100% {
-      border-color: #FFC9E2;
-      background: #FFFFFF;
-      box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10);
-    }
-    4%, 11% {
-      border-color: var(--pink-accent);
-      background: #FFF4FA;
-      box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10);
-    }
-  }
-
-  .ll-arrow {
-    position: relative;
-    z-index: 0;
-    align-self: center;
-    width: 48px;
-    height: 22px;
-    flex: 0 0 auto;
-    /* overflow: visible — lets the dots visually extend across the flex
-       gap and land on the adjacent node's edge, not the arrow's edge.
-       z-index: 0 keeps the dots behind the nodes when they extend into
-       a node's territory (dots absorbed into the box visual). */
-  }
-  /* Dashed pink track the dots ride on — extends slightly past the
-     arrow's own box on both sides so it visually reaches the adjacent
-     node edges (matching the dots' travel range). Same vocabulary as
-     the SVG diagrams' stroke-dasharray "4 5" dashed arrows. */
-  .ll-arrow::before {
-    content: "";
-    position: absolute;
-    left: -6px;
-    right: -6px;
-    top: 50%;
-    height: 0;
-    border-top: 1.5px dashed var(--pink-accent);
-    opacity: 0.38;
-    z-index: -1;
-  }
-  .ll-arrow .arrow-dot {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 9px;
-    height: 9px;
-    margin-top: -4.5px;
-    border-radius: 50%;
-    background: var(--pink-accent);
-    opacity: 0;
-  }
-
-  /* All arrow-dot animations share the 10s master cycle and use absolute
-     keyframe percentages (no animation-delay), so they lock to the node
-     pulses and queue indicators. */
-  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-1     { animation: arrow1a-fwd 8s linear infinite; }
-  .remote-flow .ll-arrow.arrow-1 .arrow-dot.dot-2     { animation: arrow1b-fwd 8s linear infinite; }
-  .remote-flow .ll-arrow.arrow-2 .arrow-dot.fetch     { animation: arrow2-fetch-rev 8s linear infinite; }
-  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-1 { animation: arrow2a-response-fwd 8s linear infinite; }
-  .remote-flow .ll-arrow.arrow-2 .arrow-dot.response-2 { animation: arrow2b-response-fwd 8s linear infinite; }
-  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-1     { animation: arrow3a-fwd 8s linear infinite; }
-  .remote-flow .ll-arrow.arrow-3 .arrow-dot.dot-2     { animation: arrow3b-fwd 8s linear infinite; }
-
-  /* Dot 1 (first notification): webhook → neuromast, visible 8–14% */
-  @keyframes arrow1a-fwd {
-    0%, 7%   { left: -80px;             opacity: 0; }
-    9%       { left: -60px;             opacity: 1; }
-    13%      { left: calc(100% + 60px); opacity: 1; }
-    14%      { left: calc(100% + 80px); opacity: 0; }
-    100%     { left: calc(100% + 80px); opacity: 0; }
-  }
-  /* Dot 2 (second notification): staggered, visible 13–19% */
-  @keyframes arrow1b-fwd {
-    0%, 12%  { left: -80px;             opacity: 0; }
-    14%      { left: -60px;             opacity: 1; }
-    18%      { left: calc(100% + 60px); opacity: 1; }
-    19%      { left: calc(100% + 80px); opacity: 0; }
-    100%     { left: calc(100% + 80px); opacity: 0; }
-  }
-  /* Fetch (faint): lateral-line → neuromast, visible 33–39% */
-  @keyframes arrow2-fetch-rev {
-    0%, 32%  { left: calc(100% + 80px); opacity: 0; }
-    34%      { left: calc(100% + 60px); opacity: 0.3; }
-    38%      { left: -60px;             opacity: 0.3; }
-    40%      { left: -80px;             opacity: 0; }
-    100%     { left: -80px;             opacity: 0; }
-  }
-  /* Response 1: neuromast → lateral-line, full opacity, visible 45–51% */
-  @keyframes arrow2a-response-fwd {
-    0%, 44%  { left: -80px;             opacity: 0; }
-    46%      { left: -60px;             opacity: 1; }
-    50%      { left: calc(100% + 60px); opacity: 1; }
-    51%      { left: calc(100% + 80px); opacity: 0; }
-    100%     { left: calc(100% + 80px); opacity: 0; }
-  }
-  /* Response 2: visible 49–55%, staggered behind response 1 */
-  @keyframes arrow2b-response-fwd {
-    0%, 48%  { left: -80px;             opacity: 0; }
-    50%      { left: -60px;             opacity: 1; }
-    54%      { left: calc(100% + 60px); opacity: 1; }
-    55%      { left: calc(100% + 80px); opacity: 0; }
-    100%     { left: calc(100% + 80px); opacity: 0; }
-  }
-  /* Delivery 1: lateral → axol, visible 61–67%, splashes at axol center */
-  @keyframes arrow3a-fwd {
-    0%, 60%  { left: -80px;             opacity: 0;   transform: scale(1); }
-    62%      { left: -60px;             opacity: 1;   transform: scale(1); }
-    66%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
-    67%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
-    69%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-  }
-  /* Delivery 2: visible 81–87%, splashes at axol center */
-  @keyframes arrow3b-fwd {
-    0%, 80%  { left: -80px;             opacity: 0;   transform: scale(1); }
-    82%      { left: -60px;             opacity: 1;   transform: scale(1); }
-    86%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
-    87%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
-    89%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-  }
-
-  /* Queue indicator — two small dots in neuromast's top-right corner,
-     each fading in as its notification arrives and fading out once the
-     response carries it back down. */
-  .ll-queue {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    display: flex;
-    gap: 4px;
-    pointer-events: none;
-  }
-  .ll-queue-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--pink-accent);
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  /* Neuromast queue — fills as each notification lands, empties as each
-     response dot carries it back down. */
-  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-neu-1 8s ease-in-out infinite; }
-  .ll-flow.remote-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-neu-2 8s ease-in-out infinite; }
-  @keyframes ll-queue-neu-1 {
-    0%, 13%   { opacity: 0; transform: scale(0.4); }
-    15%       { opacity: 1; transform: scale(1); }
-    49%       { opacity: 1; transform: scale(1); }
-    51%       { opacity: 0; transform: scale(0.4); }
-    100%      { opacity: 0; transform: scale(0.4); }
-  }
-  @keyframes ll-queue-neu-2 {
-    0%, 18%   { opacity: 0; transform: scale(0.4); }
-    20%       { opacity: 1; transform: scale(1); }
-    53%       { opacity: 1; transform: scale(1); }
-    55%       { opacity: 0; transform: scale(0.4); }
-    100%      { opacity: 0; transform: scale(0.4); }
-  }
-
-  /* Lateral-line queue — fills as each response arrives, empties as each
-     delivery dot heads out to Axol. Mirrors the real at-least-once buffer
-     that Axol's own throttling then paces out into bubbles. */
-  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(1) { animation: ll-queue-lat-1 8s ease-in-out infinite; }
-  .ll-flow.remote-flow .ll-node:nth-child(5) .ll-queue-dot:nth-child(2) { animation: ll-queue-lat-2 8s ease-in-out infinite; }
-  @keyframes ll-queue-lat-1 {
-    /* response 1 arrives at 51%; delivery 1 departs at 62% */
-    0%, 51%   { opacity: 0; transform: scale(0.4); }
-    53%       { opacity: 1; transform: scale(1); }
-    61%       { opacity: 1; transform: scale(1); }
-    63%       { opacity: 0; transform: scale(0.4); }
-    100%      { opacity: 0; transform: scale(0.4); }
-  }
-  @keyframes ll-queue-lat-2 {
-    /* response 2 arrives at 55%; delivery 2 departs at 82% (held through
-       bubble 1 window to show axol-side throttling) */
-    0%, 55%   { opacity: 0; transform: scale(0.4); }
-    57%       { opacity: 1; transform: scale(1); }
-    81%       { opacity: 1; transform: scale(1); }
-    83%       { opacity: 0; transform: scale(0.4); }
-    100%      { opacity: 0; transform: scale(0.4); }
-  }
-
-  /* Mini bubble — pops INSIDE the last node, above the axolotl icon,
-     mirroring how the real bubble sits above her head in her own
-     container. The node gets extra top padding so the bubble has room
-     without spilling out of the stage. */
-  .ll-node.ll-axol {
-    padding-top: 44px;
-  }
-  .ll-bubble {
-    position: absolute;
-    left: 50%;
-    top: 6px;
-    transform: translate(-50%, 4px) scale(0.94);
-    transform-origin: center bottom;
-    opacity: 0;
-    background: white;
-    border: 1.5px solid var(--pink-3);
-    border-radius: 10px;
-    padding: 5px 10px 6px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--ink);
-    white-space: nowrap;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-    animation-duration: 8s;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-    animation-delay: 0s;
-    pointer-events: none;
-  }
-  .ll-bubble::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: -10px;
-    width: 9px;
-    height: 9px;
-    background: white;
-    border-right: 1.5px solid var(--pink-3);
-    border-bottom: 1.5px solid var(--pink-3);
-    transform: translateX(-50%) rotate(45deg);
-  }
-  /* Bubble 1 — the first delivery. Visible 68–76% of cycle (page
-     t≈6.8–7.6s), dismisses before bubble 2 appears. */
-  .remote-flow .ll-bubble.bubble-1 { animation-name: ll-bubble-pop-1; }
-  @keyframes ll-bubble-pop-1 {
-    0%, 66%   { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-    68%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    76%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    78%       { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
-    100%      { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-  }
-  /* Bubble 2 — the second delivery. Visible 88–96% of cycle after a
-     short gap, then dismisses before the cycle restarts. */
-  .remote-flow .ll-bubble.bubble-2 { animation-name: ll-bubble-pop-2; }
-  @keyframes ll-bubble-pop-2 {
-    0%, 86%   { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-    88%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    96%       { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    98%       { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
-    100%      { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-  }
-
-  /* Local flow — a simpler 5s cycle showing a single local POST to the
-     loopback port. Two nodes, one dot, one bubble; no fetch/queue. */
-  .local-flow {
-    /* Override the shared .ll-flow margin so the demo breathes between
-       the paragraph above and the <pre> below it. */
-    margin: 26px 0 28px;
-  }
-  .local-flow .ll-node { animation-duration: 8s; }
-  .local-flow .ll-node:nth-child(1) { animation-name: ll-local-source-pulse; }
-  .local-flow .ll-node:nth-child(3) { animation-name: ll-local-axol-pulse; }
-  .local-flow .ll-arrow .arrow-dot { animation: arrow-loc-fwd 8s linear infinite; }
-  .local-flow .ll-bubble.bubble-loc {
-    animation-name: ll-bubble-pop-loc;
-    animation-duration: 8s;
-  }
-
-  @keyframes ll-local-source-pulse {
-    0%, 8%, 16%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    10%, 14% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-  @keyframes ll-local-axol-pulse {
-    0%, 30%, 38%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    32%, 36% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-  /* One dot — emerges from the local tool's center, crosses the gap to
-     axol, splashes at axol's center (visible 18–30%). */
-  @keyframes arrow-loc-fwd {
-    0%, 17%  { left: -80px;             opacity: 0;   transform: scale(1); }
-    19%      { left: -60px;             opacity: 1;   transform: scale(1); }
-    28%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
-    30%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
-    32%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-  }
-  /* Bubble — appears just after axol pulses, held long (local flow has
-     no throttling to stage, so the demo just lingers), dismisses before
-     the cycle restarts. */
-  @keyframes ll-bubble-pop-loc {
-    0%, 38%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-    40%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    90%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    94%      { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
-    100%     { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-  }
-
-  /* Poll flow — a 6s cycle showing a gill polling an upstream on a
-     schedule. Three nodes: github (polled) → gill (local poller with
-     keychain PAT, shown as queue dots) → axol. Arrow-1 is
-     bidirectional: a faint fetch dot reaches LEFT (gill → github) then
-     a strong response dot returns RIGHT. Arrow-2 forwards to Axol. */
-  .poll-flow .ll-node { animation-duration: 8s; }
-  .poll-flow .ll-node:nth-child(1) { animation-name: ll-poll-github-pulse; }
-  .poll-flow .ll-node:nth-child(3) { animation-name: ll-poll-gill-pulse; }
-  .poll-flow .ll-node:nth-child(5) { animation-name: ll-poll-axol-pulse; }
-
-  .poll-flow .ll-arrow.arrow-1 .arrow-dot.fetch    { animation: arrow-poll-fetch-rev 8s linear infinite; }
-  .poll-flow .ll-arrow.arrow-1 .arrow-dot.response { animation: arrow-poll-response-fwd 8s linear infinite; }
-  .poll-flow .ll-arrow.arrow-2 .arrow-dot.forward-1 { animation: arrow-poll-forward-1-fwd 8s linear infinite; }
-  .poll-flow .ll-arrow.arrow-2 .arrow-dot.forward-2 { animation: arrow-poll-forward-2-fwd 8s linear infinite; }
-
-  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(1) { animation: ll-queue-poll-1 8s ease-in-out infinite; }
-  .poll-flow .ll-node:nth-child(3) .ll-queue-dot:nth-child(2) { animation: ll-queue-poll-2 8s ease-in-out infinite; }
-
-  .poll-flow .ll-bubble.bubble-poll-1 {
-    animation-name: ll-bubble-pop-poll-1;
-    animation-duration: 8s;
-  }
-  .poll-flow .ll-bubble.bubble-poll-2 {
-    animation-name: ll-bubble-pop-poll-2;
-    animation-duration: 8s;
-  }
-
-  /* Gill wakes ~0s → fetch goes out t≈1s → github responds t≈2.5s →
-     gill pulses receiving t≈3s → forward t≈4s → axol pulses t≈4.5s →
-     bubble visible 5–5.6s. */
-  @keyframes ll-poll-github-pulse {
-    0%, 27%, 34%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* gill's fetch arrives */
-    29%, 32% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-  @keyframes ll-poll-gill-pulse {
-    0%, 3%, 8%, 48%, 54%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* gill wakes, reads keychain */
-    5%, 7% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* gill receives response, queues item */
-    50%, 52% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-  @keyframes ll-poll-axol-pulse {
-    0%, 66%, 72%, 85%, 91%, 100% { border-color: #FFC9E2; background: #FFFFFF; box-shadow: 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* first delivery lands */
-    68%, 70% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-    /* second delivery lands */
-    87%, 89% { border-color: var(--pink-accent); background: #FFF4FA; box-shadow: 0 0 0 4px rgba(214, 69, 122, 0.12), 0 2px 4px rgba(200, 80, 140, 0.10); }
-  }
-
-  /* Fetch: gill's cx center → github's cx center — travels RIGHT-to-LEFT,
-     faint, visible ~15–27%. Reuses arrow2-fetch-rev's pattern. */
-  @keyframes arrow-poll-fetch-rev {
-    0%, 14%  { left: calc(100% + 80px); opacity: 0; }
-    16%      { left: calc(100% + 60px); opacity: 0.35; }
-    26%      { left: -60px;             opacity: 0.35; }
-    28%      { left: -80px;             opacity: 0; }
-    100%     { left: -80px;             opacity: 0; }
-  }
-  /* Response: github → gill, full opacity, visible ~34–48%. Forward (L→R). */
-  @keyframes arrow-poll-response-fwd {
-    0%, 33%  { left: -80px;             opacity: 0; }
-    35%      { left: -60px;             opacity: 1; }
-    46%      { left: calc(100% + 60px); opacity: 1; }
-    48%      { left: calc(100% + 80px); opacity: 0; }
-    100%     { left: calc(100% + 80px); opacity: 0; }
-  }
-  /* Forward 1: gill → axol, splashes at axol's center (~62–70%).
-     Mirrors arrow3a-fwd's splash-on-arrival behavior. */
-  @keyframes arrow-poll-forward-1-fwd {
-    0%, 58%  { left: -80px;             opacity: 0;   transform: scale(1); }
-    60%      { left: -60px;             opacity: 1;   transform: scale(1); }
-    68%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
-    70%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
-    72%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-  }
-  /* Forward 2: same path, staggered to arrive at axol ~87–89%. */
-  @keyframes arrow-poll-forward-2-fwd {
-    0%, 77%  { left: -80px;             opacity: 0;   transform: scale(1); }
-    79%      { left: -60px;             opacity: 1;   transform: scale(1); }
-    87%      { left: calc(100% + 50px); opacity: 1;   transform: scale(1); }
-    89%      { left: calc(100% + 70px); opacity: 0.9; transform: scale(1.8); }
-    91%      { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-    100%     { left: calc(100% + 80px); opacity: 0;   transform: scale(2.8); }
-  }
-
-  /* Queue dots on the gill — represent items waiting to be forwarded.
-     Both appear when the response lands (~50%); first drains when
-     forward-1 leaves (~60%), second drains when forward-2 leaves (~79%). */
-  @keyframes ll-queue-poll-1 {
-    0%, 48%  { opacity: 0; transform: scale(0.75); }
-    50%      { opacity: 0.85; transform: scale(1); }
-    58%      { opacity: 0.85; transform: scale(1); }
-    62%      { opacity: 0; transform: scale(0.75); }
-    100%     { opacity: 0; transform: scale(0.75); }
-  }
-  @keyframes ll-queue-poll-2 {
-    0%, 49%  { opacity: 0; transform: scale(0.75); }
-    51%      { opacity: 0.65; transform: scale(1); }
-    77%      { opacity: 0.65; transform: scale(1); }
-    81%      { opacity: 0; transform: scale(0.75); }
-    100%     { opacity: 0; transform: scale(0.75); }
-  }
-
-  /* Bubble 1 — pops when forward-1 lands (~72%), holds briefly, fades
-     before bubble 2 takes over. Bubble 2 — pops when forward-2 lands
-     (~91%), holds through the cycle's tail. */
-  @keyframes ll-bubble-pop-poll-1 {
-    0%, 70%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-    73%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    84%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    87%      { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
-    100%     { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-  }
-  @keyframes ll-bubble-pop-poll-2 {
-    0%, 89%  { opacity: 0; transform: translate(-50%, 4px)  scale(0.94); }
-    91%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    98%      { opacity: 1; transform: translate(-50%, 0)    scale(1); }
-    100%     { opacity: 0; transform: translate(-50%, -3px) scale(0.88); }
-  }
-
-  @media (max-width: 520px) {
-    .ll-flow { flex-direction: column; gap: 6px; }
-    .ll-node { max-width: none; }
-    .ll-arrow { transform: rotate(90deg); align-self: center; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .ll-node, .ll-arrow, .ll-bubble, .arrow-dot, .ll-queue-dot { animation: none; }
-    .ll-bubble.bubble-1 { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    .ll-bubble.bubble-2 { opacity: 0; }
-    .ll-bubble.bubble-loc { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    .ll-bubble.bubble-poll-1 { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    .ll-bubble.bubble-poll-2 { opacity: 0; }
-    .arrow-dot { opacity: 0.55; left: 50%; margin-left: -4.5px; transform: none; }
-    .ll-queue-dot { opacity: 0.8; transform: scale(1); }
-  }
 
   footer {
     text-align: center;
@@ -2312,47 +1787,127 @@ type: website
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>Three paths to a bubble</h2>
     <p>Anything worth your attention arrives as a speech bubble above Axol — urgent ones pin open, the rest fade on their own. Three paths in: a loopback listener on your Mac, a signed cloud bridge for webhook-capable services, and keychain-backed polling for services that can't push.</p>
 
-    <!-- Local loopback — restores the 2-node ll-flow.local-flow animation
-         removed in 2c6152f: a local tool POSTs to the loopback port,
-         Axol pulses, one bubble pops. 5s cycle. All supporting CSS
-         (ll-local-source-pulse, ll-local-axol-pulse, arrow-loc-fwd,
-         ll-bubble-pop-loc) survived the simplification. -->
+    <!-- Local loopback — SVG circle-stage diagram matching
+         approval-flow and gill-sample-diagram's visual grammar. 2
+         stages (tool → axol), dot travels L→R, bubble pops above
+         axol. 8s cycle. -->
     <div class="product-block-wide">
       <div class="product-block-illo-wide">
-        <div class="ll-flow local-flow" aria-label="Local alert flow: a local tool posts to Axol's loopback port, a bubble pops above her">
-          <div class="ll-node">
-            <span class="ll-icon" aria-hidden="true">
-              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1.5 1.5v7a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.5-.5H2a.5.5 0 0 0-.5.5m1.854 1.646a.5.5 0 1 0-.708.708L4.293 8.5l-1.647 1.646a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2zM7 10.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5"/></svg>
-            </span>
-            <span class="ll-label">local tool</span>
-            <span class="ll-sub">curl · POST</span>
-          </div>
-          <span class="ll-arrow arrow-loc" aria-hidden="true">
-            <span class="arrow-dot"></span>
-          </span>
-          <div class="ll-node ll-axol">
-            <div class="ll-bubble bubble-loc">ci-bot · build passed</div>
-            <span class="ll-icon" aria-hidden="true">
-              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px;">
-                <defs>
-                  <radialGradient id="llBodyLoc" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" stop-color="#FFC9E2" />
-                    <stop offset="100%" stop-color="#FFA6CF" />
-                  </radialGradient>
-                </defs>
+        <style>
+          .lfd-wrap { margin: 14px auto 2px; max-width: 360px; }
+          .lfd-wrap svg { display: block; width: 100%; height: auto;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+          .lfd-track { fill: none; stroke: #D6457A; stroke-width: 1.5;
+            stroke-dasharray: 4 5; opacity: 0.55; }
+          .lfd-stage-bg { fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+            filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          .lfd-s-axol .lfd-stage-bg { stroke: #D6457A; stroke-width: 2; }
+          .lfd-label { text-anchor: middle; font-size: 12px; font-weight: 700;
+            fill: #2D2533; letter-spacing: -0.005em; }
+          .lfd-sublabel { text-anchor: middle; font-size: 10px; font-weight: 500;
+            fill: #6E5F6B; letter-spacing: 0.02em; }
+          .lfd-s-tool .lfd-stage-bg { animation: lfd-pulse-tool 8s ease-in-out infinite; }
+          .lfd-s-axol .lfd-stage-bg { animation: lfd-pulse-axol 8s ease-in-out infinite; }
+          @keyframes lfd-pulse-tool {
+            0%, 4%   { stroke: #D6457A; stroke-width: 2.4;
+              filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                      drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            9%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          }
+          @keyframes lfd-pulse-axol {
+            0%, 37%  { stroke: #D6457A; stroke-width: 2;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            40%, 45% { stroke: #D6457A; stroke-width: 2.8;
+              filter: drop-shadow(0 0 7px rgba(214, 69, 122, 0.6))
+                      drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            50%, 100% { stroke: #D6457A; stroke-width: 2;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          }
+          .lfd-dot { transform-box: fill-box; transform-origin: center; opacity: 0;
+            fill: #D6457A; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+            animation: lfd-dot 8s ease-in-out infinite; }
+          /* 100 → 260, distance 160 */
+          @keyframes lfd-dot {
+            0%, 8%   { transform: translateX(0);     opacity: 0; }
+            12%      { opacity: 1; }
+            35%      { transform: translateX(160px); opacity: 1; }
+            38%      { transform: translateX(160px); opacity: 0; }
+            100%     { transform: translateX(160px); opacity: 0; }
+          }
+          .lfd-bubble { opacity: 0; animation: lfd-bubble 8s ease-in-out infinite; }
+          @keyframes lfd-bubble {
+            0%, 42%  { opacity: 0; transform: translate(260px, 44px); }
+            46%      { opacity: 1; transform: translate(260px, 40px); }
+            88%      { opacity: 1; transform: translate(260px, 40px); }
+            92%      { opacity: 0; transform: translate(260px, 44px); }
+            100%     { opacity: 0; transform: translate(260px, 44px); }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .lfd-s-tool .lfd-stage-bg, .lfd-s-axol .lfd-stage-bg,
+            .lfd-dot, .lfd-bubble { animation: none !important; }
+            .lfd-bubble { opacity: 1; transform: translate(260px, 40px); }
+            .lfd-dot { opacity: 0; }
+          }
+        </style>
+        <div class="lfd-wrap" role="img" aria-label="Local alert flow: a local tool posts to Axol's loopback port, a bubble pops above her.">
+          <svg viewBox="0 -24 360 224" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="lfdArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+              </marker>
+            </defs>
+            <!-- Dashed track. -->
+            <path class="lfd-track" d="M 136 100 L 224 100" marker-end="url(#lfdArrowHead)" />
+            <!-- Traveling dot — starts hidden at tool center, travels to axol center. -->
+            <circle class="lfd-dot" cx="100" cy="100" r="5" />
+            <!-- Stage 1: local tool (terminal icon). -->
+            <g class="lfd-stage lfd-s-tool" transform="translate(100,100)">
+              <circle class="lfd-stage-bg" r="32" />
+              <g transform="translate(-10,-10)" fill="#D6457A" aria-hidden="true">
+                <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1.5 1.5v7a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.5-.5H2a.5.5 0 0 0-.5.5m1.854 1.646a.5.5 0 1 0-.708.708L4.293 8.5l-1.647 1.646a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2zM7 10.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5"/>
+              </g>
+              <text class="lfd-label" dy="52">local tool</text>
+              <text class="lfd-sublabel" dy="65">curl · POST</text>
+            </g>
+            <!-- Stage 2: axol. -->
+            <g class="lfd-stage lfd-s-axol" transform="translate(260,100)">
+              <circle class="lfd-stage-bg" r="32" />
+              <g transform="translate(-20,-20) scale(0.182)" aria-hidden="true">
                 <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
                 <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+                <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
                 <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
                 <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
-                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
-                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
-                <circle cx="132" cy="105" r="7" fill="#2D2533" />
-                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
-              </svg>
-            </span>
-            <span class="ll-label">axol</span>
-            <span class="ll-sub">loopback :47329</span>
-          </div>
+                <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+                <ellipse cx="110" cy="114" rx="74" ry="62" fill="#F29BC5" />
+                <ellipse cx="110" cy="135" rx="40" ry="22" fill="#F0B5D3" />
+                <circle cx="86"  cy="104" r="8" fill="#2D2533" />
+                <circle cx="134" cy="104" r="8" fill="#2D2533" />
+                <circle cx="88"  cy="101" r="2.4" fill="#FFFFFF" />
+                <circle cx="136" cy="101" r="2.4" fill="#FFFFFF" />
+                <circle cx="72"  cy="122" r="7" fill="#FF7AA3" opacity="0.45" />
+                <circle cx="148" cy="122" r="7" fill="#FF7AA3" opacity="0.45" />
+                <path d="M 98 132 Q 110 142 122 132" stroke="#7A2D4D" stroke-width="3" fill="none" stroke-linecap="round" />
+              </g>
+              <text class="lfd-label" dy="52">axol</text>
+              <text class="lfd-sublabel" dy="65">loopback :47329</text>
+            </g>
+            <!-- Bubble above axol. -->
+            <g class="lfd-bubble">
+              <rect x="-58" y="-56" width="116" height="48" rx="10"
+                    fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5"
+                    filter="drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10))" />
+              <path d="M -6 -8 L 0 0 L 6 -8 Z"
+                    fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5" />
+              <circle cx="-40" cy="-32" r="6.5" fill="#2E8B57" />
+              <path d="M -44 -32 L -41 -29 L -36 -35" stroke="#FFFFFF" stroke-width="1.7"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <text x="-26" y="-35" font-size="10" font-weight="700" fill="#2D2533">ci-bot</text>
+              <text x="-26" y="-22" font-size="9" fill="#6E5F6B">build passed</text>
+            </g>
+          </svg>
         </div>
       </div>
       <div class="product-block-body">
@@ -2364,81 +1919,188 @@ type: website
       </div>
     </div>
 
-    <!-- Webhook intake — restores the original 4-node ll-flow animation
-         removed in 2c6152f: webhook → neuromast (queue) → lateral-line
-         (queue) → axol, with a 10s master cycle that sends two
-         notifications through the pipeline and pops two bubbles above
-         Axol in sequence. All the supporting CSS + glyph sprites
-         survived the simplification, so restoring the markup is enough. -->
+    <!-- Webhook — SVG circle-stage diagram: 4 stages (webhook →
+         neuromast → lateral-line → axol), a single forward dot
+         travels through, bubble pops above axol. 8s cycle. -->
     <div class="product-block-wide">
       <div class="product-block-illo-wide">
-        <div class="ll-flow remote-flow" aria-label="Webhook flow: signed POST to neuromast, lateral-line fetches, Axol pops bubbles">
-          <div class="ll-node">
-            <span class="ll-icon" aria-hidden="true">
-              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
-            </span>
-            <span class="ll-label">webhook</span>
-            <span class="ll-sub">signed POST</span>
-          </div>
-          <span class="ll-arrow arrow-1" aria-hidden="true">
-            <span class="arrow-dot dot-1"></span>
-            <span class="arrow-dot dot-2"></span>
-          </span>
-          <div class="ll-node">
-            <span class="ll-queue" aria-hidden="true">
-              <span class="ll-queue-dot"></span>
-              <span class="ll-queue-dot"></span>
-            </span>
-            <span class="ll-icon" aria-hidden="true">
-              <svg><use href="#glyph-neuromast"/></svg>
-            </span>
-            <span class="ll-label">neuromast</span>
-            <span class="ll-sub">signed intake</span>
-          </div>
-          <span class="ll-arrow arrow-2" aria-hidden="true">
-            <span class="arrow-dot fetch"></span>
-            <span class="arrow-dot response response-1"></span>
-            <span class="arrow-dot response response-2"></span>
-          </span>
-          <div class="ll-node">
-            <span class="ll-queue" aria-hidden="true">
-              <span class="ll-queue-dot"></span>
-              <span class="ll-queue-dot"></span>
-            </span>
-            <span class="ll-icon" aria-hidden="true">
-              <svg><use href="#glyph-lateral-line"/></svg>
-            </span>
-            <span class="ll-label">lateral line</span>
-            <span class="ll-sub">local forwarder</span>
-          </div>
-          <span class="ll-arrow arrow-3" aria-hidden="true">
-            <span class="arrow-dot dot-1"></span>
-            <span class="arrow-dot dot-2"></span>
-          </span>
-          <div class="ll-node ll-axol">
-            <div class="ll-bubble bubble-1">main · CI passed</div>
-            <div class="ll-bubble bubble-2">feat/nav · review</div>
-            <span class="ll-icon" aria-hidden="true">
-              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px;">
-                <defs>
-                  <radialGradient id="llBody" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" stop-color="#FFC9E2" />
-                    <stop offset="100%" stop-color="#FFA6CF" />
-                  </radialGradient>
-                </defs>
+        <style>
+          .wfd-wrap { margin: 14px auto 2px; max-width: 620px; }
+          .wfd-wrap svg { display: block; width: 100%; height: auto;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+          .wfd-track { fill: none; stroke: #D6457A; stroke-width: 1.5;
+            stroke-dasharray: 4 5; opacity: 0.55; }
+          .wfd-stage-bg { fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+            filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          .wfd-s-axol .wfd-stage-bg { stroke: #D6457A; stroke-width: 2; }
+          .wfd-label { text-anchor: middle; font-size: 12px; font-weight: 700;
+            fill: #2D2533; letter-spacing: -0.005em; }
+          .wfd-sublabel { text-anchor: middle; font-size: 10px; font-weight: 500;
+            fill: #6E5F6B; letter-spacing: 0.02em; }
+          .wfd-s-webhook   .wfd-stage-bg { animation: wfd-pulse-webhook   8s ease-in-out infinite; }
+          .wfd-s-neuromast .wfd-stage-bg { animation: wfd-pulse-neuromast 8s ease-in-out infinite; }
+          .wfd-s-lateral   .wfd-stage-bg { animation: wfd-pulse-lateral   8s ease-in-out infinite; }
+          .wfd-s-axol      .wfd-stage-bg { animation: wfd-pulse-axol      8s ease-in-out infinite; }
+          @keyframes wfd-pulse-webhook {
+            0%, 4%   { stroke: #D6457A; stroke-width: 2.4;
+              filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                      drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            8%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          }
+          @keyframes wfd-pulse-neuromast {
+            0%, 22%   { stroke: #FFC9E2; stroke-width: 1.5;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            24%, 28%  { stroke: #D6457A; stroke-width: 2.4;
+              filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                      drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            32%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          }
+          @keyframes wfd-pulse-lateral {
+            0%, 42%   { stroke: #FFC9E2; stroke-width: 1.5;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            44%, 48%  { stroke: #D6457A; stroke-width: 2.4;
+              filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                      drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            52%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          }
+          @keyframes wfd-pulse-axol {
+            0%, 62%  { stroke: #D6457A; stroke-width: 2;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            65%, 70% { stroke: #D6457A; stroke-width: 2.8;
+              filter: drop-shadow(0 0 7px rgba(214, 69, 122, 0.6))
+                      drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+            74%, 100% { stroke: #D6457A; stroke-width: 2;
+              filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+          }
+          /* A single dot rides each 140-unit hop; hops are staggered so
+             the dot "moves through" one stage at a time. */
+          .wfd-dot-1 { transform-box: fill-box; transform-origin: center; opacity: 0;
+            fill: #D6457A; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+            animation: wfd-dot-1 8s ease-in-out infinite; }
+          .wfd-dot-2 { transform-box: fill-box; transform-origin: center; opacity: 0;
+            fill: #D6457A; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+            animation: wfd-dot-2 8s ease-in-out infinite; }
+          .wfd-dot-3 { transform-box: fill-box; transform-origin: center; opacity: 0;
+            fill: #D6457A; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+            animation: wfd-dot-3 8s ease-in-out infinite; }
+          @keyframes wfd-dot-1 {
+            0%, 4%   { transform: translateX(0);     opacity: 0; }
+            8%       { opacity: 1; }
+            22%      { transform: translateX(140px); opacity: 1; }
+            25%      { transform: translateX(140px); opacity: 0; }
+            100%     { transform: translateX(140px); opacity: 0; }
+          }
+          @keyframes wfd-dot-2 {
+            0%, 25%  { transform: translateX(0);     opacity: 0; }
+            29%      { opacity: 1; }
+            42%      { transform: translateX(140px); opacity: 1; }
+            45%      { transform: translateX(140px); opacity: 0; }
+            100%     { transform: translateX(140px); opacity: 0; }
+          }
+          @keyframes wfd-dot-3 {
+            0%, 45%  { transform: translateX(0);     opacity: 0; }
+            49%      { opacity: 1; }
+            62%      { transform: translateX(140px); opacity: 1; }
+            65%      { transform: translateX(140px); opacity: 0; }
+            100%     { transform: translateX(140px); opacity: 0; }
+          }
+          .wfd-bubble { opacity: 0; animation: wfd-bubble 8s ease-in-out infinite; }
+          @keyframes wfd-bubble {
+            0%, 64%  { opacity: 0; transform: translate(490px, 44px); }
+            68%      { opacity: 1; transform: translate(490px, 40px); }
+            92%      { opacity: 1; transform: translate(490px, 40px); }
+            96%      { opacity: 0; transform: translate(490px, 44px); }
+            100%     { opacity: 0; transform: translate(490px, 44px); }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .wfd-s-webhook .wfd-stage-bg, .wfd-s-neuromast .wfd-stage-bg,
+            .wfd-s-lateral .wfd-stage-bg, .wfd-s-axol .wfd-stage-bg,
+            .wfd-dot-1, .wfd-dot-2, .wfd-dot-3, .wfd-bubble { animation: none !important; }
+            .wfd-bubble { opacity: 1; transform: translate(490px, 40px); }
+            .wfd-dot-1, .wfd-dot-2, .wfd-dot-3 { opacity: 0; }
+          }
+        </style>
+        <div class="wfd-wrap" role="img" aria-label="Webhook flow: signed POST to neuromast, lateral-line forwards locally, bubble pops above Axol.">
+          <svg viewBox="0 -24 620 224" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="wfdArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+              </marker>
+            </defs>
+            <!-- Three forward tracks. -->
+            <path class="wfd-track" d="M 106 100 L 174 100" marker-end="url(#wfdArrowHead)" />
+            <path class="wfd-track" d="M 246 100 L 314 100" marker-end="url(#wfdArrowHead)" />
+            <path class="wfd-track" d="M 386 100 L 454 100" marker-end="url(#wfdArrowHead)" />
+            <!-- One dot per hop, staggered. -->
+            <circle class="wfd-dot-1" cx="70"  cy="100" r="5" />
+            <circle class="wfd-dot-2" cx="210" cy="100" r="5" />
+            <circle class="wfd-dot-3" cx="350" cy="100" r="5" />
+            <!-- Stage 1: webhook (GitHub mark). -->
+            <g class="wfd-stage wfd-s-webhook" transform="translate(70,100)">
+              <circle class="wfd-stage-bg" r="32" />
+              <g transform="translate(-10,-10)" fill="#D6457A" aria-hidden="true">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+              </g>
+              <text class="wfd-label" dy="52">webhook</text>
+              <text class="wfd-sublabel" dy="65">signed POST</text>
+            </g>
+            <!-- Stage 2: neuromast. -->
+            <g class="wfd-stage wfd-s-neuromast" transform="translate(210,100)">
+              <circle class="wfd-stage-bg" r="32" />
+              <svg x="-12" y="-12" width="24" height="24" color="#D6457A" overflow="visible">
+                <use href="#glyph-neuromast" />
+              </svg>
+              <text class="wfd-label" dy="52">neuromast</text>
+              <text class="wfd-sublabel" dy="65">signed intake</text>
+            </g>
+            <!-- Stage 3: lateral-line. -->
+            <g class="wfd-stage wfd-s-lateral" transform="translate(350,100)">
+              <circle class="wfd-stage-bg" r="32" />
+              <svg x="-12" y="-12" width="24" height="24" color="#D6457A" overflow="visible">
+                <use href="#glyph-lateral-line" />
+              </svg>
+              <text class="wfd-label" dy="52">lateral line</text>
+              <text class="wfd-sublabel" dy="65">local forwarder</text>
+            </g>
+            <!-- Stage 4: axol. -->
+            <g class="wfd-stage wfd-s-axol" transform="translate(490,100)">
+              <circle class="wfd-stage-bg" r="32" />
+              <g transform="translate(-20,-20) scale(0.182)" aria-hidden="true">
                 <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
                 <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+                <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
                 <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
                 <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
-                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
-                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
-                <circle cx="132" cy="105" r="7" fill="#2D2533" />
-                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
-              </svg>
-            </span>
-            <span class="ll-label">axol</span>
-            <span class="ll-sub">speech bubble</span>
-          </div>
+                <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+                <ellipse cx="110" cy="114" rx="74" ry="62" fill="#F29BC5" />
+                <ellipse cx="110" cy="135" rx="40" ry="22" fill="#F0B5D3" />
+                <circle cx="86"  cy="104" r="8" fill="#2D2533" />
+                <circle cx="134" cy="104" r="8" fill="#2D2533" />
+                <circle cx="88"  cy="101" r="2.4" fill="#FFFFFF" />
+                <circle cx="136" cy="101" r="2.4" fill="#FFFFFF" />
+                <circle cx="72"  cy="122" r="7" fill="#FF7AA3" opacity="0.45" />
+                <circle cx="148" cy="122" r="7" fill="#FF7AA3" opacity="0.45" />
+                <path d="M 98 132 Q 110 142 122 132" stroke="#7A2D4D" stroke-width="3" fill="none" stroke-linecap="round" />
+              </g>
+              <text class="wfd-label" dy="52">axol</text>
+              <text class="wfd-sublabel" dy="65">speech bubble</text>
+            </g>
+            <!-- Bubble above axol — delivered after dot-3 arrives. -->
+            <g class="wfd-bubble">
+              <rect x="-58" y="-56" width="116" height="48" rx="10"
+                    fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5"
+                    filter="drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10))" />
+              <path d="M -6 -8 L 0 0 L 6 -8 Z"
+                    fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.5" />
+              <circle cx="-42" cy="-32" r="6.5" fill="#24292E" />
+              <text x="-26" y="-35" font-size="10" font-weight="700" fill="#2D2533">main</text>
+              <text x="-26" y="-22" font-size="9" fill="#6E5F6B">CI passed</text>
+            </g>
+          </svg>
         </div>
       </div>
       <div class="product-block-body">
@@ -2450,63 +2112,11 @@ type: website
       </div>
     </div>
 
-    <!-- Polling — 3-node ll-flow matching Local and Webhook:
-         github (upstream, polled) ← fetch / response → gill (local poller
-         with keychain-PAT queue dots) → axol. 6s master cycle. -->
+    <!-- Polling — reuses gill-sample-diagram partial (already in the
+         circle-stage visual vocabulary shared with approval-flow). -->
     <div class="product-block-wide">
       <div class="product-block-illo-wide">
-        <div class="ll-flow poll-flow" aria-label="Polling flow: gill reads keychain PAT, queries upstream, forwards new items to Axol">
-          <div class="ll-node">
-            <span class="ll-icon" aria-hidden="true">
-              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
-            </span>
-            <span class="ll-label">github</span>
-            <span class="ll-sub">/notifications</span>
-          </div>
-          <span class="ll-arrow arrow-1" aria-hidden="true">
-            <span class="arrow-dot fetch"></span>
-            <span class="arrow-dot response"></span>
-          </span>
-          <div class="ll-node">
-            <span class="ll-queue" aria-hidden="true">
-              <span class="ll-queue-dot"></span>
-              <span class="ll-queue-dot"></span>
-            </span>
-            <span class="ll-icon" aria-hidden="true">
-              <svg><use href="#icon-gills"/></svg>
-            </span>
-            <span class="ll-label">gill</span>
-            <span class="ll-sub">keychain PAT</span>
-          </div>
-          <span class="ll-arrow arrow-2" aria-hidden="true">
-            <span class="arrow-dot forward forward-1"></span>
-            <span class="arrow-dot forward forward-2"></span>
-          </span>
-          <div class="ll-node ll-axol">
-            <div class="ll-bubble bubble-poll bubble-poll-1">github · @mention</div>
-            <div class="ll-bubble bubble-poll bubble-poll-2">github · review req</div>
-            <span class="ll-icon" aria-hidden="true">
-              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px;">
-                <defs>
-                  <radialGradient id="llBodyPoll" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" stop-color="#FFC9E2" />
-                    <stop offset="100%" stop-color="#FFA6CF" />
-                  </radialGradient>
-                </defs>
-                <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
-                <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
-                <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
-                <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
-                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
-                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
-                <circle cx="132" cy="105" r="7" fill="#2D2533" />
-                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
-              </svg>
-            </span>
-            <span class="ll-label">axol</span>
-            <span class="ll-sub">loopback :47329</span>
-          </div>
-        </div>
+        {% include gill-sample-diagram.html %}
       </div>
       <div class="product-block-body">
         <h3>Polling</h3>
