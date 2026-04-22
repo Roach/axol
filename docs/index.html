@@ -1112,26 +1112,6 @@ type: website
     50%      { transform: rotate(3deg);  }
   }
 
-  /* Claude section: soft pulse on the Allow button + a subtle bob on
-     the whole permission bubble so it feels "alive" in waiting state. */
-  .claude-btn-allow {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: claude-allow-pulse 2.6s ease-in-out infinite;
-  }
-  @keyframes claude-allow-pulse {
-    0%, 100% { filter: drop-shadow(0 0 0 rgba(46, 139, 87, 0)); }
-    50%      { filter: drop-shadow(0 0 6px rgba(46, 139, 87, 0.55)); }
-  }
-  .claude-bub {
-    transform-origin: 213px 110px;
-    transform-box: view-box;
-    animation: claude-bub-bob 3.6s ease-in-out infinite;
-  }
-  @keyframes claude-bub-bob {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-3px); }
-  }
 
   /* Remote-alerts illustration: pulse rings around the neuromast + a
      dot traveling from the upstream tile, through the intake, into the
@@ -1172,7 +1152,6 @@ type: website
 
   @media (prefers-reduced-motion: reduce) {
     .neuro-ring, .neuro-ring-2, .neuro-ring-3, .gill-plume-sway,
-    .claude-btn-allow, .claude-bub,
     .alerts-remote-ring, .alerts-remote-ring-2, .alerts-remote-ring-3,
     .alerts-remote-dot, .alerts-remote-bub {
       animation: none !important;
@@ -2221,51 +2200,19 @@ type: website
 
   <section id="claude">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-claude"/></svg></span>claude code</h2>
-    <p>Two drop-in hook scripts turn Claude Code's in-terminal permission prompts into tappable bubbles above Axol — no more alt-tabbing back to grant access every few minutes.</p>
+    <p>Axol handles Claude Code's permission prompts — from the terminal in front of you, from a GitHub Actions run, or from a Slack slash command. Wherever Claude needs a human to say <b>Allow</b> or <b>Deny</b>, the question pops above her and your tap flows back to the caller.</p>
 
-    <div class="product-block">
-      <div class="product-block-illo" aria-hidden="true">
-        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <filter id="claudeBubShadow" x="-10%" y="-10%" width="120%" height="140%">
-              <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#C8508C" flood-opacity="0.18"/>
-            </filter>
-          </defs>
-          <!-- Terminal window in the background, showing CC running -->
-          <g>
-            <rect x="14" y="20" width="140" height="92" rx="8" fill="#1E1A26" stroke="#2D2533" stroke-width="1"/>
-            <circle cx="24" cy="30" r="2.2" fill="#FF5F56"/>
-            <circle cx="32" cy="30" r="2.2" fill="#FFBD2E"/>
-            <circle cx="40" cy="30" r="2.2" fill="#27C93F"/>
-            <text x="22" y="52" font-size="8" font-family="monospace" fill="#6E5F6B">$ claude code</text>
-            <text x="22" y="66" font-size="8" font-family="monospace" fill="#A795B5">&gt; edit src/lib/hmac.ts</text>
-            <text x="22" y="82" font-size="8" font-family="monospace" fill="#E08A2E">⚠ needs permission</text>
-            <text x="22" y="100" font-size="8" font-family="monospace" fill="#6E5F6B" opacity="0.6">waiting...</text>
-          </g>
-          <!-- Connector line: terminal to axol bubble tail-tip -->
-          <path class="claude-connector" d="M 154 72 Q 164 100 166 134"
-                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-dasharray="4 5" opacity="0.7"/>
-          <!-- Axol permission bubble: single tail on the left side
-               points back at the terminal so the whole thing reads as
-               "bubble emerging from CC's prompt". -->
-          <g class="claude-bub">
-            <path d="M 180 58 H 246 A 10 10 0 0 1 256 68 V 150 A 10 10 0 0 1 246 160 L 180 160 A 10 10 0 0 1 170 150 V 140 L 164 134 L 170 128 V 68 A 10 10 0 0 1 180 58 Z"
-                  fill="#FFFFFF" stroke="#D6457A" stroke-width="1.6" filter="url(#claudeBubShadow)"/>
-            <text x="213" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#2D2533">Claude</text>
-            <text x="213" y="96" text-anchor="middle" font-size="9" fill="#6E5F6B">edit hmac.ts?</text>
-            <rect class="claude-btn-allow" x="180" y="108" width="30" height="18" rx="4" fill="#2E8B57"/>
-            <text x="195" y="120" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">Allow</text>
-            <rect x="216" y="108" width="30" height="18" rx="4" fill="#FFFFFF" stroke="#6E5F6B" stroke-width="1.2"/>
-            <text x="231" y="120" text-anchor="middle" font-size="9" font-weight="700" fill="#6E5F6B">Deny</text>
-            <text x="213" y="146" text-anchor="middle" font-size="8" fill="#A795B5" font-style="italic">tap to answer</text>
-          </g>
-        </svg>
+    <div class="product-block-wide">
+      <div class="product-block-illo-wide">
+        {% include approval-flow.html %}
       </div>
       <div class="product-block-body">
         <h3>Permission prompts, without context-switching</h3>
-        <p>The <code>PreToolUse</code> hook forwards CC's ask into an Axol bubble; tapping <b>Allow</b> or <b>Deny</b> replies for you and dismisses it. A paired <code>Stop</code> hook posts a git-aware summary when CC finishes a turn — the file it touched, the branch it's on, whether tests still pass.</p>
+        <p>Locally, a <code>PreToolUse</code> hook intercepts CC's in-terminal ask, forwards it through the loopback listener, and Axol renders a tappable <b>Allow</b>/<b>Deny</b>. A paired <code>Stop</code> hook posts a git-aware summary when CC finishes a turn — the file it touched, the branch it's on, whether tests still pass.</p>
+        <p>Remote callers share the same bubble. Your CI job <code>POST</code>s to <code>/app/api/permission/github-actions</code>, the neuromast queues it, lateral-line pulls it to your Mac, Axol rings. You tap, and the decision travels back — either inline if the caller held the connection open, or via <code>GET /app/api/decision/{id}</code> if not.</p>
         <div class="product-block-ctas">
-          <a class="product-block-cta" href="https://github.com/Roach/axol#claude-code-integration">Hook setup →</a>
+          <a class="product-block-cta" href="https://github.com/Roach/axol#claude-code-integration">Local hook setup →</a>
+          <a class="product-block-cta" href="remote-alerts.html#approval-flow">Remote approvals →</a>
         </div>
       </div>
     </div>
