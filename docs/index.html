@@ -566,7 +566,7 @@ type: website
   .tagline {
     font-size: 18px;
     color: rgba(31, 58, 86, 0.75);
-    margin: 0 auto 12px;
+    margin: 0 auto 24px;
     max-width: 460px;
   }
 
@@ -578,7 +578,7 @@ type: website
     gap: 12px;
     justify-content: center;
     align-items: center;
-    margin: 0 auto 14px;
+    margin: 0 auto 26px;
     flex-wrap: wrap;
   }
   .hero-cta-primary {
@@ -997,6 +997,15 @@ type: website
   .product-block-wide:first-of-type {
     border-top: none;
     padding-top: 4px;
+  }
+  /* Per-block override: illustration on TOP, body below. Used on the
+     Claude Code section so the approval-flow animation is the first
+     thing the reader sees after the section intro. */
+  .product-block-wide--illo-top {
+    flex-direction: column;
+  }
+  .product-block-wide--illo-top .product-block-illo-wide {
+    margin: 0 0 14px;
   }
   .product-block-illo-wide {
     margin: 10px 0 0;
@@ -2053,7 +2062,7 @@ type: website
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-claude"/></svg></span>Claude Code, answered</h2>
     <p>Axol handles Claude Code's permission prompts — from the terminal in front of you, from a GitHub Actions run, or from a Slack slash command. Wherever Claude needs a human to say <b>Allow</b> or <b>Deny</b>, the question pops above her and your tap flows back to the caller.</p>
 
-    <div class="product-block-wide">
+    <div class="product-block-wide product-block-wide--illo-top">
       <div class="product-block-illo-wide">
         {% include approval-flow.html %}
       </div>
