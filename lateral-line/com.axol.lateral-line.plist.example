@@ -18,7 +18,7 @@
     <true/>
 
     <key>StartInterval</key>
-    <integer>15</integer>
+    <integer>60</integer>
 
     <key>EnvironmentVariables</key>
     <dict>

@@ -1849,7 +1849,7 @@ cd axol/axol
 
   <section id="remote">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-remote"/></svg></span>remote alerts <span class="pill">optional</span></h2>
-    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she picks up alerts through a two-part bridge: a signed webhook endpoint in the cloud (the <b>neuromast</b>) and a local 60-line bash forwarder (the <b>lateral line</b>) that drains its queue into the loopback port every 15 seconds.</p>
+    <p>Axol's receiver is loopback-only. For services that live on the wider internet — GitHub, Stripe, Sentry — she picks up alerts through a two-part bridge: a signed webhook endpoint in the cloud (the <b>neuromast</b>) and a local 60-line bash forwarder (the <b>lateral line</b>) that drains its queue into the loopback port every minute.</p>
 
     <div class="ll-flow remote-flow" aria-label="Lateral-line data flow">
       <div class="ll-node">
@@ -1932,7 +1932,7 @@ cd axol/axol
         <span class="gloss-icon" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>
         <div class="gloss-body">
           <b>lateral line</b>
-          <span>The local half. A bash script on your Mac that polls the neuromast every 15 seconds and posts each queued body into Axol's loopback port. Named after the nerve running along a fish's flank that wires those sensors back to her brain.</span>
+          <span>The local half. A bash script on your Mac that polls the neuromast every minute and posts each queued body into Axol's loopback port. Named after the nerve running along a fish's flank that wires those sensors back to her brain.</span>
         </div>
       </div>
     </div>

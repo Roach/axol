@@ -1,6 +1,6 @@
 # lateral-line — local forwarder
 
-A ~50-line bash script that pulls queued webhooks from `neuromast/` and POSTs each one into Axol's loopback receiver (`127.0.0.1:47329`). Runs every 15 seconds via `launchd`.
+A ~50-line bash script that pulls queued webhooks from `neuromast/` and POSTs each one into Axol's loopback receiver (`127.0.0.1:47329`). Runs every minute via `launchd`.
 
 Named after the lateral line nerve — the pathway that carries signals from a fish's neuromasts back to the brain.
 

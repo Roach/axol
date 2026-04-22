@@ -8,7 +8,7 @@
       "body":     "{{workflow_run.name | default 'CI'}} passed",
       "priority": "normal",
       "source":   "github-actions",
-      "icon":     "success",
+      "icon":     "github",
       "actions":  [
         { "type": "open-url", "url": "{{workflow_run.html_url}}", "label": "View run" }
       ]
@@ -18,7 +18,7 @@
       "body":     "{{workflow_run.name | default 'CI'}} failed",
       "priority": "urgent",
       "source":   "github-actions",
-      "icon":     "error",
+      "icon":     "github",
       "actions":  [
         { "type": "open-url", "url": "{{workflow_run.html_url}}", "label": "View run" }
       ]

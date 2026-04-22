@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lateral-line — pull queued webhooks from neuromast and forward each one
 # to the local Axol receiver. Intended to run on launchd with
-# StartInterval: 15. One pass per invocation; failures are no-ops so the
+# StartInterval: 60. One pass per invocation; failures are no-ops so the
 # next tick retries.
 #
 # Required env:

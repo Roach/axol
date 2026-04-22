@@ -517,7 +517,7 @@ type: article
 <pre><code><span class="tok-cmd">curl</span> <span class="tok-flag">-X</span> POST <span class="tok-str">"$AXOL_CLOUD_URL/app/api/hooks/demo?key=$SHARED_SECRET"</span> \
   <span class="tok-flag">-H</span> <span class="tok-str">'content-type: application/json'</span> \
   <span class="tok-flag">-d</span> <span class="tok-str">'{"title":"remote alert","body":"delivered by the lateral line"}'</span></code></pre>
-        <p>Within 15 seconds a speech bubble pops on your screen. <code>tail -f ~/Library/Logs/Axol/lateral-line.log</code> shows the pull → forward → ack cycle.</p>
+        <p>Within a minute a speech bubble pops on your screen. <code>tail -f ~/Library/Logs/Axol/lateral-line.log</code> shows the pull → forward → ack cycle.</p>
       </li>
     </ol>
   </section>

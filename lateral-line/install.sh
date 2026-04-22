@@ -67,7 +67,7 @@ cat >"$PLIST" <<PLIST_EOF
     <key>RunAtLoad</key>
     <true/>
     <key>StartInterval</key>
-    <integer>15</integer>
+    <integer>60</integer>
     <key>EnvironmentVariables</key>
     <dict>
       <key>AXOL_CLOUD_URL</key>

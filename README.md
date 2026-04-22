@@ -208,7 +208,7 @@ curl -X POST "$AXOL_CLOUD_URL/app/api/hooks/test?key=$SHARED_SECRET" \
      -d '{"title":"hello","body":"from the cloud"}'
 ```
 
-Within 15 seconds a bubble should pop. Overview: [remote-alerts docs page](https://roach.github.io/axol/remote-alerts.html). Details: [`neuromast/README.md`](./neuromast/README.md), [`lateral-line/README.md`](./lateral-line/README.md).
+Within a minute a bubble should pop. Overview: [remote-alerts docs page](https://roach.github.io/axol/remote-alerts.html). Details: [`neuromast/README.md`](./neuromast/README.md), [`lateral-line/README.md`](./lateral-line/README.md).
 
 ## Claude Code integration
 

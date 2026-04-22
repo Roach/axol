@@ -1081,7 +1081,7 @@ type: article
           <h3>lateral line</h3>
         </div>
         <p><b>In fish:</b> the nerve pathway running along the flank, wiring every neuromast back to the brain — the channel that carries signals home.</p>
-        <p><b>In Axol:</b> a 60-line bash script on your Mac, run by <code>launchd</code> every 15 seconds. Pulls each neuromast's queue with a bearer token, POSTs the bodies to <code>127.0.0.1:47329</code>, acks on success. Cursor lives at <code>~/Library/Application Support/Axol/lateral-line.cursor</code>.</p>
+        <p><b>In Axol:</b> a 60-line bash script on your Mac, run by <code>launchd</code> every minute. Pulls each neuromast's queue with a bearer token, POSTs the bodies to <code>127.0.0.1:47329</code>, acks on success. Cursor lives at <code>~/Library/Application Support/Axol/lateral-line.cursor</code>.</p>
         <p><b>Guarantees:</b> at-least-once. Items stay queued if Axol's offline; a crashed ack causes at most one duplicate bubble. No cloud redeploy needed when adding sources — Axol's local adapter system handles translation.</p>
       </div>
     </div>
@@ -1113,7 +1113,7 @@ type: article
       </div>
       <div class="flow-step">
         <b><span class="glyph" aria-hidden="true"><svg><use href="#glyph-lateral-line"/></svg></span>lateral-line</b>
-        <div class="desc">A 60-line bash script run by <code>launchd</code> every 15 seconds. Fetches each neuromast's queue with a bearer token, POSTs each body unchanged to <code>127.0.0.1:47329</code>, acks on success. At-least-once: if Axol is offline, items stay queued until she's back.</div>
+        <div class="desc">A 60-line bash script run by <code>launchd</code> every minute. Fetches each neuromast's queue with a bearer token, POSTs each body unchanged to <code>127.0.0.1:47329</code>, acks on success. At-least-once: if Axol is offline, items stay queued until she's back.</div>
       </div>
       <div class="flow-arrow arrow-3" aria-hidden="true"><span class="arrow-dot"></span></div>
       <div class="flow-step">
