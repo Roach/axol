@@ -1218,57 +1218,14 @@ type: website
   }
 
 
-  /* Remote-alerts illustration: pulse rings around the neuromast + a
-     dot traveling from the upstream tile, through the intake, into the
-     delivered bubble. */
-  .alerts-remote-ring {
-    transform-origin: 130px 96px;
-    transform-box: view-box;
-    animation: alerts-remote-ring 2.8s ease-out infinite;
-    opacity: 0.85;
-  }
-  .alerts-remote-ring-2 { animation-delay: -0.93s; }
-  .alerts-remote-ring-3 { animation-delay: -1.87s; }
-  @keyframes alerts-remote-ring {
-    0%   { transform: scale(0.45); opacity: 0.85; }
-    100% { transform: scale(1.3);  opacity: 0;    }
-  }
-  .alerts-remote-dot {
-    animation: alerts-remote-dot 3.2s ease-in-out infinite;
-  }
-  @keyframes alerts-remote-dot {
-    0%   { transform: translateX(0);    opacity: 0; }
-    10%  { opacity: 1; }
-    45%  { transform: translateX(56px); opacity: 1; }
-    55%  { transform: translateX(56px); opacity: 1; }
-    88%  { transform: translateX(126px); opacity: 1; }
-    100% { transform: translateX(126px); opacity: 0; }
-  }
-  .alerts-remote-bub {
-    transform-origin: 218px 96px;
-    transform-box: view-box;
-    animation: alerts-remote-bub 3.2s ease-in-out infinite;
-  }
-  @keyframes alerts-remote-bub {
-    0%, 60% { transform: scale(1); }
-    70%     { transform: scale(1.05); }
-    100%    { transform: scale(1); }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .neuro-ring, .neuro-ring-2, .neuro-ring-3, .gill-plume-sway,
-    .alerts-remote-ring, .alerts-remote-ring-2, .alerts-remote-ring-3,
-    .alerts-remote-dot, .alerts-remote-bub {
+    .neuro-ring, .neuro-ring-2, .neuro-ring-3, .gill-plume-sway {
       animation: none !important;
     }
     .neuro-ring  { transform: scale(1.5); opacity: 0; }
     .neuro-ring-2 { transform: scale(1.1); opacity: 0.25; }
     .neuro-ring-3 { transform: scale(0.75); opacity: 0.6; }
     .gill-plume-sway { transform: rotate(0deg); }
-    .alerts-remote-ring  { transform: scale(1.3); opacity: 0; }
-    .alerts-remote-ring-2 { transform: scale(1); opacity: 0.35; }
-    .alerts-remote-ring-3 { transform: scale(0.7); opacity: 0.7; }
-    .alerts-remote-dot { opacity: 0; }
   }
   .feature-card:hover .feature-card-cta {
     text-decoration: underline;
@@ -2231,54 +2188,82 @@ type: website
       </div>
     </div>
 
-    <!-- Webhook intake -->
-    <div class="product-block">
-      <div class="product-block-illo" aria-hidden="true">
-        <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <filter id="alertRemoteShadow" x="-10%" y="-10%" width="120%" height="140%">
-              <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#C8508C" flood-opacity="0.18"/>
-            </filter>
-            <marker id="alertRemoteArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A"/>
-            </marker>
-          </defs>
-          <!-- Upstream service tile (webhook source) -->
-          <g>
-            <rect x="14" y="74" width="56" height="44" rx="8" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.4"/>
-            <circle cx="42" cy="90" r="7" fill="#24292E"/>
-            <path d="M 42 85 C 39.5 85 38 86.8 38 89.2 C 38 91.1 39.1 92.6 40.7 93.1 C 40.9 93.1 40.9 93 40.9 92.9 L 40.9 92.1 C 39.6 92.3 39.3 91.6 39.3 91.6 C 39.1 91.1 38.8 91 38.8 91 C 38.4 90.7 38.9 90.7 38.9 90.7 C 39.3 90.7 39.5 91.1 39.5 91.1 C 39.9 91.8 40.5 91.6 40.9 91.5 C 40.9 91.2 41.1 91 41.2 90.9 C 40.1 90.8 39 90.4 39 88.9 C 39 88.4 39.2 88 39.5 87.7 C 39.4 87.6 39.3 87.2 39.5 86.6 C 39.5 86.6 39.9 86.5 40.9 87.1 C 41.2 87 41.6 87 42 87 C 42.4 87 42.8 87 43.1 87.1 C 44.1 86.5 44.5 86.6 44.5 86.6 C 44.7 87.2 44.6 87.6 44.5 87.7 C 44.8 88 45 88.4 45 88.9 C 45 90.4 43.9 90.8 42.8 90.9 C 43 91 43.2 91.4 43.2 91.9 L 43.2 92.9 C 43.2 93 43.2 93.1 43.4 93.1 C 44.9 92.6 46 91.1 46 89.2 C 46 86.8 44.5 85 42 85 Z"
-                  fill="#FFFFFF"/>
-            <text x="42" y="112" text-anchor="middle" font-size="9" font-weight="600" fill="#6E5F6B">webhook</text>
-          </g>
-          <!-- Signal path in -->
-          <path class="alerts-remote-path-in" d="M 74 96 L 108 96"
-                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-dasharray="4 5" opacity="0.75"
-                marker-end="url(#alertRemoteArrow)"/>
-          <!-- Neuromast intake in the cloud -->
-          <circle class="alerts-remote-ring"   cx="130" cy="96" r="22" fill="none" stroke="#D6457A" stroke-width="1.5"/>
-          <circle class="alerts-remote-ring alerts-remote-ring-2" cx="130" cy="96" r="22" fill="none" stroke="#D6457A" stroke-width="1.5"/>
-          <circle class="alerts-remote-ring alerts-remote-ring-3" cx="130" cy="96" r="22" fill="none" stroke="#D6457A" stroke-width="1.5"/>
-          <circle cx="130" cy="96" r="12" fill="#D6457A"/>
-          <circle cx="130" cy="96" r="5.5" fill="#FFEEF5"/>
-          <text x="130" y="136" text-anchor="middle" font-size="9" font-weight="600" fill="#6E5F6B">neuromast</text>
-          <!-- Signal path out — stops just before the bubble tail tip -->
-          <path class="alerts-remote-path-out" d="M 152 96 L 176 96"
-                stroke="#D6457A" stroke-width="1.6" fill="none" stroke-dasharray="4 5" opacity="0.75"
-                marker-end="url(#alertRemoteArrow)"/>
-          <!-- Resulting bubble: tail on the left side points back at the neuromast
-               so the flow reads continuously left→right. Body sits well inside the
-               viewBox so the pulse scale and drop-shadow don't clip. -->
-          <g class="alerts-remote-bub">
-            <path d="M 194 74 H 242 A 8 8 0 0 1 250 82 V 110 A 8 8 0 0 1 242 118 L 194 118 A 8 8 0 0 1 186 110 V 100 L 180 96 L 186 92 V 82 A 8 8 0 0 1 194 74 Z"
-                  fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.4" filter="url(#alertRemoteShadow)"/>
-            <circle cx="202" cy="90" r="6" fill="#24292E"/>
-            <text x="213" y="93" font-size="10" font-weight="700" fill="#2D2533">#421</text>
-            <text x="194" y="110" font-size="8.5" fill="#6E5F6B">pr opened</text>
-          </g>
-          <!-- Traveling dot — continuous: enters left, passes through neuromast, absorbs into bubble -->
-          <circle class="alerts-remote-dot" cx="74" cy="96" r="3.2" fill="#D6457A"/>
-        </svg>
+    <!-- Webhook intake — restores the original 4-node ll-flow animation
+         removed in 2c6152f: webhook → neuromast (queue) → lateral-line
+         (queue) → axol, with a 10s master cycle that sends two
+         notifications through the pipeline and pops two bubbles above
+         Axol in sequence. All the supporting CSS + glyph sprites
+         survived the simplification, so restoring the markup is enough. -->
+    <div class="product-block-wide">
+      <div class="product-block-illo-wide">
+        <div class="ll-flow remote-flow" aria-label="Webhook flow: signed POST to neuromast, lateral-line fetches, Axol pops bubbles">
+          <div class="ll-node">
+            <span class="ll-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+            </span>
+            <span class="ll-label">webhook</span>
+            <span class="ll-sub">signed POST</span>
+          </div>
+          <span class="ll-arrow arrow-1" aria-hidden="true">
+            <span class="arrow-dot dot-1"></span>
+            <span class="arrow-dot dot-2"></span>
+          </span>
+          <div class="ll-node">
+            <span class="ll-queue" aria-hidden="true">
+              <span class="ll-queue-dot"></span>
+              <span class="ll-queue-dot"></span>
+            </span>
+            <span class="ll-icon" aria-hidden="true">
+              <svg><use href="#glyph-neuromast"/></svg>
+            </span>
+            <span class="ll-label">neuromast</span>
+            <span class="ll-sub">signed intake</span>
+          </div>
+          <span class="ll-arrow arrow-2" aria-hidden="true">
+            <span class="arrow-dot fetch"></span>
+            <span class="arrow-dot response response-1"></span>
+            <span class="arrow-dot response response-2"></span>
+          </span>
+          <div class="ll-node">
+            <span class="ll-queue" aria-hidden="true">
+              <span class="ll-queue-dot"></span>
+              <span class="ll-queue-dot"></span>
+            </span>
+            <span class="ll-icon" aria-hidden="true">
+              <svg><use href="#glyph-lateral-line"/></svg>
+            </span>
+            <span class="ll-label">lateral line</span>
+            <span class="ll-sub">local forwarder</span>
+          </div>
+          <span class="ll-arrow arrow-3" aria-hidden="true">
+            <span class="arrow-dot dot-1"></span>
+            <span class="arrow-dot dot-2"></span>
+          </span>
+          <div class="ll-node ll-axol">
+            <div class="ll-bubble bubble-1">main · CI passed</div>
+            <div class="ll-bubble bubble-2">feat/nav · review</div>
+            <span class="ll-icon" aria-hidden="true">
+              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+                <defs>
+                  <radialGradient id="llBody" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#FFC9E2" />
+                    <stop offset="100%" stop-color="#FFA6CF" />
+                  </radialGradient>
+                </defs>
+                <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+                <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+                <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+                <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+                <circle cx="132" cy="105" r="7" fill="#2D2533" />
+                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="ll-label">axol</span>
+            <span class="ll-sub">speech bubble</span>
+          </div>
+        </div>
       </div>
       <div class="product-block-body">
         <h3>Webhook</h3>
