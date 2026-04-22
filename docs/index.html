@@ -1645,6 +1645,21 @@ type: website
        z-index: 0 keeps the dots behind the nodes when they extend into
        a node's territory (dots absorbed into the box visual). */
   }
+  /* Dashed pink track the dots ride on — extends slightly past the
+     arrow's own box on both sides so it visually reaches the adjacent
+     node edges (matching the dots' travel range). Same vocabulary as
+     the SVG diagrams' stroke-dasharray "4 5" dashed arrows. */
+  .ll-arrow::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    top: 50%;
+    height: 0;
+    border-top: 1.5px dashed var(--pink-accent);
+    opacity: 0.38;
+    z-index: -1;
+  }
   .ll-arrow .arrow-dot {
     position: absolute;
     top: 50%;
