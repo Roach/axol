@@ -2174,14 +2174,52 @@ type: website
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-alerts"/></svg></span>Three paths to a bubble</h2>
     <p>Anything worth your attention arrives as a speech bubble above Axol — urgent ones pin open, the rest fade on their own. Three paths in: a loopback listener on your Mac, a signed cloud bridge for webhook-capable services, and keychain-backed polling for services that can't push.</p>
 
-    <!-- Local loopback — reuses the envelope-flow-mini partial from plugins.html -->
+    <!-- Local loopback — restores the 2-node ll-flow.local-flow animation
+         removed in 2c6152f: a local tool POSTs to the loopback port,
+         Axol pulses, one bubble pops. 5s cycle. All supporting CSS
+         (ll-local-source-pulse, ll-local-axol-pulse, arrow-loc-fwd,
+         ll-bubble-pop-loc) survived the simplification. -->
     <div class="product-block-wide">
       <div class="product-block-illo-wide">
-        {% include envelope-flow-mini.html %}
+        <div class="ll-flow local-flow" aria-label="Local alert flow: a local tool posts to Axol's loopback port, a bubble pops above her">
+          <div class="ll-node">
+            <span class="ll-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1.5 1.5v7a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.5-.5H2a.5.5 0 0 0-.5.5m1.854 1.646a.5.5 0 1 0-.708.708L4.293 8.5l-1.647 1.646a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2zM7 10.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5"/></svg>
+            </span>
+            <span class="ll-label">local tool</span>
+            <span class="ll-sub">curl · POST</span>
+          </div>
+          <span class="ll-arrow arrow-loc" aria-hidden="true">
+            <span class="arrow-dot"></span>
+          </span>
+          <div class="ll-node ll-axol">
+            <div class="ll-bubble bubble-loc">ci-bot · build passed</div>
+            <span class="ll-icon" aria-hidden="true">
+              <svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+                <defs>
+                  <radialGradient id="llBodyLoc" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#FFC9E2" />
+                    <stop offset="100%" stop-color="#FFA6CF" />
+                  </radialGradient>
+                </defs>
+                <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+                <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+                <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+                <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+                <ellipse cx="110" cy="110" rx="72" ry="62" fill="#F29BC5" />
+                <circle cx="88"  cy="105" r="7" fill="#2D2533" />
+                <circle cx="132" cy="105" r="7" fill="#2D2533" />
+                <path d="M 98 130 Q 110 138 122 130" stroke="#7A2D4D" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="ll-label">axol</span>
+            <span class="ll-sub">loopback :47329</span>
+          </div>
+        </div>
       </div>
       <div class="product-block-body">
         <h3>Local</h3>
-        <p>A tiny loopback listener on <code>127.0.0.1:47329</code>. Any script that can <code>curl</code> can pop a bubble — whatever shape the payload arrives in, an adapter translates it into Axol's envelope (<b>title</b>, <b>body</b>, <b>priority</b>, optional <b>actions</b>) before she renders it. Nothing ever leaves your Mac.</p>
+        <p>A tiny loopback listener on <code>127.0.0.1:47329</code>. Any script that can <code>curl</code> can pop a bubble. The envelope is <b>title</b> + <b>body</b> + <b>priority</b> + optional <b>actions</b> — focus a terminal, open a URL, reveal a file. Nothing ever leaves your Mac.</p>
         <div class="product-block-ctas">
           <a class="product-block-cta" href="plugins.html">Envelope reference →</a>
         </div>
