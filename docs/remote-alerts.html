@@ -1197,7 +1197,7 @@ type: article
     <h2>authentication</h2>
     <p>The <code>/hooks/{source}</code> route resolves auth in a fixed order:</p>
     <ol>
-      <li>If <code>HOOK_SCHEME_&lt;SOURCE&gt;</code> is set for this URL segment, verify the request's signature with that scheme.</li>
+      <li>If <code>HOOK_SECRET_&lt;SOURCE&gt;</code> is set for this URL segment, verify the request's signature. Scheme comes from <code>HOOK_SCHEME_&lt;SOURCE&gt;</code>; if unset, it defaults to the source name when that name matches a known scheme (<code>github</code> / <code>stripe</code> / <code>generic</code>).</li>
       <li>Otherwise, accept if <code>?key=&lt;SHARED_SECRET&gt;</code> matches (constant-time compare).</li>
       <li>Otherwise, <code>401</code>.</li>
     </ol>
@@ -1433,7 +1433,7 @@ type: article
 }</code></pre>
 
     <h3 style="margin-top: 22px;">request shape</h3>
-    <p>Auth is the same ladder as <code>/app/api/hooks/{source}</code> — a per-source HMAC if you've configured <code>HOOK_SCHEME_*</code> + <code>HOOK_SECRET_*</code>, otherwise the <code>SHARED_SECRET</code> query key.</p>
+    <p>Auth is the same ladder as <code>/app/api/hooks/{source}</code> — a per-source HMAC if <code>HOOK_SECRET_&lt;SOURCE&gt;</code> is set (scheme defaults to the source name when it's a known one), otherwise the <code>SHARED_SECRET</code> query key.</p>
     <pre><code>POST /app/api/permission/github-actions?key=&lt;shared-secret&gt;
 Content-Type: application/json
 

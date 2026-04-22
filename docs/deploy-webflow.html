@@ -475,7 +475,7 @@ type: article
         <ul>
           <li><code>POLL_TOKEN</code> — bearer the local forwarder uses for <code>/pull</code> + <code>/ack</code>. Generate with <code>openssl rand -hex 32</code>.</li>
           <li><code>SHARED_SECRET</code> <em>(optional)</em> — query-key fallback for senders that can't sign HMAC. Same command.</li>
-          <li><code>HOOK_SCHEME_&lt;SOURCE&gt;</code> + <code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source (e.g. <code>HOOK_SCHEME_GITHUB=github</code>, <code>HOOK_SECRET_GITHUB=&lt;your-repo-webhook-secret&gt;</code>).</li>
+          <li><code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source (e.g. <code>HOOK_SECRET_GITHUB=&lt;your-repo-webhook-secret&gt;</code>). The scheme is inferred from the source name when it matches <code>github</code> / <code>stripe</code> / <code>generic</code>; if you're using a different pairing (e.g. a source named <code>ci</code> using the <code>generic</code> scheme), also set <code>HOOK_SCHEME_&lt;SOURCE&gt;</code>.</li>
         </ul>
       </li>
       <li>

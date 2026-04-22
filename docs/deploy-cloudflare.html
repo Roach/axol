@@ -338,9 +338,8 @@ type: article
         <p>Wrangler stores these encrypted with the project; they're not in the repo and don't ship in the bundle:</p>
 <pre><code><span class="tok-cmd">npx</span> wrangler secret put POLL_TOKEN
 <span class="tok-cmd">npx</span> wrangler secret put SHARED_SECRET     <span class="tok-flag"># optional, for ?key= fallback</span>
-<span class="tok-cmd">npx</span> wrangler secret put HOOK_SCHEME_GITHUB <span class="tok-flag"># e.g. "github"</span>
 <span class="tok-cmd">npx</span> wrangler secret put HOOK_SECRET_GITHUB <span class="tok-flag"># your webhook secret</span></code></pre>
-        <p>Each one prompts for the value. Repeat for every signed source.</p>
+        <p>Each one prompts for the value. Scheme defaults to the source name when it's <code>github</code> / <code>stripe</code> / <code>generic</code>; if you're using a different pairing, also <code>npx wrangler secret put HOOK_SCHEME_&lt;SOURCE&gt;</code>. Repeat for every signed source.</p>
       </li>
       <li>
         <h3>Deploy</h3>

@@ -1,9 +1,11 @@
 // POST /api/hooks/{source}
 //
 // Per-source auth, resolved in order:
-//   1. HOOK_SCHEME_<SOURCE> + HOOK_SECRET_<SOURCE> set → HMAC verify
+//   1. HOOK_SECRET_<SOURCE> set → HMAC verify. Scheme is taken from
+//      HOOK_SCHEME_<SOURCE> if set; otherwise it defaults to the source
+//      name when that name is a known scheme (github/stripe/generic).
 //   2. SHARED_SECRET set and ?key matches → accept (fallback for senders
-//      that can't sign; GitHub/Stripe are expected to use signatures)
+//      that can't sign).
 //   3. Reject with 401.
 //
 // On accept, the raw JSON body is parked in the KV queue under the source
@@ -12,7 +14,7 @@
 import type { APIRoute } from 'astro';
 import { enqueue } from '../../../lib/queue';
 import { getQueueStore, resolveEnv, type StorageEnv } from '../../../lib/storage';
-import { verify, timingSafeEqualString } from '../../../lib/hmac';
+import { verify, timingSafeEqualString, isKnownScheme } from '../../../lib/hmac';
 
 export const prerender = false;
 
@@ -46,8 +48,12 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   // Tier 1 — per-source HMAC.
   const schemeKey = `HOOK_SCHEME_${source.toUpperCase()}`;
   const secretKey = `HOOK_SECRET_${source.toUpperCase()}`;
-  const scheme = typeof env[schemeKey] === 'string' ? (env[schemeKey] as string) : undefined;
+  const explicitScheme = typeof env[schemeKey] === 'string' ? (env[schemeKey] as string) : undefined;
   const secret = typeof env[secretKey] === 'string' ? (env[secretKey] as string) : undefined;
+  // If the scheme wasn't set explicitly, default it to the source name when
+  // that name is already a known scheme — the common case (a `github` source
+  // using the `github` scheme) then needs only HOOK_SECRET_GITHUB to work.
+  const scheme = explicitScheme ?? (secret && isKnownScheme(source) ? source : undefined);
 
   if (scheme) {
     const result = await verify(scheme, secret, request, rawBody);

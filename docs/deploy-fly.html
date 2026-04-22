@@ -330,7 +330,8 @@ RUN npm run build</code></pre>
         <h3>Set the bearer + HMAC secrets</h3>
 <pre><code><span class="tok-cmd">fly</span> secrets set <span class="tok-str">POLL_TOKEN="$(openssl rand -hex 32)"</span>
 <span class="tok-cmd">fly</span> secrets set <span class="tok-str">SHARED_SECRET="$(openssl rand -hex 32)"</span>    <span class="tok-flag"># optional</span>
-<span class="tok-cmd">fly</span> secrets set <span class="tok-str">HOOK_SCHEME_GITHUB=github HOOK_SECRET_GITHUB=&lt;your-webhook-secret&gt;</span></code></pre>
+<span class="tok-cmd">fly</span> secrets set <span class="tok-str">HOOK_SECRET_GITHUB=&lt;your-webhook-secret&gt;</span></code></pre>
+        <p>Scheme defaults to the source name (here <code>github</code>) when it matches one of <code>github</code> / <code>stripe</code> / <code>generic</code>. For a different pairing (e.g. a source named <code>ci</code> using the <code>generic</code> scheme), also set <code>HOOK_SCHEME_&lt;SOURCE&gt;</code>.</p>
       </li>
       <li>
         <h3>Deploy</h3>

@@ -467,7 +467,7 @@ type: article
         <ul>
           <li><code>POLL_TOKEN</code> — bearer the local forwarder uses for <code>/pull</code> + <code>/ack</code>. <code>openssl rand -hex 32</code>.</li>
           <li><code>SHARED_SECRET</code> <em>(optional)</em> — query-key fallback for senders that can't sign. Same command.</li>
-          <li><code>HOOK_SCHEME_&lt;SOURCE&gt;</code> + <code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source (e.g. <code>HOOK_SCHEME_GITHUB=github</code>).</li>
+          <li><code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source (e.g. <code>HOOK_SECRET_GITHUB</code>). Scheme defaults to the source name when it's <code>github</code> / <code>stripe</code> / <code>generic</code>; set <code>HOOK_SCHEME_&lt;SOURCE&gt;</code> only for non-matching pairings.</li>
         </ul>
       </li>
       <li>

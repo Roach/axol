@@ -341,7 +341,7 @@ type: article
           <li><code>ADAPTER=node</code> — tells Astro to build for Node, not Cloudflare.</li>
           <li><code>POLL_TOKEN</code> — bearer for <code>/pull</code> + <code>/ack</code>. <code>openssl rand -hex 32</code>.</li>
           <li><code>SHARED_SECRET</code> <em>(optional)</em> — <code>?key=</code> fallback.</li>
-          <li><code>HOOK_SCHEME_&lt;SOURCE&gt;</code> + <code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source.</li>
+          <li><code>HOOK_SECRET_&lt;SOURCE&gt;</code> per signed source. Scheme defaults to the source name when it's <code>github</code> / <code>stripe</code> / <code>generic</code>; set <code>HOOK_SCHEME_&lt;SOURCE&gt;</code> only for non-matching pairings.</li>
         </ul>
       </li>
       <li>

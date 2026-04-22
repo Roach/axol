@@ -1,8 +1,9 @@
 // POST /api/permission/{source}
 //
 // Approval-flow intake. Same auth ladder as /api/hooks/{source}:
-//   1. HOOK_SCHEME_<SOURCE> + HOOK_SECRET_<SOURCE> → HMAC verify
-//   2. SHARED_SECRET + ?key                        → accept
+//   1. HOOK_SECRET_<SOURCE> set → HMAC verify (scheme = HOOK_SCHEME_<SOURCE>,
+//      or the source name itself if that's a known scheme).
+//   2. SHARED_SECRET + ?key    → accept
 // On accept, stash a pending record and enqueue a `kind: "permission"`
 // envelope on the main queue so the forwarder picks it up alongside
 // regular alerts. If the request set `hold`, wait up to N seconds for
@@ -20,7 +21,7 @@ import {
 } from '../../../lib/permissions';
 import { defaultsFor } from '../../../lib/services';
 import { getQueueStore, resolveEnv, type StorageEnv } from '../../../lib/storage';
-import { verify, timingSafeEqualString } from '../../../lib/hmac';
+import { verify, timingSafeEqualString, isKnownScheme } from '../../../lib/hmac';
 
 export const prerender = false;
 
@@ -50,8 +51,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   // Auth — copied from hooks intake so operators have one mental model.
   const schemeKey = `HOOK_SCHEME_${source.toUpperCase()}`;
   const secretKey = `HOOK_SECRET_${source.toUpperCase()}`;
-  const scheme = typeof env[schemeKey] === 'string' ? (env[schemeKey] as string) : undefined;
+  const explicitScheme = typeof env[schemeKey] === 'string' ? (env[schemeKey] as string) : undefined;
   const secret = typeof env[secretKey] === 'string' ? (env[secretKey] as string) : undefined;
+  const scheme = explicitScheme ?? (secret && isKnownScheme(source) ? source : undefined);
   if (scheme) {
     const result = await verify(scheme, secret, request, rawBody);
     if (!result.ok) {
