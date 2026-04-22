@@ -1148,11 +1148,11 @@ type: website
     10%  { opacity: 1; }
     45%  { transform: translateX(56px); opacity: 1; }
     55%  { transform: translateX(56px); opacity: 1; }
-    90%  { transform: translateX(112px); opacity: 1; }
-    100% { transform: translateX(112px); opacity: 0; }
+    88%  { transform: translateX(126px); opacity: 1; }
+    100% { transform: translateX(126px); opacity: 0; }
   }
   .alerts-remote-bub {
-    transform-origin: 223px 82px;
+    transform-origin: 218px 96px;
     transform-box: view-box;
     animation: alerts-remote-bub 3.2s ease-in-out infinite;
   }
@@ -2223,19 +2223,21 @@ type: website
           <circle cx="130" cy="96" r="12" fill="#D6457A"/>
           <circle cx="130" cy="96" r="5.5" fill="#FFEEF5"/>
           <text x="130" y="136" text-anchor="middle" font-size="9" font-weight="600" fill="#6E5F6B">neuromast</text>
-          <!-- Signal path out -->
-          <path class="alerts-remote-path-out" d="M 152 96 L 186 96"
+          <!-- Signal path out — stops just before the bubble tail tip -->
+          <path class="alerts-remote-path-out" d="M 152 96 L 176 96"
                 stroke="#D6457A" stroke-width="1.6" fill="none" stroke-dasharray="4 4" opacity="0.75"
                 marker-end="url(#alertRemoteArrow)"/>
-          <!-- Resulting bubble -->
+          <!-- Resulting bubble: tail on the left side points back at the neuromast
+               so the flow reads continuously left→right. Body sits well inside the
+               viewBox so the pulse scale and drop-shadow don't clip. -->
           <g class="alerts-remote-bub">
-            <path d="M 194 58 H 252 A 8 8 0 0 1 260 66 V 98 A 8 8 0 0 1 252 106 L 230 106 L 224 114 L 218 106 L 194 106 A 8 8 0 0 1 186 98 V 66 A 8 8 0 0 1 194 58 Z"
+            <path d="M 194 74 H 242 A 8 8 0 0 1 250 82 V 110 A 8 8 0 0 1 242 118 L 194 118 A 8 8 0 0 1 186 110 V 100 L 180 96 L 186 92 V 82 A 8 8 0 0 1 194 74 Z"
                   fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.4" filter="url(#alertRemoteShadow)"/>
-            <circle cx="204" cy="78" r="6" fill="#24292E"/>
-            <text x="214" y="76" font-size="9" font-weight="700" fill="#2D2533">Roach/axol</text>
-            <text x="196" y="94" font-size="8.5" fill="#6E5F6B">pr opened · #421</text>
+            <circle cx="202" cy="90" r="6" fill="#24292E"/>
+            <text x="213" y="93" font-size="10" font-weight="700" fill="#2D2533">#421</text>
+            <text x="194" y="110" font-size="8.5" fill="#6E5F6B">pr opened</text>
           </g>
-          <!-- Traveling dot — continuous: enters left, passes through neuromast, exits right -->
+          <!-- Traveling dot — continuous: enters left, passes through neuromast, absorbs into bubble -->
           <circle class="alerts-remote-dot" cx="74" cy="96" r="3.2" fill="#D6457A"/>
         </svg>
       </div>
