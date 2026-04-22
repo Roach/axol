@@ -2,6 +2,15 @@
 title: "Axol — deploying neuromast to Railway"
 description: "Step-by-step deploy of Axol's webhook intake (neuromast) to Railway: fork the repo, add the Redis plugin, set env vars, and git push to deploy."
 type: article
+schema_howto:
+  - name: "Push neuromast to your own GitHub repo"
+    text: "Fork or split neuromast/ into a fresh repo Railway can deploy from."
+  - name: "Create the Railway project"
+    text: "Connect your repo, add the Railway Redis plugin, set ADAPTER=node so Astro builds for Node, and configure HOOK_SECRET_* + LATERAL_BEARER + REDIS_URL env vars."
+  - name: "Deploy via git push"
+    text: "Push to main (or let Railway auto-deploy) to trigger the Node build."
+  - name: "Point lateral-line at the Railway URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to your Railway app's public URL and restart the launchd job."
 ---
 <style>
   :root {

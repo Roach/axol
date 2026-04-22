@@ -2,6 +2,15 @@
 title: "Axol — deploying neuromast to Render"
 description: "Deploy Axol's webhook intake (neuromast) to Render: connect a GitHub repo, add Render Redis, git push."
 type: article
+schema_howto:
+  - name: "Push neuromast to your own GitHub repo"
+    text: "Fork or split neuromast/ into a fresh repo Render can deploy from."
+  - name: "Create the Render services"
+    text: "Create a Web Service from your repo, attach a Render Key Value (Redis) instance, wire REDIS_URL into the web service env, and set HOOK_SECRET_* + LATERAL_BEARER."
+  - name: "Deploy via git push"
+    text: "Push to main; Render runs the Node build for the neuromast Astro app automatically."
+  - name: "Point lateral-line at the Render URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to your Render service's public URL and restart the launchd job."
 ---
 <style>
   :root {

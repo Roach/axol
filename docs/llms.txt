@@ -1,0 +1,38 @@
+# Axol
+
+> Axol is a tiny axolotl that lives in the corner of your screen on macOS. She surfaces alerts from any tool that can POST JSON — webhooks, local scripts, API polling — as speech bubbles above her head, and cheers you on while you work.
+
+Axol is open source (MIT), written in Swift, and runs as a ~350 KB native binary with no telemetry. She sits in your menubar corner and handles three kinds of alerts: local (any script that can `curl` a bubble via `127.0.0.1:47329`), webhook (a signed cloud intake called a "neuromast" forwards alerts to your Mac via the "lateral line"), and polling (bash "gills" read keychain-backed PATs and poll upstream APIs on a 30-second schedule). She also turns Claude Code's permission prompts into tappable Allow/Deny bubbles so you don't have to context-switch back to the terminal every few minutes.
+
+## Core concepts
+
+- **Envelope**: the canonical alert shape. Required field: `title`. Optional: `body`, `priority` (`low` / `normal` / `high` / `urgent`), `actions` (`focus-pid` / `open-url` / `reveal-file` / `noop`), `icon`, `source`.
+- **Adapter**: a JSON file in `~/Library/Application Support/Axol/adapters/` that translates a third-party payload into Axol's envelope via a small `{{field}}` template language. No code required. Five ship with Axol: `claude-code`, `github-actions`, `sentry`, `stripe`, `generic`.
+- **Neuromast**: the cloud half of the remote-alerts pipeline. An Astro app that runs on either Cloudflare Workers + KV or a Node runtime + Redis. Verifies signatures (GitHub / Stripe / generic HMAC or a shared query key), parks the body in a short-TTL queue, returns 204.
+- **Lateral line**: the local half of the remote-alerts pipeline. A 60-line bash script on your Mac that `launchd` runs every 30 seconds. Drains each neuromast's queue via a bearer token and POSTs each body into Axol's loopback listener.
+- **Gill**: a single bash script + `launchd` job for polling services that don't webhook. Reads a keychain-backed personal access token, calls an upstream API on a 30-second cadence, POSTs each new item straight to the loopback listener. Credential never leaves your Mac. One bundled: `github-notifications`.
+- **Sizes**: ⌘-click cycles through full / mini / micro. The current mode persists across launches.
+- **Priorities**: `urgent` bubbles pin open and float worry-bubbles above Axol's head until you handle them; everything else fades on its own.
+
+## Pages
+
+- [Homepage](https://roach.github.io/axol/): Overview of Axol's three alert paths (local / webhook / polling), Claude Code integration, sizes, extensibility, and install.
+- [Remote alerts](https://roach.github.io/axol/remote-alerts.html): The full remote-alerts pipeline — neuromast (cloud intake) + lateral-line (local forwarder) + adapter + bubble delivery. Includes the approval-flow diagram for the cloud permission API (caller → neuromast → lateral-line → axol → tap → decision flows back).
+- [Plugins](https://roach.github.io/axol/plugins.html): The adapter reference. Envelope shape, template language, match rules, closed action vocabulary, per-adapter built-ins.
+- [Gills](https://roach.github.io/axol/gills.html): The polling reference. How to write a new gill, what `lib.sh` provides, how to install a `launchd` job, security posture for tokens.
+- [Changelog](https://roach.github.io/axol/changelog.html): Release notes — each release is called a "molt."
+
+## Deployment platforms (for the neuromast)
+
+- [Webflow Cloud](https://roach.github.io/axol/deploy-webflow.html): Zero-config default. Astro on Cloudflare Workers, KV auto-provisioned. No separate vendor signup.
+- [Cloudflare (direct)](https://roach.github.io/axol/deploy-cloudflare.html): Workers + KV via wrangler.
+- [Railway](https://roach.github.io/axol/deploy-railway.html): Node runtime + Railway Redis plugin.
+- [Fly.io](https://roach.github.io/axol/deploy-fly.html): Node in Docker + Upstash Redis (or any TCP Redis).
+- [Render](https://roach.github.io/axol/deploy-render.html): Node + Render Redis add-on.
+
+## Source
+
+- Repository: https://github.com/Roach/axol
+- License: MIT
+- Language: Swift (Axol.app), TypeScript / Astro (neuromast), bash (lateral-line + gills)
+- Platforms: macOS 13+ (Axol.app); Cloudflare Workers / Node (neuromast)

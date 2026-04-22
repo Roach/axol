@@ -2,6 +2,15 @@
 title: "Axol — deploying neuromast to Fly.io"
 description: "Deploy Axol's webhook intake (neuromast) to Fly.io as an Astro Node standalone app with Upstash Redis for the queue."
 type: article
+schema_howto:
+  - name: "Launch the app on Fly"
+    text: "Log in to Fly via flyctl, run fly launch from the neuromast directory, set ADAPTER=node as a build arg, and attach an Upstash Redis instance."
+  - name: "Set the secrets"
+    text: "Use fly secrets set to configure HOOK_SECRET_* and LATERAL_BEARER; REDIS_URL is injected by the Upstash attachment."
+  - name: "Deploy and verify"
+    text: "Run fly deploy, then hit /app/api/health to confirm the queue is reachable."
+  - name: "Point lateral-line at the Fly URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to your Fly app's public URL and restart the launchd job."
 ---
 <style>
   :root {

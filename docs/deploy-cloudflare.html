@@ -2,6 +2,13 @@
 title: "Axol — deploying neuromast to Cloudflare Workers"
 description: "Deploy Axol's webhook intake (neuromast) straight to Cloudflare Workers + KV with wrangler, skipping the Webflow Cloud wrapper."
 type: article
+schema_howto:
+  - name: "Set up the project"
+    text: "Install dependencies, log in to Cloudflare via wrangler, and create the KV namespace neuromast uses for its queue."
+  - name: "Deploy with wrangler"
+    text: "Run astro build with the Cloudflare adapter, set HOOK_SECRET_* + LATERAL_BEARER as Worker secrets, and wrangler deploy."
+  - name: "Point lateral-line at the Worker URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to the Worker's public URL and restart the launchd job."
 ---
 <style>
   :root {

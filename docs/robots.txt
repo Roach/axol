@@ -1,0 +1,44 @@
+User-agent: *
+Allow: /
+
+# Explicit allow for the major AI / answer-engine crawlers. GitHub Pages
+# serves a default-allow robots at the site root (which we don't control);
+# this file lives at /axol/robots.txt and documents intent for any crawler
+# that respects project-path robots or hits the URL directly.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+Sitemap: https://roach.github.io/axol/sitemap.xml
