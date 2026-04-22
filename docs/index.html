@@ -1041,6 +1041,83 @@ type: website
     line-height: 1.5;
   }
 
+  /* Molts card — personality callout that sits between the feature
+     surface and the install steps. Pink-washed band with a small
+     axol looking up as confetti tumbles past her. */
+  .molts-card {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 22px;
+    align-items: center;
+    margin: 34px 0 28px;
+    padding: 22px 26px;
+    background: linear-gradient(135deg, #FFF7FB 0%, #FFE9F3 100%);
+    border: 1px solid #FBEAF2;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .molts-illo {
+    height: 100px;
+    position: relative;
+  }
+  .molts-illo svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+    overflow: visible;
+  }
+  .molts-body h3 {
+    font-size: 19px;
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .molts-body p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0 0 10px;
+    line-height: 1.5;
+  }
+  .molts-cta {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--pink-accent);
+    text-decoration: none;
+    letter-spacing: 0.005em;
+  }
+  .molts-cta:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .molts-c {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: molts-fall 4.2s ease-in infinite;
+  }
+  .molts-c-1 { animation-delay: 0s;    }
+  .molts-c-2 { animation-delay: 0.6s;  }
+  .molts-c-3 { animation-delay: 1.2s;  }
+  .molts-c-4 { animation-delay: 1.8s;  }
+  .molts-c-5 { animation-delay: 2.4s;  }
+  @keyframes molts-fall {
+    0%   { transform: translateY(0)     rotate(0deg);   opacity: 0; }
+    8%   { opacity: 1; }
+    85%  { transform: translateY(70px)  rotate(220deg); opacity: 1; }
+    100% { transform: translateY(82px)  rotate(260deg); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .molts-c { animation: none !important; opacity: 0; }
+  }
+  @media (max-width: 640px) {
+    .molts-card {
+      grid-template-columns: 1fr;
+      padding: 18px 20px;
+    }
+    .molts-illo { height: 80px; }
+  }
+
   /* Deploy target link tiles — compact pills for the 5 platforms
      under Install & Deploy. */
   .deploy-links {
@@ -2351,6 +2428,48 @@ type: website
       </div>
     </div>
   </section>
+
+  <!-- Personality teaser: changelog callout. Sits between the feature
+       surface and the install steps so readers who made it this far
+       feel the heartbeat of the project before they clone it. -->
+  <aside class="molts-card" aria-label="Changelog teaser">
+    <div class="molts-illo" aria-hidden="true">
+      <svg viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <!-- Confetti rectangles tumbling down — same five-piece palette
+             as the changelog hero, scaled down for this compact band. -->
+        <g class="molts-confetti">
+          <rect class="molts-c molts-c-1" x="18"  y="-4"  width="9" height="4" rx="1" fill="#D6457A"/>
+          <rect class="molts-c molts-c-2" x="42"  y="-4"  width="9" height="4" rx="1" fill="#3A6EA5"/>
+          <rect class="molts-c molts-c-3" x="66"  y="-4"  width="9" height="4" rx="1" fill="#D4A017"/>
+          <rect class="molts-c molts-c-4" x="90"  y="-4"  width="9" height="4" rx="1" fill="#2E8B57"/>
+          <rect class="molts-c molts-c-5" x="114" y="-4"  width="9" height="4" rx="1" fill="#BF4F85"/>
+        </g>
+        <!-- Miniature axol looking up, in the lower half -->
+        <g transform="translate(44,44) scale(0.32)">
+          <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+          <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+          <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+          <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+          <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+          <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+          <ellipse cx="110" cy="114" rx="74" ry="62" fill="#F29BC5"/>
+          <ellipse cx="110" cy="135" rx="40" ry="22" fill="#F0B5D3"/>
+          <circle cx="86"  cy="104" r="8" fill="#2D2533"/>
+          <circle cx="134" cy="104" r="8" fill="#2D2533"/>
+          <circle cx="88"  cy="101" r="2.4" fill="#FFFFFF"/>
+          <circle cx="136" cy="101" r="2.4" fill="#FFFFFF"/>
+          <circle cx="72"  cy="122" r="7" fill="#FF7AA3" opacity="0.45"/>
+          <circle cx="148" cy="122" r="7" fill="#FF7AA3" opacity="0.45"/>
+          <path d="M 98 132 Q 110 142 122 132" stroke="#7A2D4D" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
+    <div class="molts-body">
+      <h3>She molts every so often.</h3>
+      <p>New gills, new poses, new bubbles. The release notes list the sheddings.</p>
+      <a class="molts-cta" href="changelog.html">See the changelog →</a>
+    </div>
+  </aside>
 
   <section id="install">
     <h2><span class="heading-icon" aria-hidden="true"><svg><use href="#icon-install"/></svg></span>install &amp; deploy</h2>
