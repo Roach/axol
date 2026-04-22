@@ -28,6 +28,9 @@
     "typescript": "5.9.3",
     "wrangler": "4.83.0"
   },
+  "overrides": {
+    "undici": "^7.24.0"
+  },
   "engines": {
     "node": ">=22.12.0"
   }
