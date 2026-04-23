@@ -951,7 +951,7 @@ type: article
 
   <section id="template-language">
     <h2>template language</h2>
-    <p>Every string value in a template runs through a tiny substitution engine. Whole strings that are just <code>{% raw %}{{…}}{% endraw %}</code> preserve their native type (so <code>{% raw %}"pid": "{{claude_pid}}"{% endraw %}</code> yields <code>"pid": 12345</code>, not <code>"12345"</code>).</p>
+    <p>Every string value in a template runs through a tiny substitution engine. A string that is just <code>{% raw %}{{…}}{% endraw %}</code> and nothing else preserves its native type (so <code>{% raw %}"pid": "{{claude_pid}}"{% endraw %}</code> yields <code>"pid": 12345</code>, not <code>"12345"</code>).</p>
     <div class="tmpl">
       {% raw %}<code>{{field}}</code>            <span>top-level substitution</span>
       <code>{{nested.field}}</code>     <span>dot-path into objects</span>
