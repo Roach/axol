@@ -37,8 +37,20 @@
     fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
     filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10));
   }
+  /* Axol pulses when the bubble pops (33–50% of the 8s cycle). At rest
+     its border is the same soft #FFC9E2 as every other stage — only the
+     pulse phase darkens it. */
   .afd-s-axol .afd-stage-bg {
-    stroke: #D6457A; stroke-width: 2;
+    animation: afd-pulse-axol 8s ease-in-out infinite;
+  }
+  @keyframes afd-pulse-axol {
+    0%, 30%   { stroke: #FFC9E2; stroke-width: 1.5;
+      filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    33%, 50%  { stroke: #D6457A; stroke-width: 2.4;
+      filter: drop-shadow(0 0 7px rgba(214, 69, 122, 0.6))
+              drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+    54%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+      filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
   }
 
   .afd-label {
@@ -167,7 +179,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .afd-req, .afd-dec, .afd-bubble, .afd-btn-pulse, .afd-btn-allow > rect:first-of-type,
-    .afd-caption-req, .afd-caption-dec {
+    .afd-caption-req, .afd-caption-dec, .afd-s-axol .afd-stage-bg {
       animation: none !important;
     }
     .afd-bubble { opacity: 1; transform: translate(490px, 40px); }
