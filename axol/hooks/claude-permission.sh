@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Claude Code PermissionRequest hook → Axol permission bubble bridge.
+# Claude Code PreToolUse hook → Axol permission bubble bridge.
 #
-# Only fires when Claude Code's own permission flow would prompt —
-# reads the PermissionRequest JSON on stdin, POSTs it to Axol, and
-# forwards Axol's response verbatim (shapes already match).
+# Fires for every matched tool call (matcher lives in ~/.claude/settings.json).
+# Reads the PreToolUse JSON on stdin, POSTs it to Axol, and forwards Axol's
+# JSON response verbatim — Axol decides whether to auto-allow (from cached
+# rule eval) or bubble for the user.
 #
-# If Axol is unreachable, emit a neutral pass-through so CC's normal
-# flow takes over rather than hanging.
+# If Axol is unreachable, emit an empty decision so CC falls back to its
+# built-in permission flow rather than hanging.
 set -eo pipefail
 
 payload=$(cat)

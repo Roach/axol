@@ -511,7 +511,7 @@ type: article
       <ul>
         <li><b>Allow / Deny buttons</b> — permission requests pop a modal bubble with a green Allow and outlined Deny. No auto-dismiss; she waits for you.</li>
         <li><b>Attention choreography</b> — big anticipation hop on arrival, then alternating wave / wiggle every five seconds until answered, so you notice even if you looked away.</li>
-        <li><b>Claude Code integration</b> — a <code>PermissionRequest</code> hook bridge routes CC's tool-permission prompts through Axol. She stays out of the way unless CC would have prompted otherwise.</li>
+        <li><b>Claude Code integration</b> — a <code>PreToolUse</code> hook bridge routes CC's tool-permission prompts through Axol. Rules from your user and project <code>settings.json</code> auto-allow or auto-deny silently; only unresolved calls surface a bubble.</li>
         <li><b>Answered history</b> — every decision is logged to the Recent Alerts panel with a compact <span style="background:#DDEFE3;color:#2E8B57;padding:1px 8px;border-radius:8px;font-weight:700;font-size:11px">✓</span> or <span style="background:#F7DDDD;color:#C0392B;padding:1px 8px;border-radius:8px;font-weight:700;font-size:11px">✕</span> chip alongside the source label.</li>
       </ul>
     </div>

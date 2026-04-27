@@ -2730,7 +2730,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     default: break
                     }
                 }
-                self.presentPermissionBubble(requestId: requestId, payload: payload)
+
+                // Evaluate CC's own permission rules (merged across user +
+                // project settings). An allow/deny match short-circuits with
+                // the matching behavior so bubble-less tool calls stay
+                // bubble-less. Ask / undecided → surface the bubble — unless
+                // CC's session-level permission_mode tells us the user has
+                // opted out of prompting, in which case we honor that rather
+                // than block an autonomous run behind a Click.
+                let toolName  = (payload["tool_name"]       as? String) ?? ""
+                let toolInput = (payload["tool_input"]      as? [String: Any]) ?? [:]
+                let cwd       = (payload["cwd"]             as? String) ?? NSHomeDirectory()
+                let permMode  = (payload["permission_mode"] as? String) ?? "default"
+                let ruleDecision = PermissionRules(cwd: cwd).evaluate(toolName: toolName, toolInput: toolInput)
+                let decision = PermissionRules.applyMode(ruleDecision, mode: permMode, toolName: toolName)
+                NSLog("axol: rule-eval \(toolName) mode=\(permMode) → \(decision.rawValue) (rules=\(ruleDecision.rawValue))")
+                switch decision {
+                case .allow:
+                    PendingPermissions.shared.resolve(requestId: requestId, behavior: "allow")
+                case .deny:
+                    PendingPermissions.shared.resolve(requestId: requestId, behavior: "deny")
+                case .ask, .undecided:
+                    self.presentPermissionBubble(requestId: requestId, payload: payload)
+                }
             })
         server?.start(port: 47329)
 
