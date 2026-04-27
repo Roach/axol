@@ -451,6 +451,144 @@ type: article
     <h2>she reads the rulebook</h2>
     <p class="release-lede">Axol now reads the same <code>permissions.allow</code> / <code>deny</code> / <code>ask</code> rules Claude Code already evaluates, so calls she'd normally bubble for get auto-resolved when your <code>settings.json</code> has an answer. Only the genuinely undecided ones surface — no more clicking through allows for tools you'd already approved.</p>
 
+    <style>
+      .ccd-wrap { margin: 14px auto 2px; max-width: 360px; }
+      .ccd-wrap svg { display: block; width: 100%; height: auto;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+      .ccd-track { fill: none; stroke: #D6457A; stroke-width: 1.5;
+        stroke-dasharray: 4 5; opacity: 0.55; }
+      .ccd-stage-bg { fill: #FFFFFF; stroke: #FFC9E2; stroke-width: 1.5;
+        filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+      .ccd-label { text-anchor: middle; font-size: 12px; font-weight: 700;
+        fill: #2D2533; letter-spacing: -0.005em; }
+      .ccd-sublabel { text-anchor: middle; font-size: 10px; font-weight: 500;
+        fill: #6E5F6B; letter-spacing: 0.02em; }
+      .ccd-s-cc .ccd-stage-bg { animation: ccd-pulse-cc 8s ease-in-out infinite; }
+      .ccd-s-axol .ccd-stage-bg { animation: ccd-pulse-axol 8s ease-in-out infinite; }
+      @keyframes ccd-pulse-cc {
+        0%, 4%   { stroke: #D6457A; stroke-width: 2.4;
+          filter: drop-shadow(0 0 5px rgba(214, 69, 122, 0.55))
+                  drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+        9%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+          filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+      }
+      @keyframes ccd-pulse-axol {
+        0%, 28%   { stroke: #FFC9E2; stroke-width: 1.5;
+          filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+        30%, 36%  { stroke: #D6457A; stroke-width: 2.4;
+          filter: drop-shadow(0 0 7px rgba(214, 69, 122, 0.6))
+                  drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+        40%, 100% { stroke: #FFC9E2; stroke-width: 1.5;
+          filter: drop-shadow(0 2px 4px rgba(200, 80, 140, 0.10)); }
+      }
+      .ccd-dot { transform-box: fill-box; transform-origin: center; opacity: 0;
+        fill: #D6457A; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+        animation: ccd-dot 8s ease-in-out infinite; }
+      @keyframes ccd-dot {
+        0%, 8%   { transform: translateX(0);     opacity: 0; }
+        12%      { opacity: 1; }
+        28%      { transform: translateX(160px); opacity: 1; }
+        32%      { transform: translateX(160px); opacity: 0; }
+        100%     { transform: translateX(160px); opacity: 0; }
+      }
+      .ccd-bubble { opacity: 0; animation: ccd-bubble 8s ease-in-out infinite; }
+      @keyframes ccd-bubble {
+        0%, 36%  { opacity: 0; transform: translate(260px, 52px); }
+        40%      { opacity: 1; transform: translate(260px, 48px); }
+        88%      { opacity: 1; transform: translate(260px, 48px); }
+        92%      { opacity: 0; transform: translate(260px, 52px); }
+        100%     { opacity: 0; transform: translate(260px, 52px); }
+      }
+      .ccd-btn-pulse { transform-box: fill-box; transform-origin: center;
+        opacity: 0; animation: ccd-btn-pulse 8s ease-out infinite; }
+      @keyframes ccd-btn-pulse {
+        0%, 64%  { opacity: 0;   transform: scale(1); }
+        66%      { opacity: 0.8; transform: scale(1); }
+        72%      { opacity: 0;   transform: scale(1.6); }
+        100%     { opacity: 0;   transform: scale(1); }
+      }
+      .ccd-btn-allow > rect:first-of-type { transform-box: fill-box;
+        transform-origin: center;
+        animation: ccd-btn-press 8s ease-out infinite; }
+      @keyframes ccd-btn-press {
+        0%, 64%  { transform: scale(1);    filter: none; }
+        66%      { transform: scale(1.06); filter: brightness(1.1); }
+        72%      { transform: scale(1);    filter: none; }
+        100%     { transform: scale(1);    filter: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ccd-s-cc .ccd-stage-bg, .ccd-s-axol .ccd-stage-bg,
+        .ccd-dot, .ccd-bubble, .ccd-btn-pulse,
+        .ccd-btn-allow > rect:first-of-type { animation: none !important; }
+        .ccd-bubble { opacity: 1; transform: translate(260px, 48px); }
+        .ccd-dot, .ccd-btn-pulse { opacity: 0; }
+      }
+    </style>
+    <div class="ccd-wrap" role="img" aria-label="Claude Code permission flow: a PreToolUse hook POSTs the ask to Axol's loopback listener, she pops an Allow/Deny bubble, your tap flows back.">
+      <svg viewBox="0 -24 360 224" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ccdArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+          </marker>
+        </defs>
+        <path class="ccd-track" d="M 136 100 L 224 100" marker-end="url(#ccdArrowHead)" />
+        <circle class="ccd-dot" cx="100" cy="100" r="5" />
+        <g class="ccd-stage ccd-s-cc" transform="translate(100,100)">
+          <circle class="ccd-stage-bg" r="32" />
+          <g transform="translate(-10,-10)" fill="#D6457A" aria-hidden="true">
+            <path d="M6 9a.5.5 0 0 1-.146.354l-3 3a.5.5 0 0 1-.708-.708L4.793 9 2.146 6.354a.5.5 0 1 1 .708-.708l3 3A.5.5 0 0 1 6 9m2 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5"/>
+            <path d="M14 3a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+          </g>
+          <text class="ccd-label" dy="52">claude code</text>
+          <text class="ccd-sublabel" dy="65">PreToolUse</text>
+        </g>
+        <g class="ccd-stage ccd-s-axol" transform="translate(260,100)">
+          <circle class="ccd-stage-bg" r="32" />
+          <g transform="translate(-20,-20) scale(0.182)" aria-hidden="true">
+            <ellipse cx="52"  cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(-35 52 70)" />
+            <ellipse cx="42"  cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(-8 42 95)" />
+            <ellipse cx="50"  cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(22 50 122)" />
+            <ellipse cx="168" cy="70"  rx="16" ry="9"  fill="#E066A0" transform="rotate(35 168 70)" />
+            <ellipse cx="178" cy="95"  rx="18" ry="10" fill="#E066A0" transform="rotate(8 178 95)" />
+            <ellipse cx="170" cy="122" rx="20" ry="11" fill="#BF4F85" transform="rotate(-22 170 122)" />
+            <ellipse cx="110" cy="114" rx="74" ry="62" fill="#F29BC5" />
+            <ellipse cx="110" cy="135" rx="40" ry="22" fill="#F0B5D3" />
+            <circle cx="86"  cy="104" r="8" fill="#2D2533" />
+            <circle cx="134" cy="104" r="8" fill="#2D2533" />
+            <circle cx="88"  cy="101" r="2.4" fill="#FFFFFF" />
+            <circle cx="136" cy="101" r="2.4" fill="#FFFFFF" />
+            <circle cx="72"  cy="122" r="7" fill="#FF7AA3" opacity="0.45" />
+            <circle cx="148" cy="122" r="7" fill="#FF7AA3" opacity="0.45" />
+            <path d="M 98 132 Q 110 142 122 132" stroke="#7A2D4D" stroke-width="3" fill="none" stroke-linecap="round" />
+          </g>
+          <text class="ccd-label" dy="52">axol</text>
+          <text class="ccd-sublabel" dy="65">loopback :47329</text>
+        </g>
+        <g class="ccd-bubble">
+          <path d="M -48 -56 H 48 A 10 10 0 0 1 58 -46 V -10 A 10 10 0 0 1 48 0 H 6 L 0 8 L -6 0 H -48 A 10 10 0 0 1 -58 -10 V -46 A 10 10 0 0 1 -48 -56 Z"
+                fill="#FFEEF5" stroke="#D6457A" stroke-width="1.5" />
+          <text y="-40" text-anchor="middle" font-size="11" font-weight="700"
+                fill="#2D2533">Claude</text>
+          <text y="-28" text-anchor="middle" font-size="9" fill="#6E5F6B">needs permission</text>
+          <g class="ccd-btn ccd-btn-allow" transform="translate(-26, -18)">
+            <rect x="-22" y="0" width="44" height="14" rx="4"
+                  fill="#2E8B57" stroke="none" />
+            <text x="0" y="10" text-anchor="middle" font-size="9"
+                  font-weight="700" fill="#FFFFFF">Allow</text>
+            <rect class="ccd-btn-pulse" x="-22" y="0" width="44" height="14" rx="4"
+                  fill="none" stroke="#2E8B57" stroke-width="2" />
+          </g>
+          <g class="ccd-btn ccd-btn-deny" transform="translate(26, -18)">
+            <rect x="-22" y="0" width="44" height="14" rx="4"
+                  fill="#FFFFFF" stroke="#D6457A" stroke-width="1" />
+            <text x="0" y="10" text-anchor="middle" font-size="9"
+                  font-weight="700" fill="#2D2533">Deny</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+
     <div class="feature-group">
       <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>rules-driven permission prompts</h3>
       <ul>
