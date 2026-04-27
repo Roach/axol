@@ -4165,12 +4165,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func setModeMini()           { setMode(.mini) }
     @objc func setModeMicroAction()  { setMode(.micro) }
 
-    /// Keeps the given window origin inside the active screen's visible frame
-    /// (respecting the menu bar + Dock). Called from drag handlers.
+    /// Keeps the given window origin inside a screen's visible frame
+    /// (respecting the menu bar + Dock). Picks the screen under the cursor
+    /// first so a drag can cross monitor boundaries; falls back to the
+    /// screen containing the proposed window center, then the window's
+    /// current screen.
     fileprivate func clampOriginToScreen(_ origin: CGPoint, size: NSSize) -> CGPoint {
-        guard let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame else {
-            return origin
-        }
+        let proposedCenter = CGPoint(x: origin.x + size.width / 2,
+                                     y: origin.y + size.height / 2)
+        let cursor = NSEvent.mouseLocation
+        let target = NSScreen.screens.first { $0.frame.contains(cursor) }
+            ?? NSScreen.screens.first { $0.frame.contains(proposedCenter) }
+            ?? window.screen
+            ?? NSScreen.main
+        guard let screen = target?.visibleFrame else { return origin }
         let margin: CGFloat = 4
         var o = origin
         o.x = max(screen.minX + margin, min(o.x, screen.maxX - size.width  - margin))
