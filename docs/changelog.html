@@ -436,12 +436,45 @@ type: article
   </header>
 
   <nav class="section-nav" aria-label="page sections">
+    <a href="#v3-0">v3.0 · she knows when to ask</a>
     <a href="#v2-2">v2.2 · she stretches her gills</a>
     <a href="#v2-1-1">v2.1.1 · bubble polish</a>
     <a href="#v2-1">v2.1 · she holds the door</a>
     <a href="#v2-0">v2.0 · she grew up</a>
     <a href="#v1-0">v1.0 · she hatched!</a>
   </nav>
+
+  <article id="v3-0" class="release">
+    <span class="release-tag"><span class="spark" aria-hidden="true">📜</span>v3.0</span>
+    <div style="height:6px"></div>
+    <span class="release-date">April 27, 2026</span>
+    <h2>she knows when to ask</h2>
+    <p class="release-lede">Axol now reads the same <code>permissions.allow</code> / <code>deny</code> / <code>ask</code> rules Claude Code already uses, so calls she'd normally bubble for get auto-resolved when your <code>settings.json</code> has an answer. Only the genuinely undecided ones surface — no more clicking through allows for tools you'd already approved.</p>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>rules-driven permission prompts</h3>
+      <ul>
+        <li><b>Reads your existing CC rules.</b> User settings (<code>~/.claude/settings.json</code>) and every project-level <code>.claude/settings.json</code> + <code>settings.local.json</code> on the way up from <code>cwd</code> all merge in. Same shape Claude Code already evaluates — Axol just evaluates them too, so the answer arrives without a bubble.</li>
+        <li><b>Deny beats ask beats allow.</b> First match in each bucket wins, deny short-circuits everything. Matches CC's documented precedence so the two evaluators stay in agreement.</li>
+        <li><b>Bash compound commands split correctly.</b> <code>git status &amp;&amp; git diff</code> evaluates each subcommand independently — any deny match denies the whole call, and every subcommand has to be allow-matched for a silent pass.</li>
+        <li><b>Session-mode aware.</b> Honors CC's session-level <code>permission_mode</code>: <code>auto</code> / <code>bypassPermissions</code> auto-allow undecided cases, <code>acceptEdits</code> waves through Edit / Write / NotebookEdit only, <code>plan</code> denies any unresolved mutation. Explicit allow / deny rules always pass through — mode never downgrades them.</li>
+      </ul>
+    </div>
+
+    <div class="feature-group">
+      <h3><span class="bullet" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 4.5 6 12l-3.5-3.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>upgrading from v2.x</h3>
+      <ul>
+        <li><b>Rename the hook event.</b> Open <code>~/.claude/settings.json</code> and change <code>"PermissionRequest"</code> to <code>"PreToolUse"</code>. CC's <code>PermissionRequest</code> hook had a ~1.5s race that swallowed human-paced clicks; <code>PreToolUse</code> doesn't, but it fires for every tool call — which is what the rules engine above is for.</li>
+        <li><b>Add a matcher.</b> Restrict the hook to tools that actually need a decision; without one you'll get a flicker for every Read and Glob too. <code>"matcher": "Bash|Edit|Write|WebFetch|NotebookEdit|mcp__.*"</code> covers the common set.</li>
+        <li><b>Your existing rules just work.</b> Anything already in <code>permissions.allow</code> / <code>deny</code> / <code>ask</code> is honored automatically — no migration on the rules side.</li>
+      </ul>
+    </div>
+
+    <div class="quip" aria-label="Axol's take">
+      <svg class="quip-axol" viewBox="0 0 80 80" aria-hidden="true"><use href="#cl-mode-axol"/></svg>
+      <div class="quip-bubble">"If you've already told Claude it's fine, I won't ask twice."</div>
+    </div>
+  </article>
 
   <article id="v2-2" class="release">
     <span class="release-tag"><span class="spark" aria-hidden="true">🪶</span>v2.2</span>
