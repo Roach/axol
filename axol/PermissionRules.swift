@@ -48,6 +48,9 @@ extension PermissionRules {
     /// - `acceptEdits` — user opted to auto-accept file edits only. Allow
     ///   Edit / Write / NotebookEdit; still bubble Bash / WebFetch / MCP.
     /// - `plan` — read-only planning mode. Deny any unresolved mutation.
+    /// - `dontAsk` — inverse of `auto`: anything not pre-approved by an
+    ///   allow rule is denied (per CC docs). Falling through to a bubble
+    ///   here would defeat the user's "don't ask me" intent.
     /// - `default` (or unknown) — pass through (bubble on ask / undecided).
     static func applyMode(_ ruleDecision: PermissionDecision, mode: String, toolName: String) -> PermissionDecision {
         if ruleDecision == .deny || ruleDecision == .allow { return ruleDecision }
@@ -57,7 +60,7 @@ extension PermissionRules {
         case "acceptEdits":
             let edits: Set<String> = ["Edit", "Write", "NotebookEdit"]
             return edits.contains(toolName) ? .allow : ruleDecision
-        case "plan":
+        case "plan", "dontAsk":
             return .deny
         default:
             return ruleDecision
