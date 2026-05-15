@@ -7,18 +7,22 @@ url: https://roach.github.io
 baseurl: /axol
 lang: en_US
 
-# Shared OG / Twitter image + dimensions. Per-page front matter can override
-# `image` when a page has a more representative graphic.
-image: https://github.com/user-attachments/assets/0278e1d5-b354-4090-bd69-0ceba1767a9f
-image_width: 450
-image_height: 237
-image_alt: Axol, a pink axolotl, waving from the corner of a screen.
+# Shared OG / Twitter image, in the hash shape jekyll-seo-tag expects so
+# it emits og:image + og:image:width/height/alt and upgrades the Twitter
+# card to summary_large_image automatically. Per-page front matter can
+# override `image` when a page has a more representative graphic.
+image:
+  path: https://github.com/user-attachments/assets/0278e1d5-b354-4090-bd69-0ceba1767a9f
+  width: 450
+  height: 237
+  alt: Axol, a pink axolotl, waving from the corner of a screen.
 
 twitter:
   card: summary_large_image
 
 plugins:
   - jekyll-seo-tag
+  - jekyll-sitemap
 
 # Every page defaults to the shared layout and the "article" og:type; the
 # homepage overrides to "website" in its own front matter.

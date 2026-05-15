@@ -2,13 +2,13 @@ import Foundation
 import Network
 
 /// In-flight permission requests waiting on a user decision. Claude Code's
-/// PermissionRequest hook is an HTTP POST whose *response body* carries the
-/// Allow/Deny decision — so we hold the NWConnection open from Server.handle
-/// until the user clicks a bubble button, then write the CC-shaped JSON
-/// response and close.
+/// PreToolUse hook is an HTTP POST whose *response body* carries the
+/// allow/deny decision — we hold the NWConnection open from Server.handle
+/// until the user clicks a bubble button (or a rule eval short-circuits),
+/// then write the CC-shaped JSON response and close.
 ///
-/// MVP scope: Allow/Deny only, no "Always" / updatedPermissions, no session
-/// tracking, no timeout.
+/// MVP scope: allow/deny only, no `updatedInput` / `permissionDecisionReason`
+/// enrichment, no session tracking, no timeout.
 final class PendingPermissions {
     static let shared = PendingPermissions()
 
@@ -30,8 +30,8 @@ final class PendingPermissions {
 
         let payload: [String: Any] = [
             "hookSpecificOutput": [
-                "hookEventName": "PermissionRequest",
-                "decision": ["behavior": behavior]
+                "hookEventName": "PreToolUse",
+                "permissionDecision": behavior
             ]
         ]
         let body = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()

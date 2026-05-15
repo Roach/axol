@@ -18,6 +18,7 @@ SOURCES=(
     Envelope.swift
     AlertStore.swift
     PendingPermissions.swift
+    PermissionRules.swift
     Themes.swift
     Axol.swift
     main.swift

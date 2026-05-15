@@ -6,19 +6,89 @@
 <link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url }}" sizes="32x32" />
 <link rel="icon" type="image/svg+xml" href="{{ '/favicon.svg' | relative_url }}" />
 <title>{{ page.title }}</title>
-{% seo title=false %}
-{%- assign img_width = page.image_width | default: site.image_width -%}
-{%- assign img_height = page.image_height | default: site.image_height -%}
-{%- assign img_alt = page.image_alt | default: site.image_alt -%}
-{%- assign img = page.image | default: site.image -%}
-{%- if img_width and img_height %}
-<meta property="og:image:width" content="{{ img_width }}" />
-<meta property="og:image:height" content="{{ img_height }}" />
+{%- comment -%}
+  Belt-and-suspenders image + card tags emitted BEFORE {% seo %} so
+  social-card parsers (which pick the first matching meta) see the
+  correct values. jekyll-seo-tag 2.8 doesn't always emit og:image or
+  upgrade twitter:card given our config shape, so we emit them here
+  and let it fill in the rest. Per-page `image:` front matter (hash
+  or string) overrides the site default.
+{%- endcomment -%}
+{%- if page.image.path -%}
+  {%- assign img_path = page.image.path -%}
+  {%- assign img_w = page.image.width | default: site.image.width -%}
+  {%- assign img_h = page.image.height | default: site.image.height -%}
+  {%- assign img_alt = page.image.alt | default: site.image.alt -%}
+{%- elsif page.image -%}
+  {%- assign img_path = page.image -%}
+  {%- assign img_w = site.image.width -%}
+  {%- assign img_h = site.image.height -%}
+  {%- assign img_alt = site.image.alt -%}
+{%- else -%}
+  {%- assign img_path = site.image.path -%}
+  {%- assign img_w = site.image.width -%}
+  {%- assign img_h = site.image.height -%}
+  {%- assign img_alt = site.image.alt -%}
+{%- endif %}
+<meta property="og:image" content="{{ img_path }}" />
+{%- if img_w and img_h %}
+<meta property="og:image:width" content="{{ img_w }}" />
+<meta property="og:image:height" content="{{ img_h }}" />
 {%- endif %}
 {%- if img_alt %}
 <meta property="og:image:alt" content="{{ img_alt }}" />
 {%- endif %}
-<meta name="twitter:image" content="{{ img }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="{{ img_path }}" />
+{% seo title=false %}
+{%- comment -%}
+  Structured data per page type. Homepage gets SoftwareApplication —
+  Axol is the product. Deploy pages get HowTo (each is a step-by-step
+  install guide). Everything else inherits jekyll-seo-tag's default
+  WebSite/WebPage schema.
+{%- endcomment -%}
+{%- if page.url == '/' -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Axol",
+  "description": "{{ site.description | strip_newlines | strip }}",
+  "url": "{{ site.url }}{{ site.baseurl }}/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS 13+",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "downloadUrl": "https://github.com/Roach/axol",
+  "author": {
+    "@type": "Person",
+    "name": "Roach"
+  },
+  "license": "https://github.com/Roach/axol/blob/main/LICENSE",
+  "image": "{{ site.image.path }}"
+}
+</script>
+{%- endif -%}
+{%- if page.schema_howto -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": {{ page.title | jsonify }},
+  "description": {{ page.description | jsonify }},
+  "url": "{{ site.url }}{{ site.baseurl }}{{ page.url }}",
+  "image": "{{ site.image.path }}",
+  "step": [
+  {%- for s in page.schema_howto -%}
+    {"@type": "HowToStep", "position": {{ forloop.index }}, "name": {{ s.name | jsonify }}, "text": {{ s.text | jsonify }}}{% unless forloop.last %},{% endunless %}
+  {%- endfor -%}
+  ]
+}
+</script>
+{%- endif -%}
 <style>
   /* Site-wide smooth-scroll so section-nav jumps and the back-to-top
      button both glide. Every content page already has a

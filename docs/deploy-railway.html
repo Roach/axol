@@ -2,6 +2,15 @@
 title: "Axol — deploying neuromast to Railway"
 description: "Step-by-step deploy of Axol's webhook intake (neuromast) to Railway: fork the repo, add the Redis plugin, set env vars, and git push to deploy."
 type: article
+schema_howto:
+  - name: "Push neuromast to your own GitHub repo"
+    text: "Fork or split neuromast/ into a fresh repo Railway can deploy from."
+  - name: "Create the Railway project"
+    text: "Connect your repo, add the Railway Redis plugin, set ADAPTER=node so Astro builds for Node, and configure HOOK_SECRET_* + LATERAL_BEARER + REDIS_URL env vars."
+  - name: "Deploy via git push"
+    text: "Push to main (or let Railway auto-deploy) to trigger the Node build."
+  - name: "Point lateral-line at the Railway URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to your Railway app's public URL and restart the launchd job."
 ---
 <style>
   :root {
@@ -508,7 +517,7 @@ type: article
     <a href="#step-push">1 · push</a>
     <a href="#step-create">2 · create</a>
     <a href="#step-connect">3 · connect</a>
-    <a href="#day-2">day-2</a>
+    <a href="#day-2">operations</a>
     <a href="#troubleshooting">troubleshooting</a>
   </nav>
 
@@ -604,7 +613,7 @@ type: article
   </section>
 
   <section id="day-2">
-    <h2>day-2 operations</h2>
+    <h2>operations</h2>
 
     <h3>Redeploying</h3>
     <p>Same flow as any Railway project: <code>git push</code>. The connected branch triggers a build; the <b>Deployments</b> tab shows status per commit.</p>

@@ -2,6 +2,17 @@
 title: "Axol — deploying neuromast to Webflow Cloud"
 description: "Step-by-step deploy of Axol's webhook intake (neuromast) to Webflow Cloud: CLI install, first deploy, setting secrets in the dashboard, and republishing the site."
 type: article
+schema_howto:
+  - name: "Push the neuromast directory to your own GitHub repo"
+    text: "Fork or split neuromast/ into a fresh repo that Webflow Cloud can connect to."
+  - name: "Create the Webflow Cloud project"
+    text: "Open the Webflow Cloud dashboard, connect your GitHub repo, pick a mount path, and configure environment variables (HOOK_SECRET_*, LATERAL_BEARER)."
+  - name: "Trigger the first deploy"
+    text: "Push to main (or click deploy in the dashboard). Webflow Cloud runs astro build with the Cloudflare adapter and auto-provisions KV."
+  - name: "Publish the Webflow site"
+    text: "Republish the parent Webflow site so the /app mount-path routes become live on your custom domain."
+  - name: "Point lateral-line at the published URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to your Webflow Cloud URL and restart the launchd job."
 ---
 <style>
   :root {
@@ -426,7 +437,7 @@ type: article
     <a href="#step-push">1 · push</a>
     <a href="#step-create">2 · create</a>
     <a href="#step-connect">3 · connect</a>
-    <a href="#day-2">day-2</a>
+    <a href="#day-2">operations</a>
     <a href="#troubleshooting">troubleshooting</a>
   </nav>
 
@@ -523,7 +534,7 @@ type: article
   </section>
 
   <section id="day-2">
-    <h2>day-2 operations</h2>
+    <h2>operations</h2>
 
     <h3>Redeploying</h3>
     <p>Every subsequent code change is just:</p>

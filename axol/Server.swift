@@ -86,15 +86,13 @@ final class AxolServer {
                             let requestId = (json["request_id"] as? String) ?? UUID().uuidString
                             let reqJson = json
                             DispatchQueue.main.async { onPermission(requestId, reqJson, conn) }
-                            // Keep a sentinel read running so peer-close fires
-                            // — Claude Code still prompts in-terminal in
-                            // parallel with the PermissionRequest hook, and
-                            // when the user answers in CC it kills the hook
-                            // subprocess, closing curl's socket. Without an
-                            // active read, NWConnection won't surface that
-                            // close and the Axol bubble would stay up. On
-                            // peer EOF / error we cancel, which fires the
-                            // existing stateUpdateHandler → dismissPermissionBubble.
+                            // Safety net for crashed / killed Claude Code
+                            // sessions: if CC dies while the hook is in
+                            // flight, curl's socket closes. We post an idle
+                            // read so NWConnection surfaces that peer EOF as
+                            // a state transition instead of sitting in
+                            // `.ready` forever — stateUpdateHandler then
+                            // discards the entry and dismisses the bubble.
                             Self.watchForPeerClose(conn)
                             return  // connection stays open until resolve/discard
                         }

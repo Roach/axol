@@ -238,15 +238,16 @@ The cloud side and the local forwarder use different names for the same secret �
 
 ## Claude Code integration
 
-Claude Code support is provided by the bundled `axol/adapters/claude-code.json` plus two helper scripts in `axol/hooks/` that add the features you actually want. Recognized events: `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until handled), `PermissionRequest` (bridges to Axol's Allow/Deny bubble), and `Stop` (normal, with an optional git-enriched "what just happened" note). The internal "waiting for your input" chatter is dropped via a `skip_if`.
+Claude Code support is provided by the bundled `axol/adapters/claude-code.json` plus two helper scripts in `axol/hooks/` that add the features you actually want. Recognized events: `SessionStart` (low priority), `Notification` (urgent — so permission prompts pin open until handled), `PreToolUse` (bridges to Axol's Allow/Deny bubble; rules from your `settings.json` auto-resolve matches so only undecided calls surface), and `Stop` (normal, with an optional git-enriched "what just happened" note). The internal "waiting for your input" chatter is dropped via a `skip_if`.
 
-Settings file: `~/.claude/settings.json` (user-wide) or `.claude/settings.json` in a project root. The snippet below uses absolute paths to `axol/hooks/*.sh`; point them at wherever you cloned the Axol repo.
+Settings file: `~/.claude/settings.json` (user-wide) or `.claude/settings.json` in a project root. The snippet below uses absolute paths to `axol/hooks/*.sh`; point them at wherever you cloned the Axol repo. The `matcher` on `PreToolUse` restricts the hook to tools that actually need a permission decision — without it the hook fires for every tool call (Read, Glob, etc.) and you'll see Axol flicker on each one.
 
 ```json
 {
   "hooks": {
-    "PermissionRequest": [
+    "PreToolUse": [
       {
+        "matcher": "Bash|Edit|Write|WebFetch|NotebookEdit|mcp__.*",
         "hooks": [
           { "type": "command", "command": "/path/to/axol/axol/hooks/claude-permission.sh" }
         ]
@@ -263,8 +264,10 @@ Settings file: `~/.claude/settings.json` (user-wide) or `.claude/settings.json` 
 }
 ```
 
+> **Upgrading from v2.x?** The hook event was renamed from `PermissionRequest` to `PreToolUse` in v3.0 — rename it in your settings.json and add the matcher above. Existing `permissions.allow` / `deny` / `ask` rules carry over unchanged; Axol now evaluates them locally so already-approved calls resolve without a bubble.
+
 What each hook does:
-- **`claude-permission.sh`** — intercepts CC's permission prompts, posts them to Axol's `/permission` endpoint, and forwards Axol's Allow/Deny decision back to CC verbatim. Hangs open up to 5 minutes waiting for you to click. If Axol is unreachable, the script returns an empty response so CC's built-in prompt takes over — the bridge degrades gracefully.
+- **`claude-permission.sh`** — fires on every matched tool call, posts the payload to Axol's `/permission` endpoint, and forwards her response back to CC verbatim. Axol consults your merged `permissions.allow` / `deny` / `ask` rules first; matches resolve silently and only undecided calls pop a bubble. Hangs open up to 5 minutes waiting for you to click. If Axol is unreachable, the script returns an empty response so CC's built-in prompt takes over — the bridge degrades gracefully.
 - **`claude-stop.sh`** — reads the Stop-hook payload, enriches it with a short note based on the repo at `cwd` (`"main · 3 files changed"` on a dirty repo, `"main · Tighten hero demo bubble dwell times"` on a clean one), then POSTs to Axol. Safe on non-git cwds, missing `jq`, or Axol offline — never fails the hook. The `X-Claude-PID` header (auto-populated via `$PPID`) is what lets clicking the bubble focus the right terminal on click.
 
 Minimal inline alternative if you don't want the enricher or permission bridge:

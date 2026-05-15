@@ -1,0 +1,109 @@
+{%- comment -%}
+  Compact envelope-flow diagram: two raw payload shapes (GitHub + Claude)
+  converge through an adapter ({{ }}), become an Axol envelope, and render
+  as a speech bubble above the axolotl. Self-contained SVG — no external
+  CSS dependency beyond the wrapper's width:100% rule.
+
+  Used on:
+    - plugins.html — "the flow" section
+    - index.html   — the alerts section's "Local" block
+{%- endcomment -%}
+<style>
+  .envelope-flow-mini {
+    margin: 18px 0 4px;
+  }
+  .envelope-flow-mini svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+</style>
+<div class="envelope-flow-mini" role="img" aria-label="Multiple payload shapes converge through an adapter, become an envelope, and render as a speech bubble above Axol.">
+  <svg viewBox="0 0 760 170" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="efmBg" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0"   stop-color="#FFF7FB" />
+        <stop offset="0.5" stop-color="#FFEAF3" />
+        <stop offset="1"   stop-color="#FFF7FB" />
+      </linearGradient>
+      <linearGradient id="efmEnv" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF" />
+        <stop offset="1" stop-color="#FFE5F0" />
+      </linearGradient>
+      <marker id="efmArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6457A" />
+      </marker>
+      <filter id="efmShadow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#D6457A" flood-opacity="0.15" />
+      </filter>
+    </defs>
+
+    <rect x="0" y="0" width="760" height="170" rx="18" fill="url(#efmBg)" />
+
+    <!-- 2 raw payload shapes on the left — no labels, just icons -->
+    <g transform="translate(70,55)" filter="url(#efmShadow)">
+      <polygon points="0,-18 15.6,-9 15.6,9 0,18 -15.6,9 -15.6,-9" fill="#2D2533" />
+      <svg x="-8" y="-8" width="16" height="16" viewBox="0 0 16 16" fill="#FFFFFF">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+      </svg>
+    </g>
+    <g transform="translate(70,115)" filter="url(#efmShadow)">
+      <circle r="18" fill="#D97757" />
+      <svg x="-9" y="-9" width="18" height="18" viewBox="0 0 257 257" fill="#FFFFFF">
+        <path d="M50.2162 170.973L100.762 142.62L101.608 140.148L100.762 138.78H98.2906L89.8332 138.26L61.0578 137.48L36.1158 136.44L11.9538 135.14L5.8722 133.84L0.1818 126.374L0.7618 122.637L5.8722 119.213L13.1854 119.854L29.3182 120.954L53.4802 122.637L70.994 123.677L96.9906 126.374H101.088L101.672 124.717L100.242 123.677L99.1364 122.637L73.8974 105.622L46.544 87.5083L32.2024 77.0963L24.4578 71.8419L20.567 66.9015L18.889 56.1663L25.8746 48.4795L35.2394 49.1255L37.6302 49.7715L47.142 57.072L67.4492 72.741L94.0382 92.3407L97.9302 95.5827L99.4824 94.4767L99.6742 93.6947L97.9302 90.7715L83.542 64.7415L68.182 38.2175L61.3498 27.2791L59.5486 20.7235C58.8962 18.0395 58.4302 15.8111 58.4302 13.0639L66.342 2.2715L70.7258 0.859497L81.298 2.2715L85.7518 6.1275L92.3238 21.1695L102.988 44.8263L119.531 77.0963L124.368 86.6755L126.95 95.5363L127.914 98.2203H129.592V96.6815L130.943 78.5563L133.449 56.2915L135.888 27.6691L136.723 19.6027L140.683 9.9903L148.542 4.8179L154.699 7.7527L159.754 14.9615L159.052 19.6027L156.046 39.1551L150.158 69.7355L146.312 90.1963H148.567L151.149 87.6143L161.57 73.7843L179.058 51.879L186.776 43.1965L195.781 33.5843L201.566 29.0103H212.478L220.507 40.9555L216.925 53.284L205.736 67.4723L196.463 79.4911L183.156 97.4083L174.845 111.74L175.614 112.885L177.617 112.687L207.817 106.284L224.128 103.339L243.6 100.002L252.401 104.105L253.367 108.286L249.921 116.826L229.275 121.93L205.071 126.78L168.999 135.323L168.556 135.632L169.066 136.267L185.323 137.797L192.275 138.172H209.301L241.013 140.529L249.312 146.024L254.297 152.755L253.464 157.855L240.712 164.361L223.507 160.283L183.327 150.734L169.548 147.287H167.647V148.434L179.128 159.661L200.184 178.66L226.535 203.159L227.878 209.213L224.507 213.987L220.946 213.474L197.898 196.139L188.995 188.319L168.833 171.355H167.49V173.141L172.135 179.958L196.664 216.772L197.932 228.065L196.15 231.729L189.787 233.961L182.797 212.504L168.405 212.504L153.56 189.74L141.572 169.359L140.109 170.195L133.044 246.241L129.739 250.133L122.099 253L115.741 248.159L112.365 240.341L115.741 224.878L119.824 205.047L123.143 189.258L126.152 169.621L127.942 163.089L127.819 162.649L126.346 162.842L111.203 183.627L88.163 214.745L69.9344 234.223L65.5696 235.951L58.0192 232.026L58.7222 225.056L62.9416 218.864L88.1196 186.935L103.302 167.077L113.087 155.627L113.022 153.963H112.442L45.5858 197.369L33.6802 198.893L28.5556 194.082L29.185 186.169L31.6198 183.6L51.8958 169.672z" />
+      </svg>
+    </g>
+
+    <!-- Converging dashed arrows — tips separated so arrowheads don't overlap -->
+    <g fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)">
+      <path d="M 90 55  C 150 55, 180 65, 210 75" />
+      <path d="M 90 115 C 150 115, 180 105, 210 95" />
+    </g>
+
+    <!-- Adapter: compact, just template syntax -->
+    <g transform="translate(215,55)" filter="url(#efmShadow)">
+      <rect width="88" height="60" rx="14" fill="#FFFFFF" stroke="#D6457A" stroke-width="1.5" />
+      <text x="44" y="39" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="20" font-weight="700" fill="#D6457A">{% raw %}{{ }}{% endraw %}</text>
+    </g>
+
+    <!-- Arrow: adapter → envelope -->
+    <path d="M 312 85 L 362 85" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+
+    <!-- Envelope (compact) -->
+    <g transform="translate(370,58)" filter="url(#efmShadow)">
+      <rect width="78" height="54" rx="5" fill="url(#efmEnv)" stroke="#D6457A" stroke-width="1.5" />
+      <path d="M 0 0 L 39 28 L 78 0" fill="none" stroke="#D6457A" stroke-width="1.2" opacity="0.55" />
+      <circle cx="39" cy="38" r="8" fill="#D6457A" />
+      <text x="39" y="42" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" font-weight="800" fill="#FFFFFF">A</text>
+    </g>
+
+    <!-- Arrow: envelope → bubble (arched curve) -->
+    <path d="M 456 85 C 500 85, 525 50, 568 49" fill="none" stroke="#D6457A" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.65" marker-end="url(#efmArrow)" />
+
+    <!-- Axolotl (anchor for bubble) -->
+    <g transform="translate(640,107) scale(0.7)" filter="url(#efmShadow)">
+      <g>
+        <ellipse cx="-38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(-35 -38 -19)" />
+        <ellipse cx="-45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(-8 -45 0)" />
+        <ellipse cx="38" cy="-19" rx="12" ry="6.5" fill="#E066A0" transform="rotate(35 38 -19)" />
+        <ellipse cx="45" cy="0" rx="13" ry="7" fill="#E066A0" transform="rotate(8 45 0)" />
+      </g>
+      <ellipse cx="0" cy="8" rx="50" ry="42" fill="#F29BC5" />
+      <ellipse cx="0" cy="18" rx="34" ry="26" fill="#F0B5D3" />
+      <circle cx="-15" cy="2" r="5" fill="#2D2533" />
+      <circle cx="15"  cy="2" r="5" fill="#2D2533" />
+      <circle cx="-14" cy="0" r="1.5" fill="white" />
+      <circle cx="16"  cy="0" r="1.5" fill="white" />
+      <circle cx="-22" cy="20" r="5" fill="#FF7AA3" opacity="0.45" />
+      <circle cx="22"  cy="20" r="5" fill="#FF7AA3" opacity="0.45" />
+      <path d="M -10 23 Q 0 30 10 23" stroke="#7A2D4D" stroke-width="2" fill="none" stroke-linecap="round" />
+    </g>
+
+    <!-- Bubble — anchored just above axolotl's head, drawn last so it sits on top -->
+    <g transform="translate(575,29)" filter="url(#efmShadow)">
+      <path d="M 10 0 H 120 A 10 10 0 0 1 130 10 V 30 A 10 10 0 0 1 120 40 L 72 40 L 65 54 L 58 40 L 10 40 A 10 10 0 0 1 0 30 V 10 A 10 10 0 0 1 10 0 Z" fill="#FFFFFF" stroke="#FFC9E2" stroke-width="1.25" />
+      <text x="65" y="17" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#2D2533">main</text>
+      <text x="65" y="31" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" fill="#6E5F6B">CI passed</text>
+    </g>
+  </svg>
+</div>

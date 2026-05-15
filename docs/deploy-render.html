@@ -2,6 +2,15 @@
 title: "Axol — deploying neuromast to Render"
 description: "Deploy Axol's webhook intake (neuromast) to Render: connect a GitHub repo, add Render Redis, git push."
 type: article
+schema_howto:
+  - name: "Push neuromast to your own GitHub repo"
+    text: "Fork or split neuromast/ into a fresh repo Render can deploy from."
+  - name: "Create the Render services"
+    text: "Create a Web Service from your repo, attach a Render Key Value (Redis) instance, wire REDIS_URL into the web service env, and set HOOK_SECRET_* + LATERAL_BEARER."
+  - name: "Deploy via git push"
+    text: "Push to main; Render runs the Node build for the neuromast Astro app automatically."
+  - name: "Point lateral-line at the Render URL"
+    text: "Set NEUROMAST_URL in ~/Library/Application Support/Axol/lateral-line.env to your Render service's public URL and restart the launchd job."
 ---
 <style>
   :root {
@@ -285,7 +294,7 @@ type: article
     <a href="#step-push">1 · push</a>
     <a href="#step-create">2 · create</a>
     <a href="#step-connect">3 · connect</a>
-    <a href="#day-2">day-2</a>
+    <a href="#day-2">operations</a>
     <a href="#troubleshooting">troubleshooting</a>
   </nav>
 
@@ -370,7 +379,7 @@ type: article
   </section>
 
   <section id="day-2">
-    <h2>day-2 operations</h2>
+    <h2>operations</h2>
 
     <h3>Redeploying</h3>
     <p><code>git push</code>. Render watches the branch and deploys automatically.</p>
